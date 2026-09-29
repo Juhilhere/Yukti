@@ -229,6 +229,8 @@ CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs on every push t
 
 Read the full [Security Model](docs/SECURITY_MODEL.md). To report a vulnerability, see [SECURITY.md](SECURITY.md).
 
+To report a bug or any other problem, email **juhilprogramming@gmail.com** (inside the app: Help → Report a problem).
+
 ## Real vs example data
 
 | Real (measured or sourced) | Example (written by Team UniMinds, badged) | Not included (must come from the plant) |

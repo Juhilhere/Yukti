@@ -1,8 +1,11 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, HelpCircle, KeyRound, Keyboard, Lock, MessageSquare, ShieldCheck, ThumbsUp } from 'lucide-react';
+import { BookOpen, Bug, HelpCircle, KeyRound, Keyboard, Lock, MessageSquare, ShieldCheck, ThumbsUp } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { useT } from '../lib/i18n';
+import { useSystem } from '../lib/queries';
+import { SUPPORT_EMAIL } from '../lib/contact';
+import { CopyButton } from '../components/pages2/CopyButton';
 import { Badge, Card, Kbd, PageHeader, ProvenanceBadges, StatusChip } from '../components/ui';
 
 function Item({ term, children }: { term: ReactNode; children: ReactNode }) {
@@ -17,6 +20,7 @@ function Item({ term, children }: { term: ReactNode; children: ReactNode }) {
 export default function Help() {
   const t = useT();
   const { isLlmAdmin } = useAuth();
+  const VERSION_LABEL = useSystem().data?.version ?? '0.3.0';
   return (
     <div className="h-full overflow-y-auto">
       <PageHeader title={t('page.help')} icon={<HelpCircle size={18} />} subtitle="How to get reliable answers from Yukti" />
@@ -72,6 +76,17 @@ export default function Help() {
 
         <Card title="Need more help?" icon={<Lock size={14} className="text-muted" />}>
           <p className="text-[12.5px] text-muted">For account problems (locked account, forgotten password, new role or department) contact your Yukti administrator — they can unlock your account or issue a temporary password.</p>
+        </Card>
+
+        <Card title="Report a problem with Yukti" icon={<Bug size={14} className="text-amber" />}>
+          <div className="space-y-2 text-[12.5px] text-muted">
+            <p>Found a bug or something that does not work? Email Team UniMinds. Describe what you did, what you expected and what happened; add a screenshot and the Yukti version (v{VERSION_LABEL}). Never include confidential plant documents or passwords.</p>
+            <div className="flex items-center gap-2">
+              <a className="font-mono text-cyan hover:underline" href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('[Yukti] Problem report')}`}>{SUPPORT_EMAIL}</a>
+              <CopyButton text={SUPPORT_EMAIL} label="Copy" />
+            </div>
+            <p className="text-[11.5px] text-faint">Security vulnerabilities: use the same address with the subject “[Yukti security]”.</p>
+          </div>
         </Card>
       </div>
     </div>

@@ -5,6 +5,7 @@
 // "local" (all-in-one: start the Yukti server on this PC as a child process).
 // Offline by design: no telemetry, no auto-update, no CDN.
 'use strict';
+const SUPPORT_EMAIL = 'juhilprogramming@gmail.com';  // problem reports (Help menu)
 const { app, BrowserWindow, Menu, Tray, dialog, ipcMain, shell, nativeImage, session } = require('electron');
 const { spawn, execFile } = require('child_process');
 const fs = require('fs');
@@ -392,6 +393,7 @@ function lockDown(wc) {
     if (allowed(url)) return;
     e.preventDefault();
     if (isHttp(url)) shell.openExternal(url); // user-clicked link to another host (e.g. a source citation)
+    else if (/^mailto:/i.test(url)) shell.openExternal(url); // e.g. Help > Report a problem
   });
   wc.on('will-redirect', (e, url) => { if (isHttp(url) && page === 'app' && !sameOrigin(url, activeUrl)) e.preventDefault(); });
   wc.setWindowOpenHandler(({ url }) => {
@@ -399,7 +401,7 @@ function lockDown(wc) {
       return { action: 'allow', overrideBrowserWindowOptions: { icon: winIcon(), autoHideMenuBar: true, backgroundColor: BG,
         webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true } } };
     }
-    if (isHttp(url)) shell.openExternal(url);
+    if (isHttp(url) || /^mailto:/i.test(url)) shell.openExternal(url);
     return { action: 'deny' };
   });
   wc.on('did-create-window', (child) => lockDown(child.webContents));
@@ -444,7 +446,9 @@ function about() {
   dialog.showMessageBox(win || undefined, {
     type: 'info', title: 'About Yukti', icon: winIcon(),
     message: `Yukti ${app.getVersion()}`,
-    detail: `Sovereign Industrial AI Workbench\n\nConnected server: ${activeUrl || '(none)'}\nMode: ${modeLabel()}${owns}\n\nElectron ${process.versions.electron} · Chromium ${process.versions.chrome}\nOffline build — no telemetry, no auto-update.`,
+    detail: `Sovereign Industrial AI Workbench\n\nConnected server: ${activeUrl || '(none)'}\nMode: ${modeLabel()}${owns}\n\nElectron ${process.versions.electron} · Chromium ${process.versions.chrome}\nOffline build — no telemetry, no auto-update.
+
+Report a problem: ${SUPPORT_EMAIL}`,
   });
 }
 
@@ -462,7 +466,9 @@ function buildMenu() {
       { type: 'separator' }, { role: 'togglefullscreen' },
       ...(DEBUG ? [{ type: 'separator' }, { role: 'toggleDevTools' }] : []),
     ] },
-    { label: 'Help', submenu: [{ label: 'Open log folder', click: () => openLogs() }, { type: 'separator' }, { label: 'About Yukti', click: about }] },
+    { label: 'Help', submenu: [{ label: 'Open log folder', click: () => openLogs() },
+      { label: 'Report a problem…', click: () => shell.openExternal(`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(`[Yukti ${app.getVersion()}] Problem report`)}`) },
+      { type: 'separator' }, { label: 'About Yukti', click: about }] },
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(tpl));
 }
