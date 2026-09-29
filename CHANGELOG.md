@@ -5,6 +5,19 @@ All notable changes to Yukti are documented here. The format follows [Keep a Cha
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-09-30
+
+### Added
+- **One download from GitHub**: `Yukti-Setup.exe` (one-click, no questions) installs the app; on first start Yukti downloads
+  its AI from the GitHub release (signed manifest, parts under 2 GB, SHA-256 per part, resumable, automatic retry when the
+  internet drops) and starts. `ops/release-github.ps1` publishes a release.
+- **Setup for non-technical users**: plain steps, time left, pause/resume, plain-language errors, language picker; IT options
+  under "Other options". The uninstaller removes the downloaded AI and asks before deleting data.
+- **Hindi and Kannada everywhere**: web app (1 293 keys, checked in CI), desktop setup/start-up/menus, server messages and AI
+  setting labels; the assistant answers in the chosen language.
+- **Simple model chooser**: model cards that say whether a model fits this PC, a recommended model, automatic settings.
+- **Report a problem**: guided dialog with automatic technical details, crash screen, report links on every error.
+
 ### Added
 - **Single-zip distribution** (`ops/bundle.py`, `ops/release-site.ps1`): one `Yukti-<ver>-Windows.zip` with the app, the server, both
   llama.cpp builds and the model. `Yukti.exe` starts the bundled server itself, creates shortcuts, and keeps data in `%LOCALAPPDATA%\Yukti`.
