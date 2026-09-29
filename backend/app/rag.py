@@ -254,7 +254,8 @@ def create_document(meta: dict[str, Any], file_name: str, data: bytes | Path, ac
             ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg"}.get(ext, "application/octet-stream")
     # supersede older revision of the same document number
     if meta.get("doc_number") and meta.get("status", "CURRENT") == "CURRENT":
-        for old in q("SELECT id, revision FROM documents WHERE doc_number=? AND status='CURRENT'", (meta["doc_number"],)):
+        for old in q("SELECT id, revision FROM documents WHERE doc_number=? AND status='CURRENT' AND department=?",
+                     (meta["doc_number"], meta.get("department"))):
             if str(old["revision"]) != str(meta.get("revision")) and str(old["revision"]) < str(meta.get("revision")):
                 ex("UPDATE documents SET status='SUPERSEDED' WHERE id=?", (old["id"],))
     ex("""INSERT INTO documents(id, title, doc_number, revision, status, doc_type, department, classification, effective_date,
@@ -349,13 +350,18 @@ def retrieve(subject: Subject, text: str, k: int = 8) -> dict[str, Any]:
         })
         if len(out) >= k:
             break
-    return {"sources": out, "denied": {"count": len(denied_docs), "departments": sorted({d["department"] for d in denied_docs.values()}),
-                                       "doc_types": sorted({d["doc_type"] for d in denied_docs.values()})},
+    denied_depts = sorted({d["department"] for d in denied_docs.values()}) if subject.clearance >= 1 else []
+    return {"sources": out, "denied": {"count": len(denied_docs), "departments": denied_depts, "doc_types": []},
             "tags": tags, "latency_ms": round((time.time() - t0) * 1000, 1)}
 
 
 # ------------------------------------------------------------------ dossier facts (KNOWN / MISSING / CONFLICTING)
 def dossier_facts(subject: Subject, tag: str) -> list[dict[str, Any]]:
+    from .scope import record_readable
+    asset = q1("SELECT * FROM assets WHERE tag=?", (tag,))
+    # structured plant records (asset master, CMMS, contacts) follow the same department / unit / clearance policy as documents
+    records_ok = record_readable(subject, asset)
+    wo_ok = record_readable(subject, asset, "work_order_export")
     rows = q("SELECT * FROM facts WHERE asset_tag=? ORDER BY slot, attribute", (tag,))
     groups: dict[tuple[str, str], list[dict[str, Any]]] = {}
     for r in rows:
@@ -363,16 +369,24 @@ def dossier_facts(subject: Subject, tag: str) -> list[dict[str, Any]]:
     facts: list[dict[str, Any]] = []
     for (slot, attr), cands in groups.items():
         visible = []
+        withheld = 0
         for c in cands:
             d = q1("SELECT * FROM documents WHERE doc_number=? AND revision=?", (c["source_doc_number"], c["revision"]))
-            if d and not can_read(subject, d, "cite"):
+            if (d and not can_read(subject, d, "cite")) or (not d and not records_ok):  # fail closed
+                withheld += 1
                 continue
             visible.append((c, d))
         vals = [(c, d) for c, d in visible if c["value"] not in (None, "", "null")]
         if not vals:
-            facts.append({"slot": slot, "attribute": attr, "value": None, "status": "MISSING", "candidates": [],
-                          "note": f"No authorised source holds '{attr}'. Expected in: " +
-                                  (", ".join(sorted({c['source_doc_number'] or c['source_kind'] for c in cands})) or "wiring diagram / asset master")})
+            named = sorted({c["source_doc_number"] or c["source_kind"] for c, _ in visible if c["source_doc_number"] or c["source_kind"]})
+            note = f"No authorised source holds '{attr}'."
+            if named:
+                note += " Expected in: " + ", ".join(named) + "."
+            if withheld:
+                note += f" {withheld} source(s) outside your access may hold it; you can request access."
+            elif not named:
+                note += " Expected in: wiring diagram / asset master."
+            facts.append({"slot": slot, "attribute": attr, "value": None, "status": "MISSING", "candidates": [], "note": note})
             continue
         norm = {re.sub(r"\s+", "", str(c["value"]).lower()) for c, _ in vals}
 
@@ -397,7 +411,7 @@ def dossier_facts(subject: Subject, tag: str) -> list[dict[str, Any]]:
         facts.append({"slot": slot, "attribute": attr, "value": f"{bc['value']}{(' ' + bc['unit']) if bc['unit'] else ''}",
                       "status": status, "candidates": cands_out, "note": note})
     # structured CMMS facts
-    wos = q("SELECT * FROM work_orders WHERE tag=? ORDER BY opened_at DESC", (tag,))
+    wos = q("SELECT * FROM work_orders WHERE tag=? ORDER BY opened_at DESC", (tag,)) if wo_ok else []
     if wos:
         open_ = [w for w in wos if w["status"] == "OPEN"]
         bd = [w for w in wos if w["type"] == "BD"]
@@ -409,7 +423,7 @@ def dossier_facts(subject: Subject, tag: str) -> list[dict[str, Any]]:
             causes[w["cause"] or w["failure_code"] or "?"] = causes.get(w["cause"] or w["failure_code"] or "?", 0) + 1
         facts.append({"slot": "history", "attribute": "breakdowns_5y", "value": f"{len(bd)} ({', '.join(f'{k}×{v}' for k, v in causes.items())})",
                       "status": "KNOWN", "candidates": [], "note": ""})
-    oc = q("SELECT * FROM contacts WHERE on_call=1 AND dept IN ('Electrical', 'Mechanical', 'Operations') ORDER BY dept")
+    oc = q("SELECT * FROM contacts WHERE on_call=1 AND dept IN ('Electrical', 'Mechanical', 'Operations') ORDER BY dept")         if records_ok and subject.clearance >= 1 else []
     if oc:
         facts.append({"slot": "contacts", "attribute": "on_call", "value": "; ".join(f"{c['name']} ({c['dept']}, ext {c['ext']})" for c in oc[:3]),
                       "status": "KNOWN", "candidates": [], "note": ""})

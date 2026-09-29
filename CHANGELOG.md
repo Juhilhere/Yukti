@@ -5,6 +5,25 @@ All notable changes to Yukti are documented here. The format follows [Keep a Cha
 
 ## [Unreleased]
 
+### Security
+- Department and rank scoping for all data, not only documents (`backend/app/scope.py`): assets, alerts, findings, audit log, asset-master
+  facts, CMMS work orders and on-call contacts. Dossier facts fail closed.
+- Grants carry a classification ceiling capped at the approver's clearance; the IT administrator can no longer approve business access or
+  read plant documents. Findings are approved only at RESTRICTED clearance or above.
+- Engine status and logs are administrator-only; employees get a reduced system view. Owner checks for jobs, chat stop and projects.
+- Content-Security-Policy and other security headers; optional HTTPS (`--tls-cert/--tls-key`, Secure cookie, HSTS).
+- llama-server runs with a random per-load API key on a random loopback port.
+- Ed25519-signed release manifest; the desktop app refuses unsigned or altered releases.
+- Production by default: demonstration mode needs a `DEMO_MODE` file or `YUKTI_TIER=demo`; otherwise seeded accounts must change passwords.
+- Disabling MFA needs a current authenticator or recovery code; administrators cannot change their own rank, roles or department.
+- Upload document types are validated (P&ID/SLD/work-order uploads now use the policy's type names); MSDS and contact lists are limited to
+  HSE and management.
+
+### Changed
+- Licence: Yukti Proprietary Licence (`LICENSE`) following the Smart India Hackathon IP rule.
+- Knowledge page opens on "My department"; the audit page explains department scope to HODs.
+- Chat requests are retried on the new engine if a reload or restart happens before the answer starts.
+
 ## [0.3.0] — 2026-09
 
 ### Added

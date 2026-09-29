@@ -67,7 +67,7 @@ def server_proc() -> psutil.Process | None:
     for p in psutil.process_iter(["name", "cmdline"]):
         try:
             cmd = " ".join(p.info["cmdline"] or [])
-            if "uvicorn" in cmd and "app.main:app" in cmd and "python" in (p.info["name"] or "").lower():
+            if (p.info["name"] or "").lower() == "yukti-server.exe" or ("uvicorn" in cmd and "app.main:app" in cmd and "python" in (p.info["name"] or "").lower()):
                 return p
         except Exception:  # noqa: BLE001
             pass

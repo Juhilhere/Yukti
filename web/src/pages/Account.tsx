@@ -99,6 +99,7 @@ function MfaCard() {
   const [codes, setCodes] = useState<string[] | null>(null);
   const [disableOpen, setDisableOpen] = useState(false);
   const [pw, setPw] = useState('');
+  const [offCode, setOffCode] = useState('');
 
   const start = useMutation({
     mutationFn: () => api.post<Enroll>('/api/auth/mfa/enroll', {}),
@@ -115,8 +116,8 @@ function MfaCard() {
     },
   });
   const disable = useMutation({
-    mutationFn: () => api.post<{ ok: boolean }>('/api/auth/mfa/disable', { password: pw }),
-    onSuccess: async () => { setDisableOpen(false); setPw(''); toast.success('MFA disabled'); await refresh(); },
+    mutationFn: () => api.post<{ ok: boolean }>('/api/auth/mfa/disable', { password: pw, code: offCode.trim() }),
+    onSuccess: async () => { setDisableOpen(false); setPw(''); setOffCode(''); toast.success('MFA disabled'); await refresh(); },
   });
 
   return (
@@ -163,7 +164,7 @@ function MfaCard() {
       ) : enabled ? (
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex-1 text-[12.5px] text-muted">Sign-in requires a code from your authenticator app in addition to your password.</div>
-          <button className="btn btn-danger btn-sm" onClick={() => { setPw(''); disable.reset(); setDisableOpen(true); }}><ShieldOff size={12} />Disable MFA</button>
+          <button className="btn btn-danger btn-sm" onClick={() => { setPw(''); setOffCode(''); disable.reset(); setDisableOpen(true); }}><ShieldOff size={12} />Disable MFA</button>
         </div>
       ) : (
         <div className="flex flex-wrap items-center gap-3">
@@ -176,13 +177,14 @@ function MfaCard() {
       <Modal open={disableOpen} onClose={() => setDisableOpen(false)} title="Disable MFA" width={400}
         footer={<>
           <button className="btn btn-ghost" onClick={() => setDisableOpen(false)}>{t('btn.cancel')}</button>
-          <button className="btn btn-danger" disabled={!pw || disable.isPending} onClick={() => disable.mutate()}>
+          <button className="btn btn-danger" disabled={!pw || !offCode.trim() || disable.isPending} onClick={() => disable.mutate()}>
             {disable.isPending ? <Spinner size={12} /> : <ShieldOff size={12} />}Disable
           </button>
         </>}>
         <div className="space-y-3">
-          <div className="text-[12.5px] text-muted">Confirm with your password. Your account will be protected by password only.</div>
+          <div className="text-[12.5px] text-muted">Confirm with your password and a current authenticator code (or a recovery code). Your account will be protected by password only.</div>
           <Field label={t('login.password')}><input autoFocus className="input" type="password" value={pw} onChange={(e) => setPw(e.target.value)} /></Field>
+          <Field label="Authenticator code"><input className="input font-mono" inputMode="numeric" autoComplete="one-time-code" value={offCode} onChange={(e) => setOffCode(e.target.value)} placeholder="6-digit code" /></Field>
           {disable.error ? <ErrorBox error={disable.error} /> : null}
         </div>
       </Modal>

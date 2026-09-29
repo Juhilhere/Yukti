@@ -8,6 +8,23 @@ import httpx
 B = "http://127.0.0.1:8000"
 FAILS: list[str] = []
 
+def wait_ready(timeout: float = 900) -> None:
+    """Block until /api/health reports ready (knowledge prepared and, if autoloaded, the model up)."""
+    end, last = time.time() + timeout, ""
+    while time.time() < end:
+        try:
+            h = httpx.get(B + "/api/health", timeout=5).json()
+            if h.get("ready"):
+                return
+            if h.get("stage") != last:
+                last = h.get("stage", "")
+                print(f"  waiting: {last} {h.get('progress') or ''}")
+        except Exception:  # noqa: BLE001
+            pass
+        time.sleep(2)
+    sys.exit("server did not become ready")
+
+
 
 def check(name: str, cond: bool, detail: object = "") -> None:
     print(("  PASS " if cond else "  FAIL ") + name + ("" if cond else f"  -> {str(detail)[:300]}"))
@@ -47,6 +64,7 @@ def ask(c: httpx.Client, text: str) -> tuple[dict, str]:
     return ev, "".join(toks)
 
 
+wait_ready()
 print("== admin basics")
 a = session("admin", "Admin@2026")
 check("admin login", a.last_login.status_code == 200, a.last_login.text)
@@ -97,7 +115,8 @@ check("login without totp -> mfa_required", session("admin", "Admin@2026").last_
 time.sleep(31)
 a2 = session("admin", "Admin@2026", pyotp.TOTP(en["secret"]).now())
 check("login with totp", a2.last_login.status_code == 200, a2.last_login.text)
-check("mfa disable", a2.post("/api/auth/mfa/disable", json={"password": "Admin@2026"}).status_code == 200)
+check("mfa disable needs a code", a2.post("/api/auth/mfa/disable", json={"password": "Admin@2026"}).status_code == 400)
+check("mfa disable with recovery code", a2.post("/api/auth/mfa/disable", json={"password": "Admin@2026", "code": ver.json()["recovery_codes"][0]}).status_code == 200)
 a = a2
 
 print("== AI settings (organisation-wide)")
@@ -136,14 +155,26 @@ check("anil now answered from audit", any(s["doc_number"] == "FIN-AUD-2026-Q2" f
 
 print("== findings workflow")
 sur = session("suresh.em", "Suresh@2026")
-f = sur.get("/api/findings").json()
-check("electrical manager: no approve on mechanical finding", f and "approve" not in f[0]["allowed_actions"], f[0]["allowed_actions"] if f else f)
+check("electrical HOD does not see mechanical findings", sur.get("/api/findings").json() == [])
 mee = session("meera.me", "Meera@2026")
 f = mee.get("/api/findings").json()[0]
-check("mechanical approver has approve/reject", {"approve", "reject"} <= set(f["allowed_actions"]), f["allowed_actions"])
+check("mechanical engineer: acknowledge/escalate/note, no approve", {"acknowledge", "escalate", "note"} <= set(f["allowed_actions"]) and "approve" not in f["allowed_actions"], f["allowed_actions"])
 check("note action", mee.post(f"/api/findings/{f['id']}/action", json={"action": "note", "note": "checked"}).status_code == 200)
-check("reject directly from PENDING", mee.post(f"/api/findings/{f['id']}/action", json={"action": "reject", "note": "re-measure"}).json().get("state") == "REJECTED")
-check("reject again not allowed", mee.post(f"/api/findings/{f['id']}/action", json={"action": "reject"}).status_code == 403)
+raj = session("rajesh.mm", "Rajesh@2026")
+f = raj.get("/api/findings").json()[0]
+check("mechanical HOD has approve/reject", {"approve", "reject"} <= set(f["allowed_actions"]), f["allowed_actions"])
+check("reject directly from PENDING", raj.post(f"/api/findings/{f['id']}/action", json={"action": "reject", "note": "re-measure"}).json().get("state") == "REJECTED")
+check("reject again not allowed", raj.post(f"/api/findings/{f['id']}/action", json={"action": "reject"}).status_code == 403)
+
+print("== department & rank scoping")
+check("employee cannot read engine logs", ravi.get("/api/server/logs").status_code == 403)
+check("employee cannot read engine status", ravi.get("/api/server/status").status_code == 403)
+con = session("contractor.x", "Vendor@2026")
+check("contractor sees only assigned unit assets", all(x["unit"] == "CDU-1" for x in con.get("/api/assets").json()))
+check("contractor gets no work orders", con.get("/api/assets/A2").json().get("work_orders") == [])
+check("HOD audit limited to department (no export)", sur.get("/api/audit/export").status_code == 403)
+check("IT admin cannot read finance audit", not any(d["doc_number"] == "FIN-AUD-2026-Q2" for d in a.get("/api/documents").json()))
+check("security headers", "default-src 'self'" in ravi.get("/api/health").headers.get("content-security-policy", ""))
 
 print("== guardrails")
 con = session("contractor.x", "Vendor@2026")
@@ -185,7 +216,7 @@ b = a.post("/api/admin/backups").json()
 check("backup created", b.get("size_bytes", 0) > 1000, b)
 check("backup listed", any(x["name"] == b["name"] for x in a.get("/api/admin/backups").json()))
 check("backup download", a.get(f"/api/admin/backups/{b['name']}/file").status_code == 200)
-check("audit export csv", a.get("/api/audit/export?format=csv").text.startswith("seq,"))
+check("audit export csv (org-wide roles)", a.get("/api/audit/export?format=csv").text.startswith("seq,"))
 check("audit chain verifies", a.get("/api/audit/verify").json().get("ok") is True)
 st = a.get("/api/laya/stats").json()
 check("laya: no hard-coded baseline before benchmark", st.get("benchmark") is None or st.get("baseline_llm_router_ms") is not None)

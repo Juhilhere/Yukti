@@ -39,10 +39,26 @@ async function freeBytes(dir) {
   } catch { return null; }
 }
 
-async function fetchManifest(url) {
+// When the app was built with the publisher's public key, the manifest must carry a valid Ed25519 signature
+// (manifest.json.sig, made by ops/sign-manifest.js). The manifest pins the SHA-256 of every file, so a verified
+// signature covers the whole download chain.
+async function fetchManifest(url, publicKey) {
   const r = await fetch(url, { cache: 'no-store' });
   if (!r.ok) throw new Error(`Cannot download manifest (${r.status}) from ${url}`);
-  const m = await r.json();
+  const raw = Buffer.from(await r.arrayBuffer());
+  if (publicKey) {
+    const sr = await fetch(url + '.sig', { cache: 'no-store' });
+    if (!sr.ok) throw new Error(`Release signature missing (${sr.status}) at ${url}.sig - refusing to install an unsigned release`);
+    const sig = Buffer.from((await sr.text()).trim(), 'base64');
+    let ok = false;
+    try {
+      const key = crypto.createPublicKey({ key: Buffer.from(publicKey, 'base64'), format: 'der', type: 'spki' });
+      ok = crypto.verify(null, raw, key, sig);
+    } catch { ok = false; }
+    if (!ok) throw new Error('Release signature is invalid - this download source is not signed by the Yukti publisher. Nothing was installed.');
+  }
+  let m;
+  try { m = JSON.parse(raw.toString('utf8')); } catch { throw new Error('Not a Yukti release manifest'); }
   if (!m || m.product !== 'yukti-server' || !Array.isArray(m.artifacts)) throw new Error('Not a Yukti release manifest');
   return m;
 }
@@ -73,46 +89,103 @@ async function extractZip(zip, into) {
   await run(fs.existsSync(tar) ? tar : 'tar', ['-xf', zip, '-C', into]);
 }
 
+function checkDest(dest) {
+  // Require a full absolute path (e.g. C:\Yukti\Server); reject drive-relative ("E:folder") or relative paths.
+  if (!/^[A-Za-z]:[\\/]/.test(String(dest || '')) && !String(dest || '').startsWith('\\\\')) {
+    throw new Error(`Install folder must be a full path such as C:\\Yukti\\Server (got "${dest}")`);
+  }
+}
+
+async function readState(dest) {
+  try { return JSON.parse(await fsp.readFile(path.join(dest, 'installed.json'), 'utf8')); } catch { return { version: null, artifacts: {} }; }
+}
+
+/**
+ * Work out what installing from a manifest means on this PC, without downloading anything.
+ * @param {object} o {manifestUrl | manifest, dest, forceGpu}
+ * @returns {Promise<{version, dest, nvidia, installed, artifacts:[{name,label,size,requires,needed,installed,partialBytes}],
+ *           todoCount, wantedCount, totalBytes, partialBytes, freeBytes, needBytes}>}
+ */
+async function plan(o) {
+  checkDest(o.dest);
+  const m = o.manifest || await fetchManifest(o.manifestUrl, o.publicKey);
+  const dest = path.resolve(o.dest);
+  const tmp = path.join(dest, '.download');
+  const nvidia = o.forceGpu !== undefined ? o.forceGpu : await hasNvidiaGpu();
+  const state = await readState(dest);
+  state.artifacts = state.artifacts || {};
+  const artifacts = [];
+  for (const a of m.artifacts) {
+    const needed = !(a.requires === 'nvidia' && !nvidia);
+    const installed = needed && state.artifacts[a.name] === a.sha256 && fs.existsSync(path.join(dest, a.check || a.dest));
+    let partialBytes = 0;
+    if (needed && !installed) {
+      for (let i = 0; i < (a.parts || []).length; i++) {
+        try { partialBytes += Math.min((await fsp.stat(path.join(tmp, `${a.name}.part${i}`))).size, a.parts[i].size); } catch { /* none */ }
+      }
+    }
+    artifacts.push({ name: a.name, label: a.label || a.name, size: a.size, requires: a.requires || null, needed, installed, partialBytes });
+  }
+  const todo = artifacts.filter((a) => a.needed && !a.installed);
+  const totalBytes = todo.reduce((s, a) => s + a.size, 0);
+  let probe = dest;
+  while (!fs.existsSync(probe) && path.dirname(probe) !== probe) probe = path.dirname(probe);
+  return {
+    manifest: m, version: m.version, dest, nvidia, installed: state.version ? state : null, artifacts,
+    todoCount: todo.length, wantedCount: artifacts.filter((a) => a.needed).length,
+    totalBytes, partialBytes: todo.reduce((s, a) => s + a.partialBytes, 0),
+    freeBytes: await freeBytes(probe), needBytes: Math.ceil(totalBytes * 2.1),
+  };
+}
+
 /**
  * Install or update the Yukti Server from a manifest.
- * @param {object} o {manifestUrl, dest, onProgress({phase, artifact, doneBytes, totalBytes, pct, message}), signal, forceGpu}
+ * @param {object} o {manifestUrl, publicKey (base64 SPKI; signature required when set), dest, onProgress(event), signal, forceGpu}
+ * Progress events: {phase:'manifest'|'plan'|'download'|'retry'|'verify'|'install'|'done', artifact, doneBytes, totalBytes, pct, message}
+ * plus per-component {phase:'artifact', artifact, state:'waiting'|'downloading'|'verifying'|'installing'|'installed'|'skipped'|'paused'|'error'}.
+ * 'download' events also carry artifactDone/artifactTotal, and partStart:true when a (possibly resumed) part begins.
  */
 async function install(o) {
   const report = (x) => o.onProgress && o.onProgress(x);
   report({ phase: 'manifest', message: `Reading release manifest from ${o.manifestUrl}` });
-  // Require a full absolute path (e.g. C:\Yukti\Server); reject drive-relative ("E:folder") or relative paths.
-  if (!/^[A-Za-z]:[\\/]/.test(String(o.dest || '')) && !String(o.dest || '').startsWith('\\\\')) {
-    throw new Error(`Install folder must be a full path such as C:\\Yukti\\Server (got "${o.dest}")`);
-  }
-  const m = await fetchManifest(o.manifestUrl);
+  checkDest(o.dest);
+  const m = await fetchManifest(o.manifestUrl, o.publicKey);
   const dest = path.resolve(o.dest);
   const tmp = path.join(dest, '.download');
   await fsp.mkdir(tmp, { recursive: true });
-  const nvidia = o.forceGpu !== undefined ? o.forceGpu : await hasNvidiaGpu();
+  const pl = await plan({ manifest: m, dest, forceGpu: o.forceGpu });
+  const nvidia = pl.nvidia;
   const stateFile = path.join(dest, 'installed.json');
-  let state = { version: null, artifacts: {} };
-  try { state = JSON.parse(await fsp.readFile(stateFile, 'utf8')); } catch { /* fresh */ }
+  const state = await readState(dest);
+  state.artifacts = state.artifacts || {};
 
+  const todoNames = new Set(pl.artifacts.filter((a) => a.needed && !a.installed).map((a) => a.name));
+  for (const a of pl.artifacts) report({ phase: 'artifact', artifact: a.name, state: !a.needed ? 'skipped' : a.installed ? 'installed' : 'waiting' });
   const wanted = m.artifacts.filter((a) => !(a.requires === 'nvidia' && !nvidia));
-  const todo = wanted.filter((a) => state.artifacts[a.name] !== a.sha256 || !fs.existsSync(path.join(dest, a.check || a.dest)));
-  const total = todo.reduce((s, a) => s + a.size, 0);
+  const todo = m.artifacts.filter((a) => todoNames.has(a.name));
+  const total = pl.totalBytes;
   report({ phase: 'plan', dest, message: `Yukti ${m.version} → ${dest}: ${todo.length} of ${wanted.length} components to download (${(total / 2 ** 30).toFixed(2)} GB)` +
     (nvidia ? ' · NVIDIA GPU detected (CUDA build)' : ' · no NVIDIA GPU (Vulkan/CPU build)'), totalBytes: total });
-  const free = await freeBytes(dest);
+  const free = pl.freeBytes;
   if (free !== null && free < total * 2.1) throw new Error(`Not enough disk space on ${path.parse(dest).root}: need ~${(total * 2.1 / 2 ** 30).toFixed(1)} GB, have ${(free / 2 ** 30).toFixed(1)} GB`);
 
   let completed = 0;   // bytes of verified parts
   let current = 0;     // bytes of the part being downloaded (incl. resumed bytes)
   let lastReport = 0;
-  const progress = (a, force) => {
+  let artDone = 0;     // verified bytes of the current artifact
+  const progress = (a, force, partStart) => {
     const now = Date.now();
     if (!force && now - lastReport < 250) return;
     lastReport = now;
     const d = completed + current;
-    report({ phase: 'download', artifact: a.name, doneBytes: d, totalBytes: total, pct: total ? Math.min(100, Math.round(100 * d / total)) : 100 });
+    report({ phase: 'download', artifact: a.name, doneBytes: d, totalBytes: total, pct: total ? Math.min(100, Math.round(100 * d / total)) : 100,
+      artifactDone: artDone + current, artifactTotal: a.size, ...(partStart ? { partStart: true } : {}) });
   };
   for (const a of todo) {
     const partFiles = [];
+    artDone = 0;
+    report({ phase: 'artifact', artifact: a.name, state: 'downloading' });
+    try {
     for (let i = 0; i < a.parts.length; i++) {
       const p = a.parts[i];
       const pf = path.join(tmp, `${a.name}.part${i}`);
@@ -121,11 +194,11 @@ async function install(o) {
       for (;;) {
         try {
           current = Math.min((await fsp.stat(pf).catch(() => ({ size: 0 }))).size, p.size);
-          progress(a, true);
+          progress(a, true, true);
           await downloadPart(resolveUrl(o.manifestUrl, p.url), pf, p.size, (n) => { current += n; progress(a); }, o.signal);
           const h = await sha256File(pf);
           if (h !== p.sha256.toUpperCase()) { await fsp.rm(pf, { force: true }); throw new Error(`Checksum mismatch in ${a.name} part ${i + 1}`); }
-          completed += p.size; current = 0; progress(a, true);
+          completed += p.size; artDone += p.size; current = 0; progress(a, true);
           break;
         } catch (e) {
           if (o.signal && o.signal.aborted) throw new Error('Installation cancelled — run Install again to resume');
@@ -136,6 +209,7 @@ async function install(o) {
       }
     }
     // join parts → verify whole artifact
+    report({ phase: 'artifact', artifact: a.name, state: 'verifying' });
     report({ phase: 'verify', artifact: a.name, message: `Verifying ${a.name}` });
     const whole = path.join(tmp, a.name + (a.kind === 'zip' ? '.zip' : ''));
     if (partFiles.length === 1) await fsp.rename(partFiles[0], whole);
@@ -148,6 +222,7 @@ async function install(o) {
     const h = await sha256File(whole);
     if (h !== a.sha256.toUpperCase()) { await fsp.rm(whole, { force: true }); throw new Error(`Checksum mismatch for ${a.name} — download corrupted, please retry`); }
     // install
+    report({ phase: 'artifact', artifact: a.name, state: 'installing' });
     report({ phase: 'install', artifact: a.name, message: `Installing ${a.name}` });
     if (a.kind === 'zip') {
       if (a.replace_dir) await fsp.rm(path.join(dest, a.replace_dir), { recursive: true, force: true });
@@ -161,6 +236,11 @@ async function install(o) {
     }
     state.artifacts[a.name] = a.sha256;
     await fsp.writeFile(stateFile, JSON.stringify(state, null, 2));
+    } catch (e) {
+      report({ phase: 'artifact', artifact: a.name, state: (o.signal && o.signal.aborted) ? 'paused' : 'error', message: e.message });
+      throw e;
+    }
+    report({ phase: 'artifact', artifact: a.name, state: 'installed' });
   }
   state.version = m.version;
   state.installed_at = new Date().toISOString();
@@ -176,4 +256,4 @@ async function installedVersion(dest) {
   try { return JSON.parse(await fsp.readFile(path.join(dest, 'installed.json'), 'utf8')); } catch { return null; }
 }
 
-module.exports = { install, fetchManifest, installedVersion, hasNvidiaGpu, sha256File };
+module.exports = { install, plan, fetchManifest, installedVersion, hasNvidiaGpu, freeBytes, sha256File };

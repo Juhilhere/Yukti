@@ -5,6 +5,7 @@ import asyncio
 import collections
 import json
 import re
+import secrets
 import subprocess
 import threading
 import time
@@ -14,6 +15,9 @@ from typing import Any, AsyncIterator
 import httpx
 
 from .config import BIONIC_URL, LLAMA_BINARIES, LLAMA_PORT, LLAMA_SERVER, LOG_DIR, MODELS_DIRS, VLLM_URL
+import socket
+
+import psutil
 from .db import q, q1, ex
 from .llm_params import llama_args, request_body
 
@@ -40,7 +44,100 @@ ENGINE_META = {
 DEFAULT_URLS = {"llamacpp": f"http://127.0.0.1:{LLAMA_PORT}/v1", "bionic": BIONIC_URL, "vllm": VLLM_URL, "remote": ""}
 
 
+def _free_port(start: int = LLAMA_PORT) -> int:
+    """First free TCP port on 127.0.0.1 from `start` (a leftover process may hold 8080)."""
+    for port in range(start, start + 50):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.bind(("127.0.0.1", port))
+                return port
+            except OSError:
+                continue
+    return start
+
+
+def cleanup_orphans() -> int:
+    """Kill llama-server processes started from Yukti's own binaries that are not ours (left over after a crash)."""
+    ours = {str(Path(b).resolve()).lower() for b in LLAMA_BINARIES.values() if b}
+    killed = 0
+    for p in psutil.process_iter(["name", "exe"]):
+        try:
+            exe = (p.info.get("exe") or "").lower()
+            if exe and exe in ours and (not state.proc or p.pid != state.proc.pid):
+                p.kill()
+                killed += 1
+        except Exception:
+            pass
+    if killed:
+        log(f"[engine] cleaned up {killed} leftover llama-server process(es)")
+    return killed
+
+
+# Windows job object: llama-server is killed automatically if the Yukti server process ever dies (even a hard kill).
+_JOB = None
+
+
+def _job_handle():
+    global _JOB
+    if _JOB is not None or not hasattr(__import__("ctypes"), "windll"):
+        return _JOB
+    try:
+        import ctypes
+        from ctypes import wintypes
+        k32 = ctypes.windll.kernel32
+
+        class BASIC(ctypes.Structure):
+            _fields_ = [("PerProcessUserTimeLimit", ctypes.c_int64), ("PerJobUserTimeLimit", ctypes.c_int64),
+                        ("LimitFlags", wintypes.DWORD), ("MinimumWorkingSetSize", ctypes.c_size_t),
+                        ("MaximumWorkingSetSize", ctypes.c_size_t), ("ActiveProcessLimit", wintypes.DWORD),
+                        ("Affinity", ctypes.c_size_t), ("PriorityClass", wintypes.DWORD), ("SchedulingClass", wintypes.DWORD)]
+
+        class IO(ctypes.Structure):
+            _fields_ = [(n, ctypes.c_uint64) for n in ("R", "W", "O", "RB", "WB", "OB")]
+
+        class EXT(ctypes.Structure):
+            _fields_ = [("BasicLimitInformation", BASIC), ("IoInfo", IO), ("ProcessMemoryLimit", ctypes.c_size_t),
+                        ("JobMemoryLimit", ctypes.c_size_t), ("PeakProcessMemoryUsed", ctypes.c_size_t),
+                        ("PeakJobMemoryUsed", ctypes.c_size_t)]
+
+        k32.CreateJobObjectW.restype = wintypes.HANDLE
+        job = k32.CreateJobObjectW(None, None)
+        info = EXT()
+        info.BasicLimitInformation.LimitFlags = 0x2000  # JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+        k32.SetInformationJobObject(job, 9, ctypes.byref(info), ctypes.sizeof(info))  # JobObjectExtendedLimitInformation
+        _JOB = job
+    except Exception as e:  # pragma: no cover
+        log(f"[engine] job object unavailable: {e!r}")
+        _JOB = 0
+    return _JOB
+
+
+def _attach_to_job(proc: subprocess.Popen) -> None:
+    try:
+        import ctypes
+        job = _job_handle()
+        if job:
+            ctypes.windll.kernel32.AssignProcessToJobObject(job, int(proc._handle))  # type: ignore[attr-defined]
+    except Exception as e:  # pragma: no cover
+        log(f"[engine] could not attach llama-server to job object: {e!r}")
+
+
+def redacted_command() -> str | None:
+    if not state.command:
+        return None
+    args = list(state.command)
+    if "--api-key" in args:
+        args[args.index("--api-key") + 1] = "<per-load key>"
+    return " ".join(args)
+
+
+def _llama_headers() -> dict[str, str]:
+    return {"Authorization": f"Bearer {state.api_key}"} if state.api_key else {}
+
+
 def engine_url(eid: str) -> tuple[str, str | None]:
+    if eid == "llamacpp":
+        return f"http://127.0.0.1:{state.port}/v1", state.api_key
     r = q1("SELECT base_url, api_key FROM engines WHERE id=?", (eid,))
     if r and r["base_url"]:
         return r["base_url"].rstrip("/"), r["api_key"]
@@ -188,12 +285,14 @@ class EngineState:
         self.last_load: tuple[str, str, dict[str, Any]] | None = None
         self.ready_proc: subprocess.Popen | None = None
         self.restarts: list[float] = []         # timestamps of automatic restarts (crash-loop guard)
+        self.port = LLAMA_PORT
+        self.api_key: str | None = None      # random per load; llama-server rejects requests without it
 
     def public(self) -> dict[str, Any]:
         return {"status": self.status, "engine": self.engine, "model_id": self.model_id, "model_name": self.model_name,
                 "load_config": self.load_config, "started_at": (time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(self.started_at)) if self.started_at else None), "error": self.error,
-                "port": LLAMA_PORT if self.engine == "llamacpp" else None,
-                "command": " ".join(self.command) if self.command else None, "last_stats": self.last_stats}
+                "port": self.port if self.engine == "llamacpp" else None,
+                "command": redacted_command(), "last_stats": self.last_stats}
 
 
 state = EngineState()
@@ -254,7 +353,7 @@ def _health_monitor() -> None:
             fails = 0
             continue
         try:
-            r = httpx.get(f"http://127.0.0.1:{LLAMA_PORT}/health", timeout=10)
+            r = httpx.get(f"http://127.0.0.1:{state.port}/health", timeout=10, headers=_llama_headers())
             fails = 0 if r.status_code == 200 else fails + 1
         except Exception:
             fails += 1
@@ -332,6 +431,11 @@ def load(engine: str, model_id: str, cfg: dict[str, Any], _auto: bool = False) -
         "--host", "127.0.0.1", "--port", str(LLAMA_PORT), "--alias", m["name"], "--no-webui", "--metrics",
         "--slot-save-path", str(LOG_DIR.parent / "slots"), "--offline"])]
     (LOG_DIR.parent / "slots").mkdir(exist_ok=True)
+    state.port = _free_port()
+    args[args.index("--port") + 1] = str(state.port)
+    state.api_key = secrets.token_urlsafe(24) if "--api-key" in supported_flags(binary) else None
+    if state.api_key:
+        args += ["--api-key", state.api_key]
     state.command = args
     state.model_id = model_id
     state.model_name = m["name"]
@@ -344,6 +448,7 @@ def load(engine: str, model_id: str, cfg: dict[str, Any], _auto: bool = False) -
         state.status = "error"
         state.error = str(e)
         return state.public()
+    _attach_to_job(state.proc)
     threading.Thread(target=_reader, args=(state.proc,), daemon=True).start()
 
     def wait_ready(proc: subprocess.Popen) -> None:
@@ -357,7 +462,7 @@ def load(engine: str, model_id: str, cfg: dict[str, Any], _auto: bool = False) -
                     state.error = "llama-server exited during load — see Developer logs (likely out of memory: lower context/GPU layers)."
                 return
             try:
-                r = httpx.get(f"http://127.0.0.1:{LLAMA_PORT}/health", timeout=1)
+                r = httpx.get(f"http://127.0.0.1:{state.port}/health", timeout=1, headers=_llama_headers())
                 if r.status_code == 200 and proc is state.proc:
                     state.status = "ready"
                     state.ready_proc = proc
@@ -404,19 +509,18 @@ async def stream_chat(messages: list[dict[str, Any]], pred: dict[str, Any]) -> A
     If the engine is switched or restarted before any text was produced (admin reload, watchdog restart),
     the request is transparently retried once on the new engine instead of failing the employee.
     """
-    for attempt in range(2):
-        proc_before = state.ready_proc
+    for attempt in range(3):
         produced = False
         retry = False
         async for ev in _stream_once(messages, pred):
             if ev["type"] in ("token", "reasoning"):
                 produced = True
-            if ev["type"] == "error" and not produced and attempt == 0 and ev.get("code") in ("engine_unreachable", "engine_error"):
-                await asyncio.sleep(1.0)
-                if state.status in ("loading", "restarting") or state.ready_proc is not proc_before:
-                    log("[chat] engine changed during request - retrying on the new engine")
-                    retry = True
-                    break
+            # nothing was produced yet, so a connection failure is always safe to retry (reload, restart, crash)
+            if ev["type"] == "error" and not produced and attempt < 2 and ev.get("code") in ("engine_unreachable", "engine_error"):
+                await asyncio.sleep(1.0 + attempt)
+                log("[chat] engine unavailable before the answer started - retrying")
+                retry = True
+                break
             if ev["type"] == "error" and produced:
                 ev = {**ev, "message": "The model was restarted or switched while answering. Please press Regenerate. (" + ev["message"] + ")"}
             yield ev

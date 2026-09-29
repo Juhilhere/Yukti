@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -25,12 +26,12 @@ ROLE_PERMS: dict[str, list[str]] = {
     "hse": ["findings.view"],
     "contractor": [],
     "dept_manager": ["access.approve", "findings.view", "findings.approve", "audit.view", "documents.upload"],
-    "plant_manager": ["access.approve", "findings.view", "findings.approve", "audit.view", "production.view"],
+    "plant_manager": ["access.approve", "findings.view", "findings.approve", "audit.view", "audit.export", "production.view"],
     "planner": ["production.view", "production.edit"],
-    "auditor": ["audit.view"],
+    "auditor": ["audit.view", "audit.export"],
     "approver:mechanical": ["findings.approve"],
     "approver:electrical": ["findings.approve"],
-    "admin": ["models.manage", "admin", "audit.view", "production.view", "production.edit", "findings.view",
+    "admin": ["models.manage", "admin", "audit.view", "audit.export", "production.view", "production.edit", "findings.view",
               "findings.approve", "access.approve", "developer", "users.manage", "ai.settings", "usage.view", "backup.manage"],
 }
 
@@ -199,7 +200,7 @@ def login(body: dict[str, Any], request: Request, response: Response) -> dict[st
         (now + timedelta(seconds=IDLE_TIMEOUT_S)).isoformat(timespec="seconds"),
         (now + timedelta(seconds=ABS_TIMEOUT_S)).isoformat(timespec="seconds")))
     ex("UPDATE users SET locked_until=NULL, last_login_at=? WHERE id=?", (now_iso(), u["id"]))
-    response.set_cookie(COOKIE, token, httponly=True, samesite="strict", secure=False, path="/", max_age=ABS_TIMEOUT_S)
+    response.set_cookie(COOKIE, token, httponly=True, samesite="strict", secure=os.environ.get("YUKTI_TLS") == "1", path="/", max_age=ABS_TIMEOUT_S)
     audit.write(u["username"], "auth.login.success", f"session:{sid}", {"ip": ip})
     s = q1("SELECT * FROM sessions WHERE id=?", (sid,))
     return me_payload(Ctx(u, s))
@@ -330,6 +331,8 @@ def mfa_disable(body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str, 
         ph.verify(ctx.user["password_hash"], str(body.get("password", "")))
     except VerifyMismatchError:
         raise err(400, "bad_password", "Password is incorrect.")
+    if ctx.user.get("mfa_enabled") and not _verify_totp(ctx.user, str(body.get("code", "")).strip()):
+        raise err(400, "bad_code", "Enter the current code from your authenticator app (or a recovery code).")
     ex("UPDATE users SET mfa_enabled=0, mfa_secret=NULL, recovery_json=NULL WHERE id=?", (ctx.user["id"],))
     audit.write(ctx.actor, "auth.mfa.disabled", f"user:{ctx.actor}")
     return {"ok": True}

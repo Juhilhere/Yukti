@@ -7,6 +7,7 @@ $root = Split-Path -Parent $PSScriptRoot
 $env:UV_CACHE_DIR = "E:\uvcache"; $env:PYTHONIOENCODING = "utf-8"
 $bind = if ($Lan) { "0.0.0.0" } else { "127.0.0.1" }
 Set-Location "$root\backend"
+if (-not $env:YUKTI_TIER) { $env:YUKTI_TIER = "demo" }   # developer/demo launcher: sample accounts on the login page
 Start-Process -WindowStyle Minimized -FilePath "uv" -ArgumentList "run", "uvicorn", "app.main:app", "--host", $bind, "--port", "8000" `
   -RedirectStandardOutput "$root\data\store\logs\api.log" -RedirectStandardError "$root\data\store\logs\api.err.log"
 Write-Host "Yukti server starting on $($bind):8000"

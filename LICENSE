@@ -1,0 +1,81 @@
+YUKTI PROPRIETARY LICENCE
+Version 1.0 — 2026
+
+Yukti — Sovereign Industrial AI Workbench
+Copyright (c) 2026 Team UniMinds (Juhil Modi, Saswata Das, Harshit Tiwari, Rohan Jangam, Ritesh Prajapati,
+Sanskriti). All rights reserved.
+
+This software was developed for Smart India Hackathon 2026, problem statement SIH26117, posed by Mangalore
+Refinery and Petrochemicals Limited (MRPL).
+
+
+1. OWNERSHIP
+
+   The software, its source code, object code, installers, models trained by the team (including the Laya
+   intent router), user interface, documentation and associated material (together, "the Software") are
+   the intellectual property of Team UniMinds. This follows the Smart India Hackathon rule that "the
+   Intellectual Property (IP) of the solution resides with the students who have developed and deployed
+   the solution" (https://www.sih.gov.in/projectImplementation). No ownership is transferred by this
+   licence.
+
+
+2. LICENCE TO THE CONCERNED ORGANISATION (MRPL AND ITS MINISTRY)
+
+   In accordance with the Smart India Hackathon rule that "the concerned ministry will have lifetime access
+   to the solution for free", Team UniMinds grants to
+
+     (a) Mangalore Refinery and Petrochemicals Limited (MRPL), and
+     (b) the Ministry of Petroleum and Natural Gas, Government of India, as the concerned ministry,
+
+   a perpetual, royalty-free, non-exclusive, non-transferable licence to install, run, use and configure
+   the Software, and to modify it for their own internal use, on systems they own or control. This
+   licence does not permit them to sell, sublicense, publish or distribute the Software, or modified
+   versions of it, to any third party.
+
+
+3. LICENCE TO THE HACKATHON ORGANISERS
+
+   The Ministry of Education's Innovation Cell, AICTE, the Smart India Hackathon organisers and the
+   evaluators and jury they appoint may install, run and examine the Software solely to evaluate,
+   judge, mentor and showcase the Smart India Hackathon. This licence ends when that purpose ends.
+
+
+4. EVERYONE ELSE
+
+   No other person or organisation, including other government departments, public sector undertakings,
+   companies, institutions and individuals, may use, copy, modify, distribute, sublicense, sell, host,
+   reverse engineer or create derivative works of the Software, in whole or in part, without the prior
+   written permission of Team UniMinds. Requests: juhilprogramming@gmail.com
+
+
+5. CONFIDENTIALITY OF DEPLOYED DATA
+
+   Documents, user records, chats, audit logs and any other data that a licensee loads into or generates
+   with the Software belong to that licensee. Team UniMinds receives none of it: the Software runs fully
+   offline and sends no telemetry.
+
+
+6. THIRD-PARTY COMPONENTS
+
+   The Software includes open-source components and an open-weight language model that are licensed by
+   their own authors under their own terms (listed in THIRD_PARTY_NOTICES.md). Those terms apply to those
+   components and are not restricted or replaced by this licence.
+
+
+7. NO WARRANTY; LIMITATION OF LIABILITY
+
+   The Software is a hackathon prototype. It is provided "AS IS", without warranty of any kind, express or
+   implied, including fitness for a particular purpose. Outputs of the AI assistant are advisory and must
+   be verified by a competent person before any action on plant equipment. To the maximum extent
+   permitted by law, Team UniMinds shall not be liable for any damage arising from use of the Software.
+
+
+8. TERMINATION
+
+   Any use outside the licences above is unauthorised and automatically ends any permission granted to the
+   person or organisation concerned. Sections 1, 5, 6 and 7 survive termination.
+
+
+9. GOVERNING LAW
+
+   This licence is governed by the laws of India.

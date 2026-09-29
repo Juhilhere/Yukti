@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Activity, FileCode2, Gauge, Sparkles, Timer } from 'lucide-react';
+import { Activity, FileCode2, Gauge, ShieldQuestion, Sparkles, Timer } from 'lucide-react';
 import { api } from '../../lib/api';
 import type { LayaBenchmark, LayaStats, PolicyDoc, RouteDecision } from '../../lib/types';
 import { fmtTime, num } from '../../lib/format';
@@ -118,10 +118,56 @@ function LayaCard() {
   );
 }
 
+type SimUser = { username: string; display_name: string; department: string; clearance_label: string };
+type SimDoc = { id: string; title: string; doc_number: string | null; department: string; classification: string };
+type SimResult = { effect: string; matched: string[]; reason: string };
+
+/** "Could user X do action Y on document Z?" — runs the real policy engine without granting anything. */
+function SimulateCard() {
+  const users = useQuery({ queryKey: ['admin', 'users'], queryFn: () => api.get<SimUser[]>('/api/admin/users') });
+  const docs = useQuery({ queryKey: ['admin', 'policy-docs'], queryFn: () => api.get<SimDoc[]>('/api/admin/policies/documents') });
+  const [username, setUsername] = useState('');
+  const [docId, setDocId] = useState('');
+  const [action, setAction] = useState('read');
+  const sim = useMutation({ mutationFn: () => api.post<SimResult>('/api/admin/policies/simulate', { username, document_id: docId, action }) });
+  const ok = sim.data?.effect === 'allow';
+  return (
+    <Card title="Simulate an access decision" icon={<ShieldQuestion size={14} className="text-cyan" />}>
+      <div className="space-y-3">
+        <div className="text-[12px] text-muted">Checks what the policy engine would decide for a user, document and action. Nothing is granted and nothing changes; the check is audited.</div>
+        <div className="grid gap-2 md:grid-cols-[1fr_1.4fr_140px_auto]">
+          <select className="input" value={username} onChange={(e) => { setUsername(e.target.value); sim.reset(); }}>
+            <option value="">Select employee…</option>
+            {(users.data ?? []).map((u) => <option key={u.username} value={u.username}>{u.display_name} · {u.department} · {u.clearance_label}</option>)}
+          </select>
+          <select className="input" value={docId} onChange={(e) => { setDocId(e.target.value); sim.reset(); }}>
+            <option value="">Select document…</option>
+            {(docs.data ?? []).map((d) => <option key={d.id} value={d.id}>{d.doc_number ? `${d.doc_number} · ` : ''}{d.title} ({d.department}, {d.classification})</option>)}
+          </select>
+          <select className="input" value={action} onChange={(e) => { setAction(e.target.value); sim.reset(); }}>
+            {['read', 'search', 'cite', 'download'].map((a) => <option key={a} value={a}>{a}</option>)}
+          </select>
+          <button className="btn btn-sm btn-cyan" disabled={!username || !docId || sim.isPending} onClick={() => sim.mutate()}>
+            {sim.isPending ? <Spinner size={12} /> : <ShieldQuestion size={12} />}Simulate
+          </button>
+        </div>
+        {sim.error ? <ErrorBox error={sim.error} /> : null}
+        {sim.data && (
+          <div className={`rounded-md border px-3 py-2 text-[12.5px] ${ok ? 'border-green-400/40 bg-green-400/10 text-green-300' : 'border-danger/50 bg-danger/10 text-red-300'}`}>
+            <b className="uppercase">{sim.data.effect}</b> — {sim.data.reason}
+            <div className="mt-1 font-mono text-[11px] text-muted">rules: {sim.data.matched.join(', ') || '—'}</div>
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+}
+
 export default function PoliciesLaya() {
   return (
     <div className="space-y-4 p-5">
       <LayaCard />
+      <SimulateCard />
       <PolicyCard />
     </div>
   );

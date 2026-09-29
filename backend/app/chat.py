@@ -158,8 +158,9 @@ async def run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | No
                          f"{s['_text'][:1400]}\n</doc>")
         ctx_block = "CONTEXT:\n" + ("\n".join(parts) if parts else "(no authorised documents matched)")
         if ret["denied"]["count"]:
-            ctx_block += (f"\n\nNOTE: {ret['denied']['count']} relevant document(s) exist but are withheld by access policy "
-                          f"(departments: {', '.join(ret['denied']['departments'])}). Tell the user they can request access; do not guess their content.")
+            held = f" (departments: {', '.join(ret['denied']['departments'])})" if ret["denied"]["departments"] else ""
+            ctx_block += (f"\n\nNOTE: {ret['denied']['count']} relevant document(s) exist but are withheld by access policy"
+                          f"{held}. Tell the user they can request access; do not guess their content.")
         if facts:
             ctx_block += "\n\nFACTS (structured, verified plant/public records — quote values verbatim and cite their [F#] id):\n" + _facts_block(facts)
 

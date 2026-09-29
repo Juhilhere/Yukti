@@ -3,6 +3,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { CheckCircle2, ChevronDown, ChevronRight, Download, RefreshCw, ScrollText, Search, ShieldCheck, XCircle } from 'lucide-react';
 import { api, downloadFile, errMsg, qs } from '../lib/api';
 import { useT } from '../lib/i18n';
+import { useAuth } from '../lib/auth';
 import { toast } from '../components/Toast';
 import type { AuditRecord, AuditVerify } from '../lib/types';
 import { fmtTime, num } from '../lib/format';
@@ -49,6 +50,8 @@ function Row({ r }: { r: AuditRecord }) {
 }
 
 export default function Audit() {
+  const { can, me } = useAuth();
+  const orgWide = can('audit.export');
   const [event, setEvent] = useState('');
   const [text, setText] = useState('');
   const q = useQuery({ queryKey: ['audit', event], queryFn: () => api.get<AuditRecord[]>(`/api/audit${qs({ limit: 200, event })}`) });
@@ -75,13 +78,18 @@ export default function Audit() {
       <PageHeader title={t('page.audit')} icon={<ScrollText size={18} />} subtitle="Hash-chained, tamper-evident record of every decision"
         actions={<>
           <button className="btn btn-sm" onClick={() => q.refetch()}><RefreshCw size={12} className={q.isFetching ? 'animate-spin' : ''} />{t('btn.refresh')}</button>
-          <button className="btn btn-sm" onClick={() => void exp('csv')}><Download size={12} />CSV</button>
-          <button className="btn btn-sm" onClick={() => void exp('jsonl')}><Download size={12} />JSONL</button>
+          {orgWide && <button className="btn btn-sm" onClick={() => void exp('csv')}><Download size={12} />CSV</button>}
+          {orgWide && <button className="btn btn-sm" onClick={() => void exp('jsonl')}><Download size={12} />JSONL</button>}
           <button className="btn btn-cyan btn-sm" disabled={verify.isPending} onClick={() => verify.mutate()}>
             {verify.isPending ? <Spinner size={12} /> : <ShieldCheck size={12} />}Verify chain
           </button>
         </>} />
       <div className="space-y-3 p-5">
+        {!orgWide && (
+          <div className="rounded-md border border-border bg-surface px-3 py-2 text-[12px] text-muted">
+            Showing activity of people in your department ({me?.user.department}). The plant-wide trail and exports are available to Internal Audit and refinery management.
+          </div>
+        )}
         {verify.error && <ErrorBox error={verify.error} />}
         {v && (v.ok ? (
           <div className="flex items-center gap-2 rounded-md border border-ok/40 bg-ok/10 px-3 py-2">

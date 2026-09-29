@@ -54,7 +54,9 @@ def load() -> dict[str, Any]:
 
 def _approver_username(name: str, group: str) -> str:
     n = f"{name} {group}".lower()
-    if re.search(r"financ|account|treasur|audit|tax|investor|secretar", n):
+    if re.search(r"audit|vigilance", n):  # independent functions never report to the departments they check
+        return "ramesh.pm"
+    if re.search(r"financ|account|treasur|tax|investor|secretar", n):
         return "kavita.fm"
     if re.search(r"electric|instrument", n):
         return "suresh.em"

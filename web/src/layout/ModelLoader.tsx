@@ -219,6 +219,7 @@ export function ModelLoader() {
                     onChange={(k, v) => setCfg((c) => { const n = { ...c }; if (v === undefined) delete n[k]; else n[k] = v; return n; })} />
                 </div>
               )}
+              {schema.data && selected && <CommandPreview modelId={selected} cfg={diffFromDefaults(schema.data.load, cfg)} />}
             </div>
           )}
         </div>
@@ -234,5 +235,39 @@ export function ModelLoader() {
         {err && errMsg(err).includes('insufficient') ? <div className="text-[12px] text-muted">Tip: reduce GPU offload layers or context length.</div> : null}
       </div>
     </Modal>
+  );
+}
+
+/** Shows the exact engine command the current configuration produces (llama.cpp here, vLLM for the plant GPU server). */
+function CommandPreview({ modelId, cfg }: { modelId: string; cfg: Record<string, unknown> }) {
+  const [open, setOpen] = useState(false);
+  const [data, setData] = useState<{ llamacpp: string; vllm: string } | null>(null);
+  const [error, setError] = useState<unknown>(null);
+  useEffect(() => {
+    if (!open) return;
+    let alive = true;
+    api.post<{ llamacpp: string; vllm: string }>('/api/models/command-preview', { model_id: modelId, load_config: cfg })
+      .then((r) => { if (alive) { setData(r); setError(null); } }, (e) => { if (alive) setError(e); });
+    return () => { alive = false; };
+  }, [open, modelId, JSON.stringify(cfg)]); // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <div className="mt-3 rounded-md border border-border">
+      <button className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px]" onClick={() => setOpen((o) => !o)}>
+        {open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}<span className="font-medium">Command preview</span>
+        <span className="text-muted">exact engine command for this configuration</span>
+      </button>
+      {open && (
+        <div className="space-y-2 border-t border-border p-3">
+          {error ? <ErrorBox error={error} /> : !data ? <div className="flex items-center gap-2 text-muted"><Spinner /> Building…</div> : (
+            <>
+              <div className="label">llama.cpp (this server)</div>
+              <pre className="max-h-[140px] overflow-auto whitespace-pre-wrap break-all rounded bg-bg p-2 font-mono text-[11px] text-text/90">{data.llamacpp}</pre>
+              <div className="label">vLLM equivalent (plant GPU server)</div>
+              <pre className="max-h-[140px] overflow-auto whitespace-pre-wrap break-all rounded bg-bg p-2 font-mono text-[11px] text-text/90">{data.vllm}</pre>
+            </>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

@@ -19,4 +19,19 @@ Run
   Employees install Yukti-Setup-0.3.0.exe and connect to http://<server>:8000
 
 First start creates data\store\ (database, documents, logs, backups) and loads the default model on the GPU.
+
+Demonstration mode vs production
+  If a file named DEMO_MODE is present in this folder, Yukti runs in demonstration mode: the login page lists the
+  sample accounts (Team UniMinds personas, e.g. admin / Admin@2026) and Admin > Backup offers "Reset demonstration state".
+  For production use, DELETE the DEMO_MODE file before the first start: every seeded account must then change its
+  password at first login, and no passwords are shown anywhere.
+
+Security
+  Fully offline: an egress guard blocks every outbound connection except the local AI engine; the UI has a strict
+  Content-Security-Policy. The local AI engine (llama-server) listens on 127.0.0.1 only, on a random port, with a
+  random per-load key. Access follows department, clearance (rank), assigned plant units and time-bound grants;
+  every decision is written to the hash-chained audit log.
+  On the plant LAN, serve HTTPS with your organisation's certificate:
+    yukti-server.exe --host 0.0.0.0 --port 8443 --tls-cert C:\certs\yukti.pem --tls-key C:\certs\yukti.key
+  (the session cookie is then marked Secure). Clients must trust the certificate's issuing CA.
 Only Heads of Department can add documents, and only for their own department. Administrators manage users, models and AI settings.

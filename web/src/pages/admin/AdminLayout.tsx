@@ -13,7 +13,7 @@ export const ADMIN_TABS: { to: string; label: string; perm: string | string[] }[
   { to: 'ai', label: 'AI settings', perm: 'ai.settings' },
   { to: 'usage', label: 'Usage & health', perm: 'usage.view' },
   { to: 'feedback', label: 'Feedback', perm: 'usage.view' },
-  { to: 'backup', label: 'Backup & export', perm: ['backup.manage', 'audit.view'] },
+  { to: 'backup', label: 'Backup & export', perm: ['backup.manage', 'audit.export'] },
   { to: 'policies', label: 'Policies & Laya', perm: 'admin' },
   { to: 'models', label: 'Models', perm: 'models.manage' },
   { to: 'developer', label: 'Developer', perm: 'developer' },

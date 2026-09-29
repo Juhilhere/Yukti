@@ -3,50 +3,76 @@
 <head>
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file:; style-src 'self'; script-src 'self'">
-<title>Set up Yukti</title>
+<title>Yukti</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="brand">
-    <img src="../../build/icon.png" alt="">
+<main class="wrap">
+  <header class="brand">
+    <img src="../../build/icon.png" alt="Yukti">
     <div><h1>Set up Yukti</h1><small>Sovereign Industrial AI Workbench · <span id="ver"></span></small></div>
-  </div>
+    <span class="spacer"></span>
+    <button id="back" class="ghost hidden">&larr; Back to Yukti</button>
+  </header>
 
-  <div class="opt" id="opt-install" data-mode="install">
-    <h2><input type="radio" name="mode" value="install" id="r-install"> Install Yukti on this PC</h2>
-    <p>Downloads the Yukti AI server, runtime and model from your organisation's website (resumable, every file SHA-256 verified), then runs fully offline.</p>
-    <div class="row"><label class="lbl">Install folder</label><input type="text" id="dest" spellcheck="false"><button id="browse-dest">Browse…</button></div>
-    <details><summary>Download source</summary><div class="row"><input type="text" id="manifest" spellcheck="false"></div></details>
-    <div class="state" id="inst-state"></div>
-    <div class="bar" id="bar" hidden><div id="bar-fill"></div></div>
-    <div class="msg" id="inst-msg"></div>
-  </div>
+  <div id="notice" class="banner warn hidden"></div>
 
-  <div class="opt" id="opt-remote" data-mode="remote">
-    <h2><input type="radio" name="mode" value="remote" id="r-remote"> Connect to our plant Yukti server</h2>
-    <p>For employee PCs when your organisation runs Yukti on a central GPU server.</p>
-    <div class="row">
-      <input type="text" id="url" spellcheck="false" placeholder="http://yukti.plant.local:8000">
-      <button id="test">Test connection</button>
+  <section class="opts">
+    <div class="opt" id="opt-install" data-mode="install">
+      <h2><input type="radio" name="mode" value="install" id="r-install"> Install Yukti on this PC <span class="tag hidden" id="inst-tag"></span></h2>
+      <p>Downloads the Yukti AI server, runtime and model from your organisation's website (resumable, every file SHA-256 verified), then runs fully offline.</p>
+      <div class="body">
+        <div class="row"><label class="lbl" for="dest">Install folder</label><input type="text" id="dest" spellcheck="false"><button id="browse-dest">Browse…</button></div>
+        <details class="src" id="src-det"><summary>Download source</summary><div class="row"><input type="text" id="manifest" spellcheck="false" placeholder="https://…/manifest.json"></div></details>
+        <div class="summary" id="plan-summary"></div>
+        <ul class="checklist" id="checklist"></ul>
+        <div class="banner warn hidden" id="disk-warn"></div>
+        <div class="progress hidden" id="progress">
+          <div class="bar" id="bar"><div id="bar-fill"></div></div>
+          <div class="stats"><span id="p-left"></span><span id="p-right"></span></div>
+        </div>
+        <div class="msg" id="inst-msg"></div>
+        <div class="errpanel hidden" id="inst-err">
+          <h3>Installation stopped</h3>
+          <div class="text" id="inst-err-text"></div>
+          <div class="actions"><button class="primary" id="retry">Retry</button><button id="inst-logs">Open log folder</button></div>
+        </div>
+      </div>
     </div>
-    <div class="msg" id="test-msg"></div>
-  </div>
 
-  <div class="opt" id="opt-local" data-mode="local">
-    <h2><input type="radio" name="mode" value="local" id="r-local"> Use an existing Yukti Server folder</h2>
-    <p>If Yukti Server was delivered on disk/USB. Starts it on 127.0.0.1:8000 and stops it when you quit.</p>
-    <div class="row">
-      <input type="text" id="root" spellcheck="false" placeholder="C:\Yukti-Server">
-      <button id="browse">Browse…</button>
+    <div class="opt" id="opt-remote" data-mode="remote">
+      <h2><input type="radio" name="mode" value="remote" id="r-remote"> Connect to our plant Yukti server</h2>
+      <p>For employee PCs when your organisation runs Yukti on a central GPU server.</p>
+      <div class="body">
+        <div class="row">
+          <input type="text" id="url" spellcheck="false" placeholder="http://yukti.plant.local:8000">
+          <button id="test">Test connection</button>
+        </div>
+        <div class="msg" id="test-msg"></div>
+      </div>
     </div>
-  </div>
+
+    <div class="opt" id="opt-local" data-mode="local">
+      <h2><input type="radio" name="mode" value="local" id="r-local"> Use an existing Yukti Server folder</h2>
+      <p>If Yukti Server was delivered on disk/USB. Starts it on this PC and stops it when you quit.</p>
+      <div class="body">
+        <div class="row">
+          <input type="text" id="root" spellcheck="false" placeholder="C:\Yukti-Server">
+          <button id="browse">Browse…</button>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <div class="msg" id="go-msg"></div>
-  <div class="foot">
+  <footer class="foot">
     <span>Settings are stored locally. No telemetry.</span>
-    <button id="cancel" hidden>Cancel</button>
-    <button class="primary" id="go">Install</button>
-  </div>
+    <span class="actions">
+      <button id="pause" class="hidden">Pause</button>
+      <button class="primary" id="go">Continue</button>
+    </span>
+  </footer>
+</main>
 <script src="connect.js"></script>
 </body>
 </html>

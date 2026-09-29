@@ -1,17 +1,31 @@
-// Preload for the local Setup + Splash windows only (never for the remote server page).
+// Preload for the main window. The same window shows local pages (setup / install / startup, loaded from file://)
+// and later the Yukti web app from the server. The bridge is exposed ONLY on the local file:// pages — the remote
+// server page gets no IPC access at all (main.js additionally rejects IPC from any non-file:// frame).
 'use strict';
 const { contextBridge, ipcRenderer } = require('electron');
 
-contextBridge.exposeInMainWorld('yukti', {
-  getConfig: () => ipcRenderer.invoke('yukti:getConfig'),
-  test: (url) => ipcRenderer.invoke('yukti:test', url),
-  browseRoot: () => ipcRenderer.invoke('yukti:browseRoot'),
-  connect: (req) => ipcRenderer.invoke('yukti:connect', req),
-  installInfo: () => ipcRenderer.invoke('yukti:installInfo'),
-  install: (req) => ipcRenderer.invoke('yukti:install', req),
-  cancelInstall: () => ipcRenderer.invoke('yukti:cancelInstall'),
-  onInstallProgress: (fn) => ipcRenderer.on('install:progress', (_e, p) => fn(p)),
-  splashAction: (a) => ipcRenderer.invoke('yukti:splashAction', a),
-  onLog: (fn) => ipcRenderer.on('splash:log', (_e, line) => fn(line)),
-  onStatus: (fn) => ipcRenderer.on('splash:status', (_e, s) => fn(s)),
-});
+if (location.protocol === 'file:') {
+  const on = (ch) => (fn) => {
+    const h = (_e, v) => fn(v);
+    ipcRenderer.on(ch, h);
+    return () => ipcRenderer.removeListener(ch, h);
+  };
+  contextBridge.exposeInMainWorld('yukti', {
+    // setup page
+    getConfig: () => ipcRenderer.invoke('yukti:getConfig'),
+    test: (url) => ipcRenderer.invoke('yukti:test', url),
+    browseRoot: () => ipcRenderer.invoke('yukti:browseRoot'),
+    connect: (req) => ipcRenderer.invoke('yukti:connect', req),
+    plan: (req) => ipcRenderer.invoke('yukti:plan', req),
+    install: (req) => ipcRenderer.invoke('yukti:install', req),
+    cancelInstall: () => ipcRenderer.invoke('yukti:cancelInstall'),
+    back: () => ipcRenderer.invoke('yukti:back'),
+    openLogs: (which) => ipcRenderer.invoke('yukti:openLogs', which),
+    onInstallProgress: on('install:progress'),
+    // startup page
+    splashInit: () => ipcRenderer.invoke('yukti:splashInit'),
+    splashAction: (a) => ipcRenderer.invoke('yukti:splashAction', a),
+    onLog: on('splash:log'),
+    onStatus: on('splash:status'),
+  });
+}

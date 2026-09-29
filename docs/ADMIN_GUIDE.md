@@ -5,7 +5,7 @@ Head of Department of each department. Installation is covered in [DEPLOYMENT.md
 
 ## First steps after installation
 
-1. Start the server with `YUKTI_TIER=prod` (see [DEPLOYMENT.md §2](DEPLOYMENT.md#environment-variables)) so demo passwords are not shown.
+1. Make sure there is **no `DEMO_MODE` file** in the install folder (and `YUKTI_TIER` is not `demo`) before the first start, so no passwords are shown and every seeded account must change its password.
 2. Sign in as `admin`. Change the password and turn on MFA under **Account & security**.
 3. Go to **Admin → Users**. Disable the demo accounts and import your real users (below).
 4. Go to **Admin → Models** and **Admin → AI settings**. Confirm the default model loads and set the organisation defaults.
@@ -95,5 +95,5 @@ externally at regular intervals if you need proof that the log was not edited.
 
 ## Rehearsal reset
 
-`POST /api/admin/demo/reset` revokes all grants, clears access requests and sets findings back to PENDING, so a demonstration can be run again.
+`POST /api/admin/demo/reset` (demonstration mode only) revokes all grants, clears access requests and sets findings back to PENDING, so a demonstration can be run again.
 For a full reset, see [DEPLOYMENT.md §8](DEPLOYMENT.md#8-reset).

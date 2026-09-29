@@ -20,6 +20,7 @@ from fastapi.staticfiles import StaticFiles
 from . import admin, audit, chat, engine, laya, mrpl, production, rag, seed
 from .auth import Ctx, current, err, notify, router as auth_router, user_by_id
 from .config import CLEARANCE_LABELS, CLEARANCE_BY_LABEL, DEMO_MODE, REPORTS, VERSION, WEB_DIST
+from . import scope
 from .db import ex, init_db, j, new_id, now_iso, q, q1, uj
 from .llm_params import DEFAULT_PREDICTION, schema, vllm_command
 from .policy import pdp
@@ -55,6 +56,9 @@ def _guard_gai(host, *a, **k):  # type: ignore[no-untyped-def]
 
 
 def install_guard() -> None:
+    bind = os.environ.get("YUKTI_HOST", "")
+    if bind:
+        _ALLOWED_HOSTS.add(bind)
     for r in q("SELECT base_url FROM engines WHERE base_url IS NOT NULL AND base_url != ''"):
         h = urlparse(r["base_url"]).hostname
         if h:
@@ -63,19 +67,39 @@ def install_guard() -> None:
     socket.getaddrinfo = _guard_gai  # type: ignore[assignment]
 
 
+STARTUP: dict[str, Any] = {"stage": "Starting", "done": 0, "total": 0, "knowledge_ready": False, "error": None}
+
+
+def _prepare_knowledge() -> None:
+    """First-start preparation (OCR of example documents, public MRPL briefings) runs in the background so the
+    server answers immediately and clients can show real progress. Resumable if interrupted."""
+    try:
+        def prog(done: int, total: int, title: str) -> None:
+            STARTUP.update(stage=f"Preparing knowledge base ({done + 1}/{total + 4})", done=done, total=total + 4)
+        seed.ingest_examples(prog)
+        seed.seed_workflows()
+        STARTUP.update(stage="Loading MRPL public information", done=STARTUP["total"] - 4)
+        mrpl.ensure_public_docs()
+        seed.refresh_alert_notifications()
+        STARTUP.update(stage="Knowledge base ready", done=STARTUP["total"], knowledge_ready=True)
+    except Exception as e:  # pragma: no cover
+        STARTUP.update(error=f"Knowledge preparation failed: {e!r}", knowledge_ready=True)
+        engine.log("[startup] " + STARTUP["error"])
+
+
 def startup() -> None:
     if admin.apply_pending_restore():
         engine.log("Restored database and documents from staged backup.")
     init_db()
-    seed.run(ingest=True)
-    seed.refresh_alert_notifications()
+    seed.run(ingest=False)          # accounts, departments, example assets: fast
     mrpl.ensure_departments()
-    try:
-        mrpl.ensure_public_docs()
-    except Exception as e:  # pragma: no cover
-        engine.log(f"[mrpl] public briefing ingest failed: {e!r}")
     laya.get()
     install_guard()
+    engine.cleanup_orphans()
+    if os.environ.get("YUKTI_SYNC_STARTUP") == "1":
+        _prepare_knowledge()        # tests: deterministic
+    else:
+        threading.Thread(target=_prepare_knowledge, daemon=True, name="prepare-knowledge").start()
     audit.write("system", "app.started", "api", {"version": VERSION})
     ai = admin.ai_settings()
     if ai.get("autoload", True) and os.environ.get("YUKTI_AUTOLOAD", "1") != "0":
@@ -142,6 +166,8 @@ def system(ctx: Ctx = Depends(current)) -> dict[str, Any]:
                 _SYS_CACHE["cpu_name"] = out.stdout.strip()
         except Exception:
             pass
+    if "developer" not in ctx.perms:  # employees see only that the platform is offline and healthy
+        return {"offline_guard": True, "version": VERSION}
     return {"gpu": gpu_stats(), "ram": {"total_mb": vm.total // 2**20, "used_mb": (vm.total - vm.available) // 2**20},
             "cpu": {"name": _SYS_CACHE["cpu_name"], "cores": psutil.cpu_count(False), "threads": psutil.cpu_count(),
                     "util_pct": psutil.cpu_percent(interval=None)},
@@ -277,9 +303,18 @@ def chats(project_id: str | None = None, ctx: Ctx = Depends(current)) -> list[di
     return rows
 
 
+def _own_project(pid: Any, ctx: Ctx) -> str | None:
+    if not pid:
+        return None
+    if not q1("SELECT 1 FROM projects WHERE id=? AND user_id=?", (pid, ctx.user["id"])):
+        raise err(404, "not_found", "Project not found")
+    return str(pid)
+
+
 @app.post("/api/chats")
 def create_chat(body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str, Any]:
     cid = new_id()
+    body = {**body, "project_id": _own_project(body.get("project_id"), ctx)}
     ex("INSERT INTO chats(id, user_id, project_id, title, system_prompt, prediction_json, created_at, updated_at) VALUES(?,?,?,?,?,?,?,?)",
        (cid, ctx.user["id"], body.get("project_id"), body.get("title") or "New chat", "", j({}), now_iso(), now_iso()))
     return get_chat(cid, ctx)
@@ -293,8 +328,22 @@ def get_chat(cid: str, ctx: Ctx = Depends(current)) -> dict[str, Any]:
     msgs = q("SELECT * FROM messages WHERE chat_id=? ORDER BY created_at, rowid", (cid,))
     return {"id": c["id"], "title": c["title"], "project_id": c["project_id"], "system_prompt": c["system_prompt"] or "",
             "prediction": ({**admin.ai_settings()["prediction"], **uj(c["prediction_json"], {})} if "ai.settings" in ctx.perms else {}),
-            "messages": [chat.message_out(m) for m in msgs],
+            "messages": [_recheck_sources(chat.message_out(m), ctx) for m in msgs],
             "updated_at": c["updated_at"]}
+
+
+def _recheck_sources(m: dict[str, Any], ctx: Ctx) -> dict[str, Any]:
+    srcs = m.get("sources") or []
+    if not srcs:
+        return m
+    out = []
+    for sr in srcs:
+        d = q1("SELECT * FROM documents WHERE id=?", (sr.get("document_id"),)) if isinstance(sr, dict) else None
+        if d and rag.can_read(ctx.subject, d, "cite"):
+            out.append(sr)
+        elif isinstance(sr, dict):
+            out.append({**sr, "snippet": "", "withheld": True, "title": "Document no longer available to you"})
+    return {**m, "sources": out}
 
 
 @app.patch("/api/chats/{cid}")
@@ -304,7 +353,8 @@ def patch_chat(cid: str, body: dict[str, Any], ctx: Ctx = Depends(current)) -> d
         raise err(404, "not_found", "Chat not found")
     ex("UPDATE chats SET title=?, system_prompt=?, prediction_json=?, project_id=?, updated_at=? WHERE id=?",
        (body.get("title", c["title"]), body.get("system_prompt", c["system_prompt"]),
-        j(body["prediction"]) if "prediction" in body else c["prediction_json"], body.get("project_id", c["project_id"]), now_iso(), cid))
+        j(body["prediction"]) if "prediction" in body else c["prediction_json"],
+        _own_project(body["project_id"], ctx) if "project_id" in body else c["project_id"], now_iso(), cid))
     return get_chat(cid, ctx)
 
 
@@ -350,6 +400,8 @@ async def regenerate(cid: str, body: dict[str, Any], ctx: Ctx = Depends(current)
 
 @app.post("/api/chats/{cid}/stop")
 def stop(cid: str, ctx: Ctx = Depends(current)) -> dict[str, Any]:
+    if not q1("SELECT 1 FROM chats WHERE id=? AND user_id=?", (cid, ctx.user["id"])):
+        raise err(404, "not_found", "Chat not found")
     chat.request_stop(cid)
     return {"ok": True}
 
@@ -395,6 +447,13 @@ async def upload(background: BackgroundTasks, file: UploadFile = File(...), titl
     if cl > ctx.subject.clearance:
         raise err(403, "policy_denied", "You cannot upload above your own clearance.")
     department = ctx.user["department"]  # HODs add data only for their own department
+    if doc_type not in scope.UPLOAD_DOC_TYPES:
+        raise err(422, "invalid", f"Unknown document type '{doc_type}'.")
+    need = scope.RESTRICTED_UPLOAD_TYPES.get(doc_type)
+    if need and need not in ctx.subject.roles:
+        raise err(403, "policy_denied", f"{doc_type} documents are shared plant-wide and can be added only by the {need.replace('_', ' ')} office.")
+    if doc_number and q1("SELECT 1 FROM documents WHERE doc_number=? AND department<>?", (doc_number, department)):
+        raise err(409, "conflict", f"Document number {doc_number} belongs to another department.")
     did = rag.create_document({"title": title or Path(file.filename or "upload").stem, "doc_type": doc_type, "department": department,
                                "classification": cl, "doc_number": doc_number or None, "revision": revision,
                                "effective_date": date.today().isoformat()}, file.filename or "upload.bin", data, ctx.actor)
@@ -407,7 +466,7 @@ async def upload(background: BackgroundTasks, file: UploadFile = File(...), titl
 @app.get("/api/jobs/{jid}")
 def job(jid: str, ctx: Ctx = Depends(current)) -> dict[str, Any]:
     r = q1("SELECT * FROM jobs WHERE id=?", (jid,))
-    if not r:
+    if not r or (r.get("created_by") and r["created_by"] != ctx.actor and "admin" not in ctx.subject.roles):
         raise err(404, "not_found", "Job not found")
     return {"id": r["id"], "status": r["status"], "stages": uj(r["stages_json"], []), "document_id": r["document_id"], "error": r["error"]}
 
@@ -453,11 +512,16 @@ def delete_document(did: str, ctx: Ctx = Depends(current)) -> dict[str, Any]:
 
 
 # ------------------------------------------------------------------ access requests & grants
-def _ar_out(r: dict[str, Any]) -> dict[str, Any]:
+def _ar_out(r: dict[str, Any], ctx: Ctx) -> dict[str, Any]:
     req = user_by_id(r["requester_id"]) or {}
     appr = user_by_id(r["approver_id"]) or {}
-    doc = q1("SELECT title FROM documents WHERE id=?", (r["document_id"],)) if r["document_id"] else None
-    label = doc["title"] if doc else f"{r['department']} documents" + (f" ({r['doc_type']})" if r["doc_type"] else "")
+    doc = q1("SELECT * FROM documents WHERE id=?", (r["document_id"],)) if r["document_id"] else None
+    if doc and (r["approver_id"] == ctx.user["id"] or rag.can_read(ctx.subject, doc)):
+        label = doc["title"]
+    elif doc:
+        label = f"A {r['department']} document"
+    else:
+        label = f"{r['department']} documents" + (f" ({r['doc_type']})" if r["doc_type"] else "")
     return {"id": r["id"], "requester": req.get("username"), "requester_name": req.get("display_name"), "resource_label": label,
             "department": r["department"], "justification": r["justification"], "hours": r["hours"], "state": r["state"],
             "created_at": r["created_at"], "decided_at": r["decided_at"], "approver_name": appr.get("display_name"), "note": r["note"]}
@@ -468,21 +532,36 @@ def _approver_for(dept: str) -> str | None:
     return d["manager_user_id"] if d else None
 
 
+def _escalation_user() -> str | None:
+    """Refinery management (plant manager role) handles escalations and requests without a department HOD."""
+    for u in q("SELECT id, roles_json FROM users WHERE status='active' ORDER BY created_at"):
+        if "plant_manager" in uj(u["roles_json"], []):
+            return u["id"]
+    return None
+
+
 @app.get("/api/access-requests")
 def access_requests(ctx: Ctx = Depends(current)) -> dict[str, Any]:
     mine = q("SELECT * FROM access_requests WHERE requester_id=? ORDER BY created_at DESC", (ctx.user["id"],))
     to_approve = q("SELECT * FROM access_requests WHERE approver_id=? ORDER BY state='PENDING' DESC, created_at DESC", (ctx.user["id"],))
-    return {"mine": [_ar_out(r) for r in mine], "to_approve": [_ar_out(r) for r in to_approve]}
+    return {"mine": [_ar_out(r, ctx) for r in mine], "to_approve": [_ar_out(r, ctx) for r in to_approve]}
 
 
 @app.post("/api/access-requests")
 def create_access_request(body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str, Any]:
-    dept = body.get("department") or (q1("SELECT department FROM documents WHERE id=?", (body.get("document_id"),)) or {}).get("department")
+    if body.get("document_id"):
+        dept = (q1("SELECT department FROM documents WHERE id=?", (body.get("document_id"),)) or {}).get("department")
+    else:
+        dept = body.get("department")
+        if dept and not q1("SELECT 1 FROM departments WHERE code=? OR name=?", (dept, dept)):
+            raise err(422, "invalid", f"Unknown department '{dept}'.")
     if not dept:
         raise err(422, "invalid", "department or document_id required")
     approver = _approver_for(dept)
     if not approver or approver == ctx.user["id"]:
-        approver = _approver_for("Management")
+        approver = _escalation_user()
+    if not approver or approver == ctx.user["id"]:
+        raise err(409, "conflict", "No approver is configured for this department. Ask the administrator to assign its HOD.")
     rid = new_id()
     hours = max(1, min(int(body.get("hours", 2)), 72))
     ex("""INSERT INTO access_requests(id, requester_id, department, doc_type, document_id, justification, hours, state, approver_id, created_at)
@@ -491,7 +570,7 @@ def create_access_request(body: dict[str, Any], ctx: Ctx = Depends(current)) -> 
     notify(approver, "access_request", f"Access request from {ctx.user['display_name']}",
            f"{dept} documents for {hours} h — “{body.get('justification', '')}”", "/inbox?tab=access")
     audit.write(ctx.actor, "access.requested", f"access_request:{rid}", {"department": dept, "hours": hours})
-    return _ar_out(q1("SELECT * FROM access_requests WHERE id=?", (rid,)))
+    return _ar_out(q1("SELECT * FROM access_requests WHERE id=?", (rid,)), ctx)
 
 
 def _decide(rid: str, ctx: Ctx, approve: bool, body: dict[str, Any]) -> dict[str, Any]:
@@ -499,7 +578,7 @@ def _decide(rid: str, ctx: Ctx, approve: bool, body: dict[str, Any]) -> dict[str
     r = q1("SELECT * FROM access_requests WHERE id=?", (rid,))
     if not r:
         raise err(404, "not_found", "Request not found")
-    if r["approver_id"] != ctx.user["id"] and "admin" not in ctx.subject.roles:
+    if r["approver_id"] != ctx.user["id"]:  # business access is decided by the responsible HOD, never by IT
         raise err(403, "policy_denied", "You are not the approver for this request.")
     if r["requester_id"] == ctx.user["id"]:
         raise err(403, "policy_denied", "You cannot approve your own request.")
@@ -507,19 +586,31 @@ def _decide(rid: str, ctx: Ctx, approve: bool, body: dict[str, Any]) -> dict[str
         raise err(409, "conflict", f"Request already {r['state']}")
     if approve:
         hours = max(1, min(int(body.get("hours", r["hours"])), int(r["hours"]) if int(r["hours"]) else 72))  # may narrow, never widen
+        # rank: an approver can never grant more than their own clearance; they may choose a lower ceiling
+        ceiling = ctx.subject.clearance
+        if body.get("max_classification") is not None:
+            want = body["max_classification"]
+            want = CLEARANCE_BY_LABEL.get(str(want).upper(), want) if isinstance(want, str) else want
+            ceiling = max(0, min(int(want), ceiling))
+        if r["document_id"]:
+            d = q1("SELECT classification FROM documents WHERE id=?", (r["document_id"],))
+            if d and int(d["classification"]) > ceiling:
+                raise err(403, "policy_denied", "This document is classified above your clearance; escalate the request to refinery management.")
         exp = (datetime.now(timezone.utc) + timedelta(hours=hours)).isoformat(timespec="seconds")
-        ex("INSERT INTO grants(id, user_id, department, doc_type, document_id, expires_at, approved_by, request_id, created_at) VALUES(?,?,?,?,?,?,?,?,?)",
-           (new_id(), r["requester_id"], r["department"], r["doc_type"], r["document_id"], exp, ctx.user["id"], rid, now_iso()))
+        ex("""INSERT INTO grants(id, user_id, department, doc_type, document_id, expires_at, approved_by, request_id, created_at, max_classification)
+              VALUES(?,?,?,?,?,?,?,?,?,?)""",
+           (new_id(), r["requester_id"], r["department"], r["doc_type"], r["document_id"], exp, ctx.user["id"], rid, now_iso(), ceiling))
         ex("UPDATE access_requests SET state='GRANTED', decided_at=?, hours=?, note=? WHERE id=?", (now_iso(), hours, body.get("note", ""), rid))
         ex("UPDATE users SET attr_version=attr_version+1 WHERE id=?", (r["requester_id"],))
         notify(r["requester_id"], "access_granted", f"Access granted: {r['department']} documents for {hours} h",
                f"Approved by {ctx.user['display_name']} — expires {exp[:16].replace('T', ' ')} UTC", "/chat")
-        audit.write(ctx.actor, "access.granted", f"access_request:{rid}", {"hours": hours, "expires_at": exp})
+        audit.write(ctx.actor, "access.granted", f"access_request:{rid}",
+                    {"hours": hours, "expires_at": exp, "max_classification": CLEARANCE_LABELS[ceiling]})
     else:
         ex("UPDATE access_requests SET state='REJECTED', decided_at=?, note=? WHERE id=?", (now_iso(), body.get("note", ""), rid))
         notify(r["requester_id"], "access_rejected", "Access request rejected", body.get("note", ""), "/inbox?tab=access")
         audit.write(ctx.actor, "access.rejected", f"access_request:{rid}", {"note": body.get("note", "")})
-    return _ar_out(q1("SELECT * FROM access_requests WHERE id=?", (rid,)))
+    return _ar_out(q1("SELECT * FROM access_requests WHERE id=?", (rid,)), ctx)
 
 
 @app.post("/api/access-requests/{rid}/approve")
@@ -537,7 +628,9 @@ def grants(ctx: Ctx = Depends(current)) -> list[dict[str, Any]]:
     out = []
     for g in q("SELECT * FROM grants WHERE user_id=? AND revoked_at IS NULL AND expires_at>? ORDER BY expires_at", (ctx.user["id"], now_iso())):
         a = user_by_id(g["approved_by"]) or {}
-        out.append({"id": g["id"], "scope": f"{g['department']} documents", "expires_at": g["expires_at"], "approved_by": a.get("display_name")})
+        lvl = g.get("max_classification")
+        out.append({"id": g["id"], "scope": f"{g['department']} documents" + (f" up to {CLEARANCE_LABELS[int(lvl)]}" if lvl is not None else ""),
+                    "expires_at": g["expires_at"], "approved_by": a.get("display_name")})
     return out
 
 
@@ -557,6 +650,8 @@ def assets(request: Request, ctx: Ctx = Depends(current)) -> list[dict[str, Any]
     qs = (request.query_params.get("q") or "").lower()
     out = []
     for a in q("SELECT * FROM assets ORDER BY unit, tag"):
+        if not scope.asset_visible(ctx.subject, a):
+            continue
         if qs and qs not in (a["tag"] + " " + a["name"] + " " + (a["unit"] or "")).lower():
             continue
         items = _items(a["tag"])
@@ -568,11 +663,13 @@ def assets(request: Request, ctx: Ctx = Depends(current)) -> list[dict[str, Any]
 @app.get("/api/assets/{tag}")
 def asset(tag: str, ctx: Ctx = Depends(current)) -> dict[str, Any]:
     a = q1("SELECT * FROM assets WHERE tag=?", (tag,))
-    if not a:
+    if not a or not scope.asset_visible(ctx.subject, a):
         raise err(404, "not_found", "Asset not found")
     docs = [x for x in rag.visible_documents(ctx.subject) if tag in uj(x["asset_tags_json"], [])]
-    return {**a, "specs": uj(a["specs_json"], {}), "items": _items(tag),
-            "work_orders": q("SELECT * FROM work_orders WHERE tag=? ORDER BY opened_at DESC LIMIT 30", (tag,)),
+    detail = scope.record_readable(ctx.subject, a)
+    return {**a, "specs": uj(a["specs_json"], {}) if detail else {}, "items": _items(tag),
+            "work_orders": q("SELECT * FROM work_orders WHERE tag=? ORDER BY opened_at DESC LIMIT 30", (tag,))
+            if scope.record_readable(ctx.subject, a, "work_order_export") else [],
             "documents": [_doc_out(d) for d in docs]}
 
 
@@ -580,8 +677,10 @@ def asset(tag: str, ctx: Ctx = Depends(current)) -> dict[str, Any]:
 def alerts(ctx: Ctx = Depends(current)) -> list[dict[str, Any]]:
     today = date.today()
     out = []
-    for r in q("SELECT l.*, a.name FROM ledger_items l JOIN assets a ON a.tag=l.tag WHERE l.expires_on <= ? ORDER BY l.expires_on",
-               ((today + timedelta(days=30)).isoformat(),)):
+    for r in q("""SELECT l.*, a.name, a.unit, a.owner_department FROM ledger_items l JOIN assets a ON a.tag=l.tag
+                  WHERE l.expires_on <= ? ORDER BY l.expires_on""", ((today + timedelta(days=30)).isoformat(),)):
+        if not scope.asset_visible(ctx.subject, r):
+            continue
         dl = (date.fromisoformat(r["expires_on"]) - today).days
         out.append({"id": r["id"], "severity": "red" if dl <= 7 else "amber", "title": f"{r['tag']} {r['type']} " + (f"expired {-dl} d ago" if dl < 0 else f"expires in {dl} d"),
                     "detail": f"{r['name']} · {r['ref_no']}", "tag": r["tag"], "due": r["expires_on"], "created_at": now_iso()})
@@ -603,21 +702,38 @@ def read_notification(nid: str, ctx: Ctx = Depends(current)) -> dict[str, Any]:
 
 # ------------------------------------------------------------------ findings
 def _is_discipline_approver(f: dict[str, Any], ctx: Ctx) -> bool:
-    return (f"approver:{(f['discipline'] or '').lower()}" in ctx.subject.roles or f["approver_id"] == ctx.user["id"]
-            or "plant_manager" in ctx.subject.roles or "admin" in ctx.subject.roles)
+    """Approve/reject is a decision of rank: RESTRICTED clearance or above, and either the named approver, a holder of the
+    discipline's approver role, the HOD of the discipline's department, or refinery management."""
+    s = ctx.subject
+    if "findings.approve" not in ctx.perms or s.clearance < 2:
+        return False
+    hod = "dept_manager" in s.roles and scope.finding_department(f) == s.department
+    return (f"approver:{(f['discipline'] or '').lower()}" in s.roles or f["approver_id"] == ctx.user["id"] or hod
+            or "plant_manager" in s.roles)
+
+
+def _in_finding_dept(f: dict[str, Any], ctx: Ctx) -> bool:
+    return scope.finding_department(f) == ctx.subject.department or f["approver_id"] == ctx.user["id"] \
+        or bool({"plant_manager", "hse"} & set(ctx.subject.roles))
+
+
+def _finding_visible(f: dict[str, Any], ctx: Ctx) -> bool:
+    d = q1("SELECT * FROM documents WHERE id=?", (f["source_document_id"],)) if f["source_document_id"] else None
+    return scope.finding_visible(ctx.subject, f, d is None or rag.can_read(ctx.subject, d))
 
 
 def _allowed_actions(f: dict[str, Any], ctx: Ctx) -> list[str]:
     st = f["state"]
     appr = _is_discipline_approver(f, ctx)
+    member = "findings.view" in ctx.perms and _in_finding_dept(f, ctx)  # people of the finding's own department
     acts: list[str] = []
     if st in ("PENDING", "ESCALATED"):
-        acts += ["acknowledge"] if appr or "findings.view" in ctx.perms else []
+        acts += ["acknowledge"] if appr or member else []
         acts += ["approve", "reject"] if appr else []
-        acts += ["escalate"] if appr or "findings.view" in ctx.perms else []
+        acts += ["escalate"] if appr or member else []
     elif st == "ACKNOWLEDGED":
-        acts += ["approve", "reject", "escalate"] if appr else (["escalate"] if "findings.view" in ctx.perms else [])
-    if "findings.view" in ctx.perms or appr:
+        acts += ["approve", "reject", "escalate"] if appr else (["escalate"] if member else [])
+    if member or appr:
         acts.append("note")
     return acts
 
@@ -633,13 +749,13 @@ def _finding_out(f: dict[str, Any], ctx: Ctx) -> dict[str, Any]:
 def findings(ctx: Ctx = Depends(current)) -> list[dict[str, Any]]:
     if "findings.view" not in ctx.perms and "inbox" not in ctx.perms:
         return []
-    return [_finding_out(f, ctx) for f in q("SELECT * FROM findings ORDER BY created_at DESC")]
+    return [_finding_out(f, ctx) for f in q("SELECT * FROM findings ORDER BY created_at DESC") if _finding_visible(f, ctx)]
 
 
 @app.post("/api/findings/{fid}/action")
 def finding_action(fid: str, body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str, Any]:
     f = q1("SELECT * FROM findings WHERE id=?", (fid,))
-    if not f:
+    if not f or not _finding_visible(f, ctx):
         raise err(404, "not_found", "Finding not found")
     act = body.get("action")
     if act not in _allowed_actions(f, ctx):
@@ -649,7 +765,7 @@ def finding_action(fid: str, body: dict[str, Any], ctx: Ctx = Depends(current)) 
     hist.append({"at": now_iso(), "event": "NOTE" if act == "note" else to, "by": ctx.user["display_name"], "note": body.get("note", "")})
     approver = f["approver_id"]
     if act == "escalate":
-        approver = _approver_for("Management") or approver
+        approver = _escalation_user() or approver
         notify(approver, "escalation", f"Escalated finding: {f['title']}", body.get("note", ""), "/inbox")
     ex("UPDATE findings SET state=?, history_json=?, approver_id=? WHERE id=?", (to, j(hist), approver, fid))
     audit.write(ctx.actor, f"finding.{act}", f"finding:{fid}", {"from": f["state"], "to": to})
@@ -745,7 +861,10 @@ def laya_stats(ctx: Ctx = Depends(current)) -> dict[str, Any]:
 @app.post("/api/reports/dossier")
 def dossier_report(body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str, Any]:
     from .reports import dossier_pdf
-    tag = body.get("tag", "A2")
+    tag = str(body.get("tag", "A2"))
+    a = q1("SELECT * FROM assets WHERE tag=?", (tag,))
+    if not a or not scope.asset_visible(ctx.subject, a):
+        raise err(404, "not_found", "Asset not found")
     path = dossier_pdf(ctx, tag)
     sha = hashlib.sha256(path.read_bytes()).hexdigest()
     rid = new_id()
@@ -769,12 +888,24 @@ def report_file(rid: str, ctx: Ctx = Depends(current)) -> FileResponse:
 
 
 # ------------------------------------------------------------------ audit, server, admin
+def _audit_org_wide(ctx: Ctx) -> bool:
+    return "audit.export" in ctx.perms  # Internal Audit, refinery management, administrator
+
+
 @app.get("/api/audit")
 def audit_list(request: Request, ctx: Ctx = Depends(current)) -> list[dict[str, Any]]:
     ctx.require("audit.view")
-    lim = min(int(request.query_params.get("limit", 300)), 2000)
+    lim = max(1, min(int(request.query_params.get("limit", 300) or 300), 2000))
     ev = request.query_params.get("event")
-    rows = q("SELECT * FROM audit_log " + ("WHERE event LIKE ? " if ev else "") + "ORDER BY seq DESC LIMIT ?", ((f"%{ev}%", lim) if ev else (lim,)))
+    where, args = [], []
+    if ev:
+        where.append("event LIKE ?")
+        args.append(f"%{ev}%")
+    if not _audit_org_wide(ctx):  # an HOD sees the trail of their own department's people
+        where.append("actor IN (SELECT username FROM users WHERE department=?)")
+        args.append(ctx.user["department"])
+    rows = q("SELECT * FROM audit_log " + ("WHERE " + " AND ".join(where) + " " if where else "") + "ORDER BY seq DESC LIMIT ?",
+             (*args, lim))
     return [{"seq": r["seq"], "at": r["at"], "actor": r["actor"], "event": r["event"], "entity": r["entity"],
              "detail": uj(r["detail_json"], {}), "hash": r["hash"], "prev_hash": r["prev_hash"]} for r in rows]
 
@@ -795,6 +926,8 @@ def message_feedback(mid: str, body: dict[str, Any], ctx: Ctx = Depends(current)
 @app.get("/api/audit/export")
 def audit_export(request: Request, ctx: Ctx = Depends(current)):  # type: ignore[no-untyped-def]
     ctx.require("audit.view")
+    if not _audit_org_wide(ctx):
+        raise err(403, "forbidden", "Exporting the full audit log is limited to Internal Audit, refinery management and the administrator.")
     import csv
     import io
     fmt = request.query_params.get("format", "csv")
@@ -822,23 +955,33 @@ def audit_verify(ctx: Ctx = Depends(current)) -> dict[str, Any]:
 
 @app.get("/api/server/logs")
 def server_logs(request: Request, ctx: Ctx = Depends(current)) -> dict[str, Any]:
-    tail = int(request.query_params.get("tail", 300))
+    ctx.require("models.manage")
+    tail = max(1, min(int(request.query_params.get("tail", 300) or 300), 2000))
     return {"lines": list(engine.LOG)[-tail:]}
 
 
 @app.get("/api/server/status")
 def server_status(ctx: Ctx = Depends(current)) -> dict[str, Any]:
+    ctx.require("models.manage")
     s = engine.state
     url, _ = engine.engine_url(s.engine)
-    return {"engine": s.engine, "status": s.status, "port": 8080 if s.engine == "llamacpp" else None, "openai_base_url": url,
+    return {"engine": s.engine, "status": s.status, "port": s.port if s.engine == "llamacpp" else None, "openai_base_url": url,
             "uptime_s": round(time.time() - s.started_at) if s.started_at else 0, "requests": s.requests, "model_name": s.model_name,
-            "command": " ".join(s.command) if s.command else None}
+            "command": engine.redacted_command()}
 
 
 @app.get("/api/admin/policies")
 def admin_policies(ctx: Ctx = Depends(current)) -> dict[str, Any]:
     ctx.require("admin")
     return {"version": pdp.version, "sha256": pdp.sha, "yaml": pdp.yaml_text}
+
+
+@app.get("/api/admin/policies/documents")
+def simulate_documents(ctx: Ctx = Depends(current)) -> list[dict[str, Any]]:
+    """Metadata only (no content) of every document, so the admin can simulate decisions on restricted ones too."""
+    ctx.require("admin")
+    rows = q("SELECT id, title, doc_number, department, classification FROM documents ORDER BY department, title")
+    return [{**r, "classification": CLEARANCE_LABELS[int(r["classification"])]} for r in rows]
 
 
 @app.post("/api/admin/policies/simulate")
@@ -857,6 +1000,8 @@ def simulate(body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str, Any
 def demo_reset(ctx: Ctx = Depends(current)) -> dict[str, Any]:
     """Rehearsal helper: revoke all grants, clear access requests, reset findings to PENDING."""
     ctx.require("admin")
+    if not DEMO_MODE:
+        raise err(404, "not_found", "Available only in demonstration mode.")
     g = ex("UPDATE grants SET revoked_at=? WHERE revoked_at IS NULL", (now_iso(),)).rowcount
     a = ex("DELETE FROM access_requests").rowcount
     ex("UPDATE findings SET state='PENDING'")
@@ -864,9 +1009,47 @@ def demo_reset(ctx: Ctx = Depends(current)) -> dict[str, Any]:
     return {"ok": True, "grants_revoked": g, "requests_cleared": a}
 
 
+_CSP = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; "
+        "font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; "
+        "frame-ancestors 'none'")
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):  # type: ignore[no-untyped-def]
+    resp = await call_next(request)
+    h = resp.headers
+    h.setdefault("Content-Security-Policy", _CSP)
+    h.setdefault("X-Content-Type-Options", "nosniff")
+    h.setdefault("X-Frame-Options", "DENY")
+    h.setdefault("Referrer-Policy", "no-referrer")
+    h.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()")
+    h.setdefault("Cross-Origin-Opener-Policy", "same-origin")
+    h.setdefault("Cross-Origin-Resource-Policy", "same-origin")
+    if request.url.path.startswith("/api/"):
+        h.setdefault("Cache-Control", "no-store")
+    if request.url.scheme == "https":
+        h.setdefault("Strict-Transport-Security", "max-age=31536000")
+    return resp
+
+
 @app.get("/api/health")
 def health() -> dict[str, Any]:
-    return {"ok": True, "version": VERSION, "engine": engine.state.status}
+    eng = engine.state.status
+    kr = STARTUP["knowledge_ready"]
+    if not kr:
+        stage = STARTUP["stage"]
+    elif eng in ("loading", "restarting"):
+        stage = "Loading AI model" if eng == "loading" else "Restarting AI model"
+    elif eng == "idle":
+        stage = "Ready (no AI model loaded)"
+    elif eng == "error":
+        stage = "Ready (AI model failed to load)"
+    else:
+        stage = "Ready"
+    return {"ok": True, "version": VERSION, "engine": eng, "stage": stage,
+            "progress": {"done": STARTUP["done"], "total": STARTUP["total"]} if not kr else None,
+            "knowledge_ready": kr, "ready": kr and eng in ("ready", "idle", "error"),
+            "error": STARTUP["error"] or (engine.state.error if eng == "error" else None)}
 
 
 # ------------------------------------------------------------------ SPA

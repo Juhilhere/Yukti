@@ -54,7 +54,13 @@ def _user_out(u: dict[str, Any]) -> dict[str, Any]:
 def _sync_hod(uid: str) -> None:
     """A user holding the HOD role becomes the approver of their department."""
     u = q1("SELECT * FROM users WHERE id=?", (uid,))
-    if u and "dept_manager" in uj(u["roles_json"], []) and u["status"] == "active":
+    if not u:
+        return
+    is_hod = "dept_manager" in uj(u["roles_json"], []) and u["status"] == "active"
+    # no longer HOD of a department (role removed, moved or disabled): stop routing its approvals to this user
+    ex("UPDATE departments SET manager_user_id=NULL WHERE manager_user_id=? AND NOT (? AND (code=? OR name=?))",
+       (uid, int(is_hod), u["department"], u["department"]))
+    if is_hod:
         ex("UPDATE departments SET manager_user_id=? WHERE code=? OR name=?", (uid, u["department"], u["department"]))
 
 
@@ -119,6 +125,12 @@ def update_user(uid: str, body: dict[str, Any], ctx: Ctx = Depends(current)) -> 
     _validate(body, False)
     if uid == ctx.user["id"] and (body.get("status") == "disabled" or ("roles" in body and "admin" not in body["roles"])):
         raise err(400, "invalid", "You cannot disable or demote your own admin account.")
+    if uid == ctx.user["id"]:  # no self-escalation: another administrator must change your own rank or department
+        for k, cur in (("clearance", int(u["clearance"])), ("department", u["department"]), ("asset_scopes", uj(u["asset_scopes_json"], []))):
+            if k in body and body[k] != cur:
+                raise err(403, "policy_denied", "You cannot change your own clearance, department or asset scope.")
+        if "roles" in body and set(body["roles"]) != set(uj(u["roles_json"], [])):
+            raise err(403, "policy_denied", "You cannot change your own roles.")
     fields = {"display_name": body.get("display_name", u["display_name"]), "post": body.get("post", u["post"]),
               "department": body.get("department", u["department"]), "clearance": int(body.get("clearance", u["clearance"])),
               "roles_json": j(body["roles"]) if "roles" in body else u["roles_json"],
@@ -275,8 +287,16 @@ def feedback_list(ctx: Ctx = Depends(current)) -> list[dict[str, Any]]:
         qn = q1("SELECT content FROM messages WHERE chat_id=? AND role='user' AND created_at<=? ORDER BY created_at DESC, rowid DESC LIMIT 1",
                 (m.get("chat_id"), m.get("created_at") or "")) if m else None
         u = q1("SELECT username FROM users WHERE id=?", (f["user_id"],)) or {}
+        # the conversation is shown only if the viewer may read every document the answer cited
+        full = q1("SELECT meta_json FROM messages WHERE id=?", (f["message_id"],)) or {}
+        meta = uj(full.get("meta_json"), {})
+        ids = [x.get("document_id") for x in (meta.get("sources") or []) if isinstance(x, dict)]
+        from . import rag
+        visible = all((d := q1("SELECT * FROM documents WHERE id=?", (i,))) is None or rag.can_read(ctx.subject, d) for i in ids)             and not (meta.get("denied") or {}).get("count")
+        hidden = "[hidden: this conversation used documents outside your access]"
         out.append({"message_id": f["message_id"], "user": u.get("username"), "rating": f["rating"], "comment": f["comment"],
-                    "question": (qn or {}).get("content"), "answer_excerpt": (m.get("content") or "")[:300], "created_at": f["created_at"]})
+                    "question": (qn or {}).get("content") if visible else hidden,
+                    "answer_excerpt": (m.get("content") or "")[:300] if visible else hidden, "created_at": f["created_at"]})
     return out
 
 
@@ -297,6 +317,7 @@ def create_backup(ctx: Ctx = Depends(current)) -> dict[str, Any]:
                 z.write(f, "blobs/" + f.relative_to(BLOBS).as_posix())
     snap.unlink()
     sha = hashlib.sha256(path.read_bytes()).hexdigest()
+    (BACKUPS / (name + ".sha256")).write_text(sha, encoding="utf-8")
     audit.write(ctx.actor, "admin.backup.created", f"backup:{name}", {"sha256": sha, "size": path.stat().st_size})
     return {"name": name, "size_bytes": path.stat().st_size, "sha256": sha, "created_at": now_iso()}
 
@@ -304,7 +325,10 @@ def create_backup(ctx: Ctx = Depends(current)) -> dict[str, Any]:
 @router.get("/backups")
 def list_backups(ctx: Ctx = Depends(current)) -> list[dict[str, Any]]:
     ctx.require("backup.manage")
-    return [{"name": p.name, "size_bytes": p.stat().st_size,
+    def _sha(p: Path) -> str | None:
+        f = BACKUPS / (p.name + ".sha256")
+        return f.read_text(encoding="utf-8").strip() if f.exists() else None
+    return [{"name": p.name, "size_bytes": p.stat().st_size, "sha256": _sha(p),
              "created_at": datetime.fromtimestamp(p.stat().st_mtime, timezone.utc).isoformat(timespec="seconds")}
             for p in sorted(BACKUPS.glob("yukti-backup-*.zip"), reverse=True)]
 

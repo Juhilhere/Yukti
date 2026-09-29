@@ -52,8 +52,24 @@ const assert = (c, m) => { if (!c) { console.error('FAIL:', m); process.exit(1);
   await new Promise((r) => srv.once('listening', r));
   const url = `http://127.0.0.1:${srv.address().port}/manifest.json`;
   const dest = path.join(tmp, 'install');
-  const r = await installer.install({ manifestUrl: url, dest, forceGpu: false, onProgress: () => {} });
-  assert(r.version === '9.9.9', 'install completes (with one dropped connection retried)');
+  const pl = await installer.plan({ manifestUrl: url, dest, forceGpu: false });
+  assert(pl.todoCount === 2 && pl.wantedCount === 2 && pl.totalBytes === zipBuf.length + model.length, 'plan: 2 components, correct size');
+  assert(pl.artifacts.find((x) => x.name === 'llama-cuda').needed === false, 'plan: NVIDIA-only component marked not needed');
+  // pause (abort) mid-download, then resume from the partial file
+  const ctl = new AbortController();
+  let paused = false;
+  try {
+    await installer.install({ manifestUrl: url, dest, forceGpu: false, signal: ctl.signal,
+      onProgress: (p) => { if (p.phase === 'download' && p.artifact === 'model' && p.doneBytes > zipBuf.length + 1024) ctl.abort(); } });
+  } catch (e) { paused = /cancelled/.test(e.message); }
+  assert(paused, 'pause (abort) stops the download');
+  const pl2 = await installer.plan({ manifestUrl: url, dest, forceGpu: false });
+  assert(pl2.todoCount === 1 && pl2.partialBytes > 0, 'plan after pause: core installed, partial model bytes kept');
+  const states = {};
+  const r = await installer.install({ manifestUrl: url, dest, forceGpu: false,
+    onProgress: (p) => { if (p.phase === 'artifact') states[p.artifact] = p.state; } });
+  assert(r.version === '9.9.9', 'install resumes and completes (with one dropped connection retried)');
+  assert(states.model === 'installed' && states['server-core'] === 'installed' && states['llama-cuda'] === 'skipped', 'per-component artifact events');
   assert(fs.readFileSync(path.join(dest, 'yukti-server.exe'), 'utf8') === 'fake-exe', 'zip component extracted');
   assert(sha(fs.readFileSync(path.join(dest, 'models', 'm.gguf'))) === sha(model), 'multi-part file reassembled byte-identical');
   assert(!fs.existsSync(path.join(dest, 'llama')), 'NVIDIA-only component skipped on non-NVIDIA PC');
@@ -68,6 +84,20 @@ const assert = (c, m) => { if (!c) { console.error('FAIL:', m); process.exit(1);
   let rel = false;
   try { await installer.install({ manifestUrl: url, dest: 'E:relative', onProgress: () => {} }); } catch (e) { rel = /full path/.test(e.message); }
   assert(rel, 'drive-relative install path rejected');
+  // release signing: a signed manifest installs; a missing or wrong signature is refused
+  const { privateKey, publicKey } = crypto.generateKeyPairSync('ed25519');
+  const pub = publicKey.export({ type: 'spki', format: 'der' }).toString('base64');
+  const mpath = path.join(site, 'manifest.json');
+  let sigErr = '';
+  try { await installer.plan({ manifestUrl: url, publicKey: pub, dest, forceGpu: false }); } catch (e) { sigErr = e.message; }
+  assert(/signature missing/.test(sigErr), 'unsigned release refused when the app has a publisher key');
+  fs.writeFileSync(mpath + '.sig', crypto.sign(null, fs.readFileSync(mpath), privateKey).toString('base64'));
+  const ps = await installer.plan({ manifestUrl: url, publicKey: pub, dest, forceGpu: false });
+  assert(ps.version === '9.9.9', 'correctly signed release accepted');
+  fs.writeFileSync(mpath, fs.readFileSync(mpath, 'utf8').replace('9.9.9', '9.9.8'));
+  sigErr = '';
+  try { await installer.plan({ manifestUrl: url, publicKey: pub, dest, forceGpu: false }); } catch (e) { sigErr = e.message; }
+  assert(/signature is invalid/.test(sigErr), 'tampered manifest refused (signature check)');
   srv.close();
   fs.rmSync(tmp, { recursive: true, force: true });
   console.log('installer self-test passed');

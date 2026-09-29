@@ -70,7 +70,7 @@ export default function App() {
           <Route path="ai" element={<Perm perm="ai.settings"><AiSettings /></Perm>} />
           <Route path="usage" element={<Perm perm="usage.view"><UsageHealth /></Perm>} />
           <Route path="feedback" element={<Perm perm="usage.view"><FeedbackAdmin /></Perm>} />
-          <Route path="backup" element={<Perm perm={['backup.manage', 'audit.view']}><BackupExport /></Perm>} />
+          <Route path="backup" element={<Perm perm={['backup.manage', 'audit.export']}><BackupExport /></Perm>} />
           <Route path="policies" element={<Perm perm="admin"><PoliciesLaya /></Perm>} />
           <Route path="models" element={<Perm perm="models.manage"><ModelsAdmin /></Perm>} />
           <Route path="developer" element={<Perm perm="developer"><Developer /></Perm>} />

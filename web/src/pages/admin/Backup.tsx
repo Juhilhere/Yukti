@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, ArchiveRestore, DatabaseBackup, Download, FileJson, FileSpreadsheet, ScrollText } from 'lucide-react';
+import { AlertTriangle, ArchiveRestore, DatabaseBackup, Download, FileJson, FileSpreadsheet, RefreshCw, RotateCcw, ScrollText, Wrench } from 'lucide-react';
 import { api, downloadFile, errMsg } from '../../lib/api';
 import type { Backup } from '../../lib/types';
 import { useAuth } from '../../lib/auth';
@@ -93,12 +93,52 @@ function AuditExportCard() {
   );
 }
 
+function MaintenanceCard({ demo }: { demo: boolean }) {
+  const [confirmReset, setConfirmReset] = useState(false);
+  const reload = useMutation({
+    mutationFn: () => api.post<{ documents_reingested: number; departments: number }>('/api/admin/mrpl/reload', {}),
+    onSuccess: (r) => toast.success('MRPL public information reloaded', `${r.documents_reingested} briefing(s) re-indexed · ${r.departments} departments`),
+    onError: (e) => toast.error('Reload failed', errMsg(e)),
+  });
+  const reset = useMutation({
+    mutationFn: () => api.post<{ grants_revoked: number; requests_cleared: number }>('/api/admin/demo/reset', {}),
+    onSuccess: (r) => { setConfirmReset(false); toast.success('Demonstration state reset', `${r.grants_revoked} grant(s) revoked · ${r.requests_cleared} request(s) cleared · findings reopened`); },
+    onError: (e) => toast.error('Reset failed', errMsg(e)),
+  });
+  return (
+    <Card title="Maintenance" icon={<Wrench size={14} className="text-amber" />}>
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="rounded-md border border-border p-3">
+          <div className="font-medium">MRPL public information</div>
+          <div className="mt-1 text-[12px] text-muted">Re-index the public briefings and department list after the files in data\mrpl are updated.</div>
+          <button className="btn btn-sm mt-2" disabled={reload.isPending} onClick={() => reload.mutate()}>
+            {reload.isPending ? <Spinner size={12} /> : <RefreshCw size={12} />}Reload public data
+          </button>
+        </div>
+        {demo && <div className="rounded-md border border-border p-3">
+          <div className="font-medium">Reset demonstration state</div>
+          <div className="mt-1 text-[12px] text-muted">Revokes all time-bound grants, clears access requests and reopens findings — for rehearsals and training sessions.</div>
+          <button className="btn btn-sm btn-danger mt-2" onClick={() => setConfirmReset(true)}><RotateCcw size={12} />Reset…</button>
+        </div>}
+      </div>
+      <Modal open={confirmReset} onClose={() => setConfirmReset(false)} width={440} title="Reset demonstration state?" icon={<AlertTriangle size={15} className="text-danger" />}
+        footer={<>
+          <button className="btn btn-ghost" onClick={() => setConfirmReset(false)}>Cancel</button>
+          <button className="btn btn-danger" disabled={reset.isPending} onClick={() => reset.mutate()}>{reset.isPending ? <Spinner size={12} /> : <RotateCcw size={12} />}Reset</button>
+        </>}>
+        <p className="text-[12.5px]">All active grants are revoked, all access requests are deleted and every finding returns to PENDING. Users, documents and the audit log are kept (the reset itself is audited).</p>
+      </Modal>
+    </Card>
+  );
+}
+
 export default function BackupExport() {
-  const { can } = useAuth();
+  const { can, me } = useAuth();
   return (
     <div className="space-y-4 p-5">
       {can('backup.manage') && <BackupsCard />}
-      {can('audit.view') && <AuditExportCard />}
+      {can('audit.export') && <AuditExportCard />}
+      {can('admin') && <MaintenanceCard demo={!!me?.demo_mode} />}
     </div>
   );
 }

@@ -12,7 +12,17 @@ import { Modal } from '../components/Modal';
 import { toast } from '../components/Toast';
 import { cx, fmtBytes, fmtDate } from '../lib/format';
 
-const DOC_TYPES = ['SOP', 'P&ID', 'SLD', 'datasheet', 'inspection_report', 'manual', 'audit_report', 'work_orders', 'asset_register', 'other'];
+// value = policy document type (must match policies/core.yaml); role = only that role may add it (shared plant-wide)
+const DOC_TYPES: { value: string; label: string; role?: string }[] = [
+  { value: 'SOP', label: 'SOP' }, { value: 'drawing_pid', label: 'P&ID' }, { value: 'drawing_sld', label: 'Single-line diagram' },
+  { value: 'datasheet', label: 'Datasheet' }, { value: 'manual', label: 'Manual' }, { value: 'troubleshooting_guide', label: 'Troubleshooting guide' },
+  { value: 'process_manual', label: 'Process manual' }, { value: 'inspection_report', label: 'Inspection report' },
+  { value: 'calibration_certificate', label: 'Calibration certificate' }, { value: 'shift_log', label: 'Shift log' },
+  { value: 'work_order_export', label: 'Work orders (CMMS export)' }, { value: 'asset_register', label: 'Asset register' },
+  { value: 'audit_report', label: 'Audit report' }, { value: 'MSDS', label: 'MSDS (HSE only)', role: 'hse' },
+  { value: 'contact_list', label: 'Contact list (management only)', role: 'plant_manager' }, { value: 'other', label: 'Other' },
+];
+const DOC_TYPE_LABEL: Record<string, string> = Object.fromEntries(DOC_TYPES.map((d) => [d.value, d.label.replace(/ \(.*\)$/, '')]));
 const CLASSIFICATIONS = ['PUBLIC', 'INTERNAL', 'RESTRICTED', 'CONFIDENTIAL'];
 
 function useDebounced<T>(v: T, ms = 300) {
@@ -31,14 +41,19 @@ export default function Knowledge() {
   const [uploadOpen, setUploadOpen] = useState(false);
   const t = useT();
   const docs = useQuery({ queryKey: ['documents', dq], queryFn: () => api.get<DocumentSummary[]>(`/api/documents${qs({ q: dq })}`) });
-  const rows = Array.isArray(docs.data) ? docs.data : [];
+  // department first: default to the user's own department; "All I can access" adds shared unit documents and public data
+  const [mine, setMine] = useState(true);
+  const all = Array.isArray(docs.data) ? docs.data : [];
+  const myDept = me?.user.department;
+  const ownCount = all.filter((d) => d.department === myDept).length;
+  const rows = mine ? all.filter((d) => d.department === myDept) : all;
 
   const columns: Column<DocumentSummary>[] = [
     { key: 'title', header: 'Title', render: (d) => <div className="min-w-[220px]"><div className="flex flex-wrap items-center gap-1.5 font-medium text-text">{d.title || '(untitled)'}<ProvenanceBadges isExample={d.is_example} isPublic={d.is_public} /></div><div className="text-[11px] text-faint">{fmtDate(d.created_at)} · {fmtBytes(d.size_bytes)}</div></div> },
     { key: 'doc_number', header: 'Doc no', mono: true, render: (d) => <span className="text-cyan">{d.doc_number || '—'}</span> },
     { key: 'revision', header: 'Rev', mono: true, render: (d) => d.revision || '—' },
     { key: 'status', header: 'Status', render: (d) => <StatusChip status={d.status} /> },
-    { key: 'doc_type', header: 'Type', render: (d) => <Badge mono>{d.doc_type || '—'}</Badge> },
+    { key: 'doc_type', header: 'Type', render: (d) => <Badge mono title={d.doc_type}>{DOC_TYPE_LABEL[d.doc_type] ?? (d.doc_type || '—')}</Badge> },
     { key: 'department', header: 'Department', render: (d) => d.department || '—' },
     { key: 'classification', header: 'Class', render: (d) => <StatusChip status={d.classification} /> },
     {
@@ -63,6 +78,12 @@ export default function Knowledge() {
     <div className="flex h-full flex-col">
       <PageHeader icon={<BookOpen size={18} />} title={t('page.knowledge')} subtitle={t('page.knowledge.sub')}
         actions={<>
+          <div className="flex overflow-hidden rounded-md border border-border text-[12px]">
+            <button className={cx('px-2.5 py-1', mine ? 'bg-surface-2 text-text' : 'text-muted hover:text-text')} onClick={() => setMine(true)}
+              title={myDept}>My department <span className="font-mono text-faint">{ownCount}</span></button>
+            <button className={cx('border-l border-border px-2.5 py-1', !mine ? 'bg-surface-2 text-text' : 'text-muted hover:text-text')} onClick={() => setMine(false)}
+              title="Your department, documents of your assigned plant units, public information and any time-bound grants">All I can access <span className="font-mono text-faint">{all.length}</span></button>
+          </div>
           <div className="relative w-[280px]">
             <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-faint" />
             <input className="input !pl-8" placeholder="Search title, doc no, tag…" value={q} onChange={(e) => setQ(e.target.value)} />
@@ -73,7 +94,7 @@ export default function Knowledge() {
         </>} />
       <div className="min-h-0 flex-1 overflow-hidden p-4">
         <div className="h-full overflow-hidden rounded-md border border-border bg-surface">
-          <QueryState q={docs} empty={rows.length === 0} emptyTitle={dq ? 'No documents match your search' : 'No documents yet'}
+          <QueryState q={docs} empty={rows.length === 0} emptyTitle={dq ? 'No documents match your search' : mine ? `No ${myDept ?? ''} documents yet` : 'No documents yet'}
             emptyHint={canUpload ? 'Upload SOPs, P&IDs, datasheets, inspection reports — scanned pages are OCR’d on-prem.' : undefined}>
             <DataTable rows={rows} columns={columns} rowKey={(d) => d.id} onRowClick={(d) => nav(`/knowledge/${d.id}`)} maxHeight="100%" />
           </QueryState>
@@ -209,7 +230,7 @@ function UploadDialog({ onClose }: { onClose: () => void }) {
           <Field label="Title"><input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Defaults to file name" /></Field>
           <div className="grid grid-cols-3 gap-3">
             <Field label="Document type">
-              <select className="input" value={docType} onChange={(e) => setDocType(e.target.value)}>{DOC_TYPES.map((d) => <option key={d}>{d}</option>)}</select>
+              <select className="input" value={docType} onChange={(e) => setDocType(e.target.value)}>{DOC_TYPES.filter((d) => !d.role || me?.user.roles.includes(d.role)).map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}</select>
             </Field>
             <Field label="Department">
               <input className="input" value={dept} readOnly disabled title="Documents are always added to your own department" />

@@ -36,7 +36,8 @@ def _footer(c, doc):  # type: ignore[no-untyped-def]
 def dossier_pdf(ctx: Ctx, tag: str) -> Path:
     a = q1("SELECT * FROM assets WHERE tag=?", (tag,)) or {"tag": tag, "name": tag, "unit": "", "vendor": "", "serial": "", "location": ""}
     facts = rag.dossier_facts(ctx.subject, tag)
-    wos = q("SELECT * FROM work_orders WHERE tag=? ORDER BY opened_at DESC LIMIT 10", (tag,))
+    from .scope import record_readable
+    wos = q("SELECT * FROM work_orders WHERE tag=? ORDER BY opened_at DESC LIMIT 10", (tag,))         if record_readable(ctx.subject, q1("SELECT * FROM assets WHERE tag=?", (tag,)), "work_order_export") else []
     path = REPORTS / f"Dossier_{tag}_{datetime.now():%Y%m%d_%H%M%S}.pdf"
     ss = getSampleStyleSheet()
     h = ss["Heading1"]

@@ -4,7 +4,7 @@
   "version": "0.3.0",
   "description": "Yukti \u2014 Sovereign Industrial AI Workbench (desktop client)",
   "author": "Team UniMinds <juhilprogramming@gmail.com>",
-  "license": "UNLICENSED",
+  "license": "SEE LICENSE IN ../LICENSE",
   "private": true,
   "main": "src/main.js",
   "scripts": {
@@ -20,7 +20,7 @@
   "build": {
     "appId": "in.uniminds.yukti",
     "productName": "Yukti",
-    "copyright": "Uniminds",
+    "copyright": "Copyright (c) 2026 Team UniMinds. All rights reserved.",
     "directories": {
       "output": "dist",
       "buildResources": "build"
@@ -48,6 +48,7 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Yukti",
+      "license": "../LICENSE",
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico",
       "artifactName": "Yukti-Setup-${version}.exe"

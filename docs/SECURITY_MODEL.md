@@ -56,12 +56,12 @@ Summary of `core.yaml`:
 | `R-FINANCE-COMMERCIAL` | deny | Finance & Accounts and Internal Audit records are limited to those departments, the MD Office and plant managers, unless a grant covers it. |
 | `R-PUBLIC` | allow | PUBLIC documents (classification 0). |
 | `R-OWN-DEPT` | allow | Documents of the user's own department. |
-| `R-ASSET-SCOPE` | allow | Technical doc types for plant units inside the user's asset scopes (glob match). |
+| `R-ASSET-SCOPE` | allow | Technical doc types for plant units inside the user's asset scopes (glob match). Across departments only up to INTERNAL. |
 | `R-HSE-SAFETY` | allow | HSE role reads safety-relevant doc types. |
 | `R-CONTACTS-ALL` | allow | Contact lists for clearance ≥ INTERNAL. |
 | `R-MSDS-ALL` | allow | MSDS for everyone. |
-| `R-MANAGERS` | allow | Plant managers, admins and auditors. |
-| `R-GRANT` | allow | An active, unexpired, time-bound grant covers the document, its department or its doc type. |
+| `R-MANAGERS` | allow | Refinery management (plant manager) and Internal Audit, capped by their clearance. The IT administrator configures Yukti but does not read plant documents. |
+| `R-GRANT` | allow | An active, unexpired, time-bound grant covers the document, its department or its doc type, up to the grant's classification ceiling. |
 | `G-CONTRACTOR-CHEM` | deny | Contractors get no process-chemistry, hazmat-handling or formulation detail. |
 | `G-FORMULATION` | deny | Proprietary formulations need CONFIDENTIAL clearance or a grant. |
 | `G-PROCESS-CHEM` | allow | Chemistry topics for engineer, HSE, process, operations, lab, manager and admin roles. |
@@ -76,9 +76,28 @@ server for every endpoint, not only in the UI.
 - Only `admin` has `models.manage`, `ai.settings`, `users.manage`, `backup.manage` and `developer`.
 
 **Access requests.** An employee asks for department, doc-type or document access with a justification and a duration. The department's HOD
-approves or rejects it. Approval creates a **time-bound grant**, which the policy honours only until `expires_at`. Every step is audited.
+approves or rejects it (departments without an HOD, and escalations, go to refinery management; the IT administrator cannot approve business
+access). Approval creates a **time-bound grant** whose **classification ceiling is at most the approver's own clearance**, so nobody can hand
+out more than they hold. The policy honours it only until `expires_at`. Every step is audited.
 
-**Findings.** Each finding carries `allowed_actions` computed on the server for the current user and state. The server rejects any action that is not in that list.
+**Findings.** A finding belongs to the department of its discipline. Only that department, the named approver, HSE and refinery management see
+it, and only if they may read its source document. Acknowledge, escalate and note are for members of that department. **Approve and reject
+need RESTRICTED clearance or above** and the discipline's approver role, HOD position or the plant-manager role. Each finding carries
+`allowed_actions` computed on the server; the server rejects any other action.
+
+**Everything else is scoped the same way** (`backend/app/scope.py`):
+
+| Data | Who sees it |
+|---|---|
+| Assets, certificate/calibration alerts | Owning department (INTERNAL clearance and above), people assigned to the asset's plant unit, HSE, Internal Audit, refinery management. Contractors see only their assigned units. |
+| Asset specifications, asset-master facts, CMMS work orders, on-call contacts | Evaluated by the document policy as an INTERNAL record of the asset's department, so department, unit scope and clearance apply. Facts with no readable source are withheld (fail closed). |
+| Audit log | HODs see the activity of their own department's people. The plant-wide log and exports need `audit.export` (Internal Audit, refinery management, administrator). |
+| Chat answers | Only authorised passages reach the model. Withheld sources are counted; departments are named only to INTERNAL clearance and above. Stored answers are re-checked on every view, so expired grants hide old snippets. |
+| Feedback review | Administrators see a conversation only if they may read every document it cited. |
+| Engine status, logs, hardware | Administrators only. |
+| Jobs, chats, projects, reports | Owner only. |
+
+Administrators cannot change their own clearance, roles, department or asset scope.
 
 ## 3. Authentication and sessions
 
@@ -148,16 +167,16 @@ The UI labels the guard model honestly as "base model + Company Guardrails". A f
 
 ## 10. Known limitations
 
-- **Unsigned binaries.** `Yukti-Setup-<ver>.exe` and `yukti-server.exe` are not code-signed, so Windows SmartScreen warns. Integrity of the
-  components downloaded by the desktop installer is enforced by SHA-256 values in `manifest.json`. The manifest itself is not signed, so serve
-  it over HTTPS from a host you control.
-- **Demo tier.** The default `YUKTI_TIER=demo` shows the demo accounts **and their passwords on the login screen**, and the demo passwords are
-  shorter than the production policy allows. For any real deployment, set **`YUKTI_TIER=prod`**, replace or disable the demo accounts, and
-  change the `admin` password.
-- **No built-in TLS.** The server speaks HTTP and the session cookie is not marked `Secure`. Use a segregated plant VLAN, restrict TCP 8000 to
-  the plant subnet, or put a TLS-terminating reverse proxy in front.
+- **Unsigned binaries.** `Yukti-Setup-<ver>.exe` and `yukti-server.exe` are not Authenticode-signed, so Windows SmartScreen warns. The
+  download chain is protected instead by an **Ed25519-signed release manifest** (`ops/sign-manifest.js`): the desktop app carries the
+  publisher's public key and refuses unsigned or altered manifests, and the manifest pins the SHA-256 of every downloaded part.
+- **Demonstration mode.** Production is the default. A `DEMO_MODE` file in the install folder (or `YUKTI_TIER=demo`) lists the sample
+  accounts and their passwords on the login screen. Delete it before the first production start; seeded accounts then must change their
+  password at first login.
+- **TLS is optional.** Start the server with `--tls-cert`/`--tls-key` to serve HTTPS (the session cookie is then `Secure` and HSTS is sent).
+  Without it, use a segregated plant VLAN and restrict the port to the plant subnet.
 - **Encryption at rest.** The database and blobs are not encrypted by Yukti. Use BitLocker on the server volume.
 - **Backups** are ZIP files containing the database (including password hashes and chat history) and documents. Store them as sensitive data.
 - **Guardrail classification** is pattern-based and can be phrased around. The document-level ABAC is the real boundary: guardrails limit
   *topics*, while policy limits *data*.
-- **Administrators are trusted.** They can read policies, change AI settings and restore backups. Every such action is audited.
+- **Administrators are trusted with the platform, not the plant data.** They can read policies, change AI settings and restore backups (a backup contains all data, so it is sensitive). Every such action is audited.

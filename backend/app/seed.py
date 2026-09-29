@@ -34,7 +34,7 @@ PERSONAS = [
     ("anil.u", "Anil Shetty", "Boiler Engineer", "Captive Power Plants & Utilities", 1, ["engineer"], ["UTIL"], "Anil@2026"),
     ("suresh.em", "Suresh Rao", "HOD — Electrical Maintenance", "Electrical Maintenance", 2, ["dept_manager", "approver:electrical", "engineer"], ["*"], "Suresh@2026"),
     ("kavita.fm", "Kavita Nair", "HOD — Finance & Accounts", "Finance & Accounts", 3, ["dept_manager", "approver:finance"], [], "Kavita@2026"),
-    ("meera.me", "Meera Pai", "Engineer — Static Equipment", "Mechanical Maintenance", 1, ["engineer", "approver:mechanical"], ["CDU-1", "HCU", "UTIL"], "Meera@2026"),
+    ("meera.me", "Meera Pai", "Engineer — Static Equipment", "Mechanical Maintenance", 1, ["engineer"], ["CDU-1", "HCU", "UTIL"], "Meera@2026"),
     ("priya.hse", "Priya D'Souza", "HSE Officer", "Health, Safety & Environment", 2, ["hse"], ["*"], "Priya@2026"),
     ("vikram.op", "Vikram Kulkarni", "Process Engineer — Amine / SRU", "Process Engineering", 2, ["engineer", "process"], ["SRU", "CDU-1"], "Vikram@2026"),
     ("arjun.pl", "Arjun Hegde", "Production Planner", "Production Planning & Quality Control (PP & QC)", 1, ["planner"], [], "Arjun@2026"),
@@ -43,11 +43,11 @@ PERSONAS = [
     ("rajesh.mm", "Rajesh Shenoy", "HOD — Mechanical Maintenance", "Mechanical Maintenance", 2, ["dept_manager", "approver:mechanical", "engineer"], ["*"], "Rajesh@2026"),
     ("sunita.hse", "Sunita Bhandary", "HOD — Health, Safety & Environment", "Health, Safety & Environment", 2, ["dept_manager", "hse"], ["*"], "Sunita@2026"),
     ("contractor.x", "Vendor Technician", "Contract technician (Mechanical)", "Mechanical Maintenance", 0, ["contractor"], ["CDU-1"], "Vendor@2026"),
-    ("admin", "Yukti Administrator", "Platform Administrator", "Information Systems (IT/SAP)", 3, ["admin"], ["*"], "Admin@2026"),
+    ("admin", "Yukti Administrator", "Platform Administrator", "Information Systems (IT/SAP)", 3, ["admin"], [], "Admin@2026"),
 ]
 ON_CALL = {"ravi.e", "suresh.em", "meera.me"}
 MANAGERS = {"Electrical Maintenance": "suresh.em", "Instrumentation Maintenance": "suresh.em", "Finance & Accounts": "kavita.fm",
-            "Internal Audit": "kavita.fm", "Captive Power Plants & Utilities": "ramesh.pm", "Mechanical Maintenance": "rajesh.mm",
+            "Internal Audit": "ramesh.pm", "Captive Power Plants & Utilities": "ramesh.pm", "Mechanical Maintenance": "rajesh.mm",
             "Operations (Production)": "ramesh.pm", "Health, Safety & Environment": "sunita.hse", "Process Engineering": "ramesh.pm"}
 
 # Example documents kept (plant documents authored by Team UniMinds for demonstration)
@@ -66,10 +66,13 @@ def seeded() -> bool:
 def run(ingest: bool = True) -> None:
     if seeded():
         return
+    from .config import DEMO_MODE
     for u, name, post, dept, cl, roles, scopes, pw in PERSONAS:
+        # outside demonstration mode the well-known starting passwords must be changed at first login
         ex("""INSERT INTO users(id, username, display_name, post, department, clearance, roles_json, asset_scopes_json,
-              password_hash, demo_password, created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
-           (new_id(), u, name, post, dept, cl, j(roles), j(scopes), hash_password(pw), pw, now_iso()))
+              password_hash, demo_password, must_change_password, created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)""",
+           (new_id(), u, name, post, dept, cl, j(roles), j(scopes), hash_password(pw), pw if DEMO_MODE else None,
+            0 if DEMO_MODE else 1, now_iso()))
     for dept, mgr in MANAGERS.items():
         uid = q1("SELECT id FROM users WHERE username=?", (mgr,))["id"]
         ex("INSERT OR IGNORE INTO departments(id, code, name, manager_user_id) VALUES(?,?,?,?)", (new_id(), dept, dept, uid))
@@ -112,7 +115,7 @@ def run(ingest: bool = True) -> None:
     audit.write("system", "seed.completed", "demo", {"employees": len(PERSONAS), "example_documents": len(EXAMPLE_FILES)})
     if ingest:
         ingest_examples()
-    seed_workflows()
+        seed_workflows()
 
 
 def _manifest() -> list[dict]:
@@ -127,13 +130,19 @@ def _example_tags() -> set[str]:
     return tags
 
 
-def ingest_examples() -> None:
-    for d in _manifest():
-        if d["file"] not in EXAMPLE_FILES:
-            continue
+def ingest_examples(progress=None) -> None:  # type: ignore[no-untyped-def]
+    todo = [d for d in _manifest() if d["file"] in EXAMPLE_FILES and (CORPUS / d["file"]).exists()]
+    for i, d in enumerate(todo, start=1):
+        if progress:
+            progress(i - 1, len(todo), d.get("title") or d["file"])
         p = CORPUS / d["file"]
-        if not p.exists():
-            continue
+        if q1("SELECT 1 FROM documents WHERE file_name=? AND is_example=1 AND pages>0", (d["file"],)):
+            continue  # already ingested (resumable first start)
+        stale = q1("SELECT id FROM documents WHERE file_name=? AND is_example=1", (d["file"],))
+        if stale:  # interrupted during a previous start: remove the half-ingested copy
+            for c in q("SELECT id FROM chunks WHERE document_id=?", (stale["id"],)):
+                ex("DELETE FROM chunks_fts WHERE chunk_id=?", (c["id"],))
+            ex("DELETE FROM documents WHERE id=?", (stale["id"],))
         meta = {
             "title": "[EXAMPLE] " + (d.get("title") or p.stem), "doc_number": d.get("doc_number"), "revision": d.get("revision") or "",
             "status": d.get("status", "CURRENT"), "doc_type": d.get("doc_type", "other"),
@@ -148,7 +157,7 @@ def ingest_examples() -> None:
 
 def seed_workflows() -> None:
     doc = q1("SELECT id FROM documents WHERE doc_number='UT-E310-2026-07'")
-    meera = q1("SELECT id FROM users WHERE username='meera.me'")
+    meera = q1("SELECT id FROM users WHERE username='rajesh.mm'")  # approver: HOD of the discipline
     if doc and meera and not q1("SELECT 1 FROM findings"):
         ex("""INSERT INTO findings(id, title, tag, discipline, severity, state, due_date, evidence, source_document_id, page, approver_id,
               history_json, created_at, is_example) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,1)""",

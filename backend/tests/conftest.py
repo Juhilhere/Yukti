@@ -15,6 +15,7 @@ import pytest
 _STORE = Path(tempfile.mkdtemp(prefix="yukti-test-store-"))
 os.environ["YUKTI_STORE"] = str(_STORE)
 os.environ["YUKTI_AUTOLOAD"] = "0"
+os.environ["YUKTI_SYNC_STARTUP"] = "1"
 os.environ["YUKTI_TIER"] = "demo"
 
 from fastapi.testclient import TestClient  # noqa: E402

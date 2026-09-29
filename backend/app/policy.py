@@ -69,6 +69,9 @@ def _grant_covers(subject: Obj, resource: Obj, action: str) -> bool:
             continue
         if g.get("doc_type") and g["doc_type"] != resource.get("doc_type"):
             continue
+        # a grant never reaches above the classification ceiling set by its approver (at most the approver's own clearance)
+        if g.get("max_classification") is not None and int(resource.get("classification", 0)) > int(g["max_classification"]):
+            continue
         return True
     return False
 

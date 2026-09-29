@@ -17,11 +17,12 @@ export type Me = {
 export type SessionInfo = { id: string; created_at: string; last_seen_at: string; ip: string; user_agent: string; current: boolean };
 export type DemoUser = { username: string; display_name: string; post: string; department: string; password: string };
 
+// hardware fields are sent to administrators only; employees get offline_guard + version
 export type SystemInfo = {
-  gpu: { name: string; vram_total_mb: number; vram_used_mb: number; util_pct: number } | null;
-  ram: { total_mb: number; used_mb: number };
-  cpu: { name: string; cores: number; threads: number; util_pct: number };
-  llama_build: string | null;
+  gpu?: { name: string; vram_total_mb: number; vram_used_mb: number; util_pct: number } | null;
+  ram?: { total_mb: number; used_mb: number };
+  cpu?: { name: string; cores: number; threads: number; util_pct: number };
+  llama_build?: string | null;
   offline_guard: boolean;
   version: string;
 };

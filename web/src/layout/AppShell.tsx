@@ -255,14 +255,15 @@ function StatusBar() {
   const { lastGen } = useUI();
   const s = sys.data;
   const st = loaded.data;
-  const ramPct = s ? (s.ram.used_mb / Math.max(1, s.ram.total_mb)) * 100 : 0;
+  const ramPct = s?.ram ? (s.ram.used_mb / Math.max(1, s.ram.total_mb)) * 100 : 0;
   const Item = ({ children, title }: { children: ReactNode; title?: string }) => (
     <span title={title} className="flex items-center gap-1.5 whitespace-nowrap border-r border-border px-2.5 last:border-r-0">{children}</span>
   );
   return (
     <footer className="flex h-6 shrink-0 items-center overflow-hidden border-t border-border bg-surface font-mono text-[10.5px] text-muted">
       {sys.error && !s ? <Item><Dot tone="danger" /> system stats unavailable</Item> : null}
-      {s && <>
+      {s?.offline_guard && <Item title="All outbound network connections are blocked; nothing leaves this server"><Dot tone="ok" /> offline</Item>}
+      {s?.ram && <>
         <Item title="System RAM"><MemoryStick size={11} /> RAM {fmtMB(s.ram.used_mb)} / {fmtMB(s.ram.total_mb)}
           <span className="h-1 w-8 overflow-hidden rounded bg-surface-3"><span className={cx('block h-full', ramPct > 85 ? 'bg-danger' : 'bg-cyan')} style={{ width: `${ramPct}%` }} /></span>
         </Item>

@@ -158,13 +158,17 @@ def test_scanned_pdf_detected_and_ocr(login):
 
 
 # ------------------------------------------------------------------ findings workflow
-def test_findings_allowed_actions(login):
-    f = login("suresh.em").get("/api/findings").json()[0]
-    assert "approve" not in f["allowed_actions"]  # electrical HOD cannot approve a mechanical finding
-    m = login("meera.me")
+def test_findings_scoped_by_department_and_rank(login):
+    assert login("suresh.em").get("/api/findings").json() == []  # electrical HOD does not see a mechanical finding
+    assert login("contractor.x").get("/api/findings").json() == []
+    m = login("meera.me")  # mechanical engineer (INTERNAL): works the finding but cannot approve it
     f = m.get("/api/findings").json()[0]
-    assert {"approve", "reject"} <= set(f["allowed_actions"])
+    assert {"acknowledge", "escalate", "note"} <= set(f["allowed_actions"]) and "approve" not in f["allowed_actions"]
+    assert m.post(f"/api/findings/{f['id']}/action", json={"action": "approve"}).status_code == 403
     assert m.post(f"/api/findings/{f['id']}/action", json={"action": "note", "note": "ci"}).status_code == 200
+    hod = login("rajesh.mm")  # mechanical HOD (RESTRICTED) approves
+    assert {"approve", "reject"} <= set(hod.get("/api/findings").json()[0]["allowed_actions"])
+    assert login("suresh.em").post(f"/api/findings/{f['id']}/action", json={"action": "note"}).status_code == 404
 
 
 # ------------------------------------------------------------------ production optimizer never runs on invented data
@@ -194,3 +198,147 @@ def test_backup_and_usage(login):
     assert b["size_bytes"] > 1000
     u = a.get("/api/admin/usage").json()
     assert u["knowledge"]["documents"] >= 19 and u["users"]["total"] >= 12
+
+
+# ------------------------------------------------------------------ startup / health / admin tools
+def test_health_reports_startup_progress(app_client):
+    h = app_client.get("/api/health").json()
+    assert h["knowledge_ready"] is True and h["stage"] and "ready" in h
+
+
+def test_backup_list_has_checksum(login):
+    a = login("admin")
+    b = a.post("/api/admin/backups").json()
+    listed = next(x for x in a.get("/api/admin/backups").json() if x["name"] == b["name"])
+    assert listed["sha256"] == b["sha256"]
+
+
+def test_policy_simulator(login):
+    a = login("admin")
+    assert login("ravi.e").get("/api/admin/policies/documents").status_code == 403
+    fin = next(d for d in a.get("/api/admin/policies/documents").json() if d["doc_number"] == "FIN-AUD-2026-Q2")
+    deny = a.post("/api/admin/policies/simulate", json={"username": "ravi.e", "document_id": fin["id"], "action": "read"}).json()
+    allow = a.post("/api/admin/policies/simulate", json={"username": "kavita.fm", "document_id": fin["id"], "action": "read"}).json()
+    assert deny["effect"] == "deny" and allow["effect"] == "allow"
+
+
+def test_command_preview_and_maintenance(login):
+    a = login("admin")
+    r = a.post("/api/models/command-preview", json={"model_id": "x.gguf", "load_config": {"ctx_size": 4096}}).json()
+    assert "-c 4096" in r["llamacpp"] and r["vllm"].startswith("vllm serve")
+    assert a.post("/api/admin/mrpl/reload").json()["ok"] is True
+    assert a.post("/api/admin/demo/reset").json()["ok"] is True
+
+
+def test_free_port_and_server_port_check():
+    import socket
+
+    import server_main
+    from app import engine
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        busy = s.getsockname()[1]
+        s.listen()
+        assert server_main._port_free("127.0.0.1", busy) is False
+        assert engine._free_port(busy) != busy
+
+
+def test_engine_internals_admin_only(login):
+    for path in ("/api/server/status", "/api/server/logs"):
+        assert login("ravi.e").get(path).status_code == 403
+        assert login("admin").get(path).status_code == 200
+
+
+def test_security_headers(app_client):
+    h = app_client.get("/api/health").headers
+    assert "default-src 'self'" in h["content-security-policy"] and "frame-ancestors 'none'" in h["content-security-policy"]
+    assert h["x-content-type-options"] == "nosniff" and h["x-frame-options"] == "DENY" and h["cache-control"] == "no-store"
+
+
+def test_offline_guard_blocks_egress():
+    import socket
+
+    import pytest
+    from app import main
+    main.install_guard()
+    with pytest.raises(OSError):
+        socket.create_connection(("1.1.1.1", 443), timeout=2)
+    with pytest.raises(OSError):
+        socket.getaddrinfo("example.com", 443)
+
+
+# ------------------------------------------------------------------ department & rank scoping
+def test_assets_and_alerts_scoped(login):
+    ravi = login("ravi.e").get("/api/assets").json()
+    assert "A2" in {a["tag"] for a in ravi}
+    assert all(a["unit"] in ("CDU-1", "VDU-1") or a["owner_department"] == "Electrical Maintenance" for a in ravi)
+    from app.db import q1
+    b02 = q1("SELECT owner_department FROM assets WHERE tag='B-02'")
+    assert b02["owner_department"] != "Electrical Maintenance" and login("ravi.e").get("/api/assets/B-02").status_code == 404
+    assert "UTIL" in {a["unit"] for a in login("anil.u").get("/api/assets").json()}
+    c = login("contractor.x")
+    a2 = c.get("/api/assets/A2").json()
+    assert a2["work_orders"] == [] and a2["specs"] == {}  # contractor: no CMMS history or specifications
+    assert all(x["unit"] == "CDU-1" for x in c.get("/api/assets").json())
+    assert len(login("deepa.au").get("/api/alerts").json()) >= len(login("ravi.e").get("/api/alerts").json())
+
+
+def test_contractor_dossier_has_no_internal_records(login):
+    ev = login("contractor.x").chat("A2 tripped - give me the isolation and restart dossier")
+    facts = ev["facts"]["facts"] if ev.get("facts") else []
+    assert not any(f["attribute"] in ("open_work_orders", "breakdowns_5y", "on_call") for f in facts)
+    assert not any(f["status"] in ("KNOWN", "CONFLICTING") for f in facts)
+    assert ev["retrieval"]["denied"]["departments"] == []
+
+
+def test_audit_scoped_to_department(login):
+    login("ravi.e")
+    login("kavita.fm")
+    rows = login("suresh.em").get("/api/audit?limit=2000").json()
+    from app.db import q
+    elec = {r["username"] for r in q("SELECT username FROM users WHERE department='Electrical Maintenance'")}
+    assert rows and all(r["actor"] in elec for r in rows)
+    assert login("suresh.em").get("/api/audit/export").status_code == 403
+    assert login("deepa.au").get("/api/audit/export").status_code == 200
+
+
+def test_it_admin_cannot_read_or_grant_business_documents(login):
+    a = login("admin")
+    assert not any(d["doc_number"] == "FIN-AUD-2026-Q2" for d in a.get("/api/documents").json())
+    anil = login("anil.u")
+    ar = anil.post("/api/access-requests", json={"department": "Finance & Accounts", "justification": "ci", "hours": 1}).json()
+    assert a.post(f"/api/access-requests/{ar['id']}/approve", json={}).status_code == 403
+
+
+def test_grant_never_exceeds_ceiling():
+    from app.policy import Subject, pdp
+    far = "2999-01-01T00:00:00+00:00"
+    s = Subject(id="u", username="u", display_name="u", post="", department="Electrical Maintenance", clearance=1,
+                roles=["engineer"], asset_scopes=[], grants=[{"department": "Finance & Accounts", "expires_at": far, "max_classification": 2}])
+    doc = {"type": "document", "id": "d", "department": "Finance & Accounts", "doc_type": "audit_report", "units": [], "status": "CURRENT"}
+    assert pdp.decide(s, "read", {**doc, "classification": 2}).allowed
+    assert not pdp.decide(s, "read", {**doc, "classification": 3}).allowed
+
+
+def test_admin_cannot_escalate_self(login):
+    a = login("admin")
+    me = a.get("/api/auth/me").json()["user"]
+    assert a.patch(f"/api/admin/users/{me['id']}", json={"clearance": 4}).status_code == 403
+    assert a.patch(f"/api/admin/users/{me['id']}", json={"roles": ["admin", "plant_manager"]}).status_code == 403
+
+
+def test_upload_type_rules(login):
+    hod = login("rajesh.mm")
+    f = {"file": ("x.pdf", _pdf(), "application/pdf")}
+    assert hod.post("/api/documents", files=f, data={"doc_type": "P&ID"}).status_code == 422
+    assert hod.post("/api/documents", files={"file": ("x.pdf", _pdf(), "application/pdf")}, data={"doc_type": "MSDS"}).status_code == 403
+
+
+def test_jobs_and_chat_stop_are_owner_only(login):
+    hod = login("rajesh.mm")
+    r = hod.post("/api/documents", files={"file": ("own.pdf", _pdf(), "application/pdf")}, data={"doc_type": "manual"}).json()
+    assert hod.get(f"/api/jobs/{r['job_id']}").status_code == 200
+    assert login("ravi.e").get(f"/api/jobs/{r['job_id']}").status_code == 404
+    cid = hod.post("/api/chats", json={}).json()["id"]
+    assert login("ravi.e").post(f"/api/chats/{cid}/stop", json={}).status_code == 404
+    hod.delete(f"/api/documents/{r['document_id']}")

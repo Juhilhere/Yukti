@@ -28,7 +28,9 @@ for p in (STORE, BLOBS, REPORTS, LOG_DIR, ROOT / "models"):
     p.mkdir(parents=True, exist_ok=True)
 
 VERSION = "0.3.0"
-TIER = os.environ.get("YUKTI_TIER", "demo")
+# Production by default. Demonstration mode (sample accounts listed on the login page, rehearsal reset) is enabled only
+# explicitly: YUKTI_TIER=demo, or a file named DEMO_MODE in the install folder (delete it for production use).
+TIER = os.environ.get("YUKTI_TIER") or ("demo" if (ROOT / "DEMO_MODE").exists() else "prod")
 DEMO_MODE = TIER in ("demo", "dev")
 
 API_HOST = os.environ.get("YUKTI_HOST", "127.0.0.1")  # 0.0.0.0 to serve employee desktop clients on the plant LAN

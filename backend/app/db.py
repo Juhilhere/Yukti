@@ -140,7 +140,7 @@ CREATE TABLE IF NOT EXISTS access_requests(
   hours INTEGER, state TEXT, approver_id TEXT, note TEXT, created_at TEXT, decided_at TEXT);
 CREATE TABLE IF NOT EXISTS grants(
   id TEXT PRIMARY KEY, user_id TEXT, department TEXT, doc_type TEXT, document_id TEXT, expires_at TEXT,
-  approved_by TEXT, request_id TEXT, revoked_at TEXT, created_at TEXT);
+  approved_by TEXT, request_id TEXT, revoked_at TEXT, created_at TEXT, max_classification INTEGER);
 
 CREATE TABLE IF NOT EXISTS findings(
   id TEXT PRIMARY KEY, title TEXT, tag TEXT, discipline TEXT, severity TEXT, state TEXT, due_date TEXT,
@@ -164,8 +164,18 @@ CREATE TRIGGER IF NOT EXISTS audit_no_delete BEFORE DELETE ON audit_log BEGIN SE
 """
 
 
+MIGRATIONS = [
+    "ALTER TABLE grants ADD COLUMN max_classification INTEGER",
+]
+
+
 def init_db() -> None:
     db().executescript(SCHEMA)
+    for m in MIGRATIONS:  # idempotent column additions for databases created by earlier versions
+        try:
+            db().execute(m)
+        except Exception:
+            pass
 
 
 def get_setting(key: str, default: Any = None) -> Any:

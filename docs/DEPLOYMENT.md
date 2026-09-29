@@ -53,7 +53,8 @@ Copy the folder to the server, for example `D:\Yukti\Server`, and run one of the
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `YUKTI_TIER` | `demo` | **Set to `prod` for any real deployment.** `demo` shows demo accounts and passwords on the login screen. |
+| `YUKTI_TIER` | `prod` (or `demo` when a `DEMO_MODE` file is in the install folder) | `demo` shows sample accounts and passwords on the login screen and enables the rehearsal reset. Never use it in production. |
+| `YUKTI_TLS_CERT`, `YUKTI_TLS_KEY` | — | PEM certificate and key: serve HTTPS (same as `--tls-cert` / `--tls-key`). |
 | `YUKTI_HOST` / `YUKTI_PORT` | `127.0.0.1` / `8000` | Bind address (also `--host` / `--port` on `yukti-server.exe`) |
 | `YUKTI_HOME` | folder of `yukti-server.exe` | Installation root |
 | `YUKTI_STORE` | `<root>\data\store` | Runtime data (put it on a BitLocker-protected volume) |

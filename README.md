@@ -255,4 +255,4 @@ Built for Smart India Hackathon 2026, problem statement SIH26117.
 ## Notice
 
 Copyright © 2026 Team UniMinds. All rights reserved. This is proprietary software prepared for Smart India Hackathon 2026 (SIH26117).
-It has no open-source licence. See [NOTICE](NOTICE). Third-party components and their licences are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Proprietary, under the [Yukti Proprietary Licence](LICENSE): the IP stays with Team UniMinds (per SIH rules), MRPL and the Ministry of Petroleum and Natural Gas get free lifetime use, the SIH organisers may evaluate it, and anyone else needs our written permission. See also [NOTICE](NOTICE). Third-party components and their licences are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

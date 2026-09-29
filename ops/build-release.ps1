@@ -7,7 +7,8 @@ param(
   [string]$Out = "E:\yukti-build",
   [string]$LlamaCuda = "E:\tools\llama-cuda",      # llama-bXXXX-bin-win-cuda-12.4-x64.zip + cudart zip, extracted
   [string]$LlamaVulkan = "E:\tools\llama-vulkan",  # llama-bXXXX-bin-win-vulkan-x64.zip, extracted
-  [string]$Model = "$env:USERPROFILE\.lmstudio\models\lmstudio-community\gemma-2-2b-it-GGUF\gemma-2-2b-it-Q8_0.gguf"
+  [string]$Model = "$env:USERPROFILE\.lmstudio\models\lmstudio-community\gemma-2-2b-it-GGUF\gemma-2-2b-it-Q8_0.gguf",
+  [switch]$Demo                                    # include the DEMO_MODE marker (sample accounts on the login page)
 )
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
@@ -45,6 +46,8 @@ Copy-Item $Model "$pkg\models\gemma-2-2b-it-GGUF\"
 Copy-Item "$LlamaCuda\*.exe", "$LlamaCuda\*.dll" "$pkg\llama\cuda\"
 Copy-Item "$LlamaVulkan\*.exe", "$LlamaVulkan\*.dll" "$pkg\llama\vulkan\"
 Copy-Item "$root\ops\package\*.cmd", "$root\ops\package\README.txt" $pkg
+Copy-Item "$root\LICENSE", "$root\NOTICE", "$root\THIRD_PARTY_NOTICES.md" $pkg
+if ($Demo) { Set-Content -Encoding ascii "$pkg\DEMO_MODE" "Demonstration build: delete this file before the first start for production use." }
 Copy-Item "$root\ops\package\MODELS.txt" "$pkg\models\"
 
 Write-Host "4/5 Desktop installer"; Push-Location "$root\desktop"; npm ci; npm run dist; Pop-Location

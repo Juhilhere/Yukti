@@ -1,5 +1,5 @@
 # Yukti ABAC policy — deny-overrides, default deny. Evaluated by host code only (never by the LLM).
-version: 1
+version: 2
 rules:
   # ---------- hard floors ----------
   - id: R-NO-CONTROL-WRITE
@@ -45,7 +45,8 @@ rules:
     effect: allow
     resources: [document]
     actions: [read, search, cite]
-    when: "resource.doc_type in ['SOP', 'drawing_pid', 'drawing_sld', 'datasheet', 'inspection_report', 'calibration_certificate', 'manual', 'work_order_export', 'asset_register', 'shift_log', 'MSDS', 'troubleshooting_guide'] and tags_match(resource.units, subject.asset_scopes)"
+    # technical documents of the plant units a person is assigned to; across departments only up to INTERNAL
+    when: "resource.doc_type in ['SOP', 'drawing_pid', 'drawing_sld', 'datasheet', 'inspection_report', 'calibration_certificate', 'manual', 'work_order_export', 'asset_register', 'shift_log', 'MSDS', 'troubleshooting_guide'] and tags_match(resource.units, subject.asset_scopes) and (resource.department == subject.department or resource.classification <= 1)"
   - id: R-HSE-SAFETY
     effect: allow
     resources: [document]
@@ -65,7 +66,9 @@ rules:
     effect: allow
     resources: [document]
     actions: [read, search, cite]
-    when: "('plant_manager' in subject.roles or 'admin' in subject.roles or 'auditor' in subject.roles)"
+    # refinery management and internal audit read across departments (still capped by their clearance).
+    # The IT/platform administrator configures Yukti but does not read plant documents.
+    when: "('plant_manager' in subject.roles or 'auditor' in subject.roles)"
   - id: R-GRANT
     effect: allow
     resources: [document]
