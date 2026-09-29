@@ -146,3 +146,19 @@ details.log pre { margin: 0; padding: 8px 14px; height: 220px; overflow: auto; f
   border: 1px solid rgba(245, 165, 36, .55); color: #ffdca0; padding: 10px 16px; border-radius: 10px; font-size: 13px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, .45); transition: opacity .25s, transform .25s; pointer-events: none; }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* simple setup view (non-technical users) */
+.langs { display: flex; gap: 4px; }
+button.small { padding: 4px 9px; font-size: 12px; border-radius: 6px; }
+button.ghost.on { border-color: var(--amber); color: var(--amber); }
+button.link { background: none; border: 0; padding: 0; color: var(--cyan); cursor: pointer; font-size: 12.5px; }
+button.link:hover { text-decoration: underline; }
+button.big { padding: 11px 26px; font-size: 15px; }
+.card.hero { display: flex; flex-direction: column; gap: 14px; padding: 22px 24px; }
+.lead { margin: 0; font-size: 15.5px; line-height: 1.55; }
+.hint { margin: 0; color: var(--muted); font-size: 12.5px; }
+.fine { margin: 0; color: #6f6f78; font-size: 11.5px; text-align: center; }
+.checklist.big li { padding: 12px 14px; font-size: 14.5px; }
+.bar.big { height: 12px; border-radius: 8px; }
+.retrying { font-size: 12.5px; color: var(--warn); }
+.errpanel .text { font-size: 13.5px; }

@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight, RotateCcw } from 'lucide-react';
 import type { ParamField } from '../lib/types';
 import { cx } from '../lib/format';
 import { InfoTip, Slider, Toggle } from './ui';
+import { useT } from '../lib/i18n';
 
 type Values = Record<string, unknown>;
 
@@ -12,6 +13,7 @@ function isDefault(f: ParamField, v: unknown) {
 }
 
 function FieldInput({ f, value, onChange }: { f: ParamField; value: unknown; onChange: (v: unknown) => void }) {
+  const t = useT();
   const v = value === undefined ? f.default : value;
   switch (f.type) {
     case 'bool':
@@ -43,7 +45,7 @@ function FieldInput({ f, value, onChange }: { f: ParamField; value: unknown; onC
     case 'tags': {
       const arr = Array.isArray(v) ? (v as unknown[]).map(String) : typeof v === 'string' && v ? [v] : [];
       return (
-        <input className="input font-mono !py-0.5 text-[12px]" placeholder="comma separated" defaultValue={arr.join(', ')}
+        <input className="input font-mono !py-0.5 text-[12px]" placeholder={t('common.commaSeparated')} defaultValue={arr.join(', ')}
           key={arr.join('|')}
           onBlur={(e) => onChange(e.target.value.split(',').map((s) => s.trim()).filter(Boolean))} />
       );
@@ -59,13 +61,14 @@ function JsonInput({ value, onChange }: { value: unknown; onChange: (v: unknown)
   const initial = value === undefined || value === null ? '' : typeof value === 'string' ? value : JSON.stringify(value, null, 2);
   const [text, setText] = useState(initial);
   const [err, setErr] = useState('');
+  const t = useT();
   return (
     <div>
       <textarea className={cx('input min-h-[70px] font-mono text-[11.5px]', err && '!border-danger')} value={text}
         onChange={(e) => setText(e.target.value)}
         onBlur={() => {
           if (!text.trim()) { setErr(''); onChange(null); return; }
-          try { onChange(JSON.parse(text)); setErr(''); } catch { setErr('Invalid JSON'); }
+          try { onChange(JSON.parse(text)); setErr(''); } catch { setErr(t('common.invalidJson')); }
         }} />
       {err && <div className="text-[11px] text-danger">{err}</div>}
     </div>
@@ -77,6 +80,7 @@ export function ParamForm({ fields, values, onChange, engine, showAdvanced: show
   fields: ParamField[]; values: Values; onChange: (key: string, v: unknown) => void; engine?: string | null;
   showAdvanced?: boolean; compact?: boolean; collapsedGroups?: string[];
 }) {
+  const t = useT();
   const [showAdvLocal, setShowAdvLocal] = useState(false);
   const showAdv = showAdvProp ?? showAdvLocal;
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() =>
@@ -98,7 +102,7 @@ export function ParamForm({ fields, values, onChange, engine, showAdvanced: show
     <div className="space-y-2">
       {showAdvProp === undefined && advCount > 0 && (
         <div className="flex items-center justify-end">
-          <Toggle size="sm" checked={showAdvLocal} onChange={setShowAdvLocal} label={<span className="text-[11.5px] text-muted">Show advanced ({advCount})</span>} />
+          <Toggle size="sm" checked={showAdvLocal} onChange={setShowAdvLocal} label={<span className="text-[11.5px] text-muted">{t('common.showAdvancedN', { n: advCount })}</span>} />
         </div>
       )}
       {groups.map(([g, fs]) => (
@@ -122,12 +126,12 @@ export function ParamForm({ fields, values, onChange, engine, showAdvanced: show
                       <InfoTip text={<>
                         <div>{f.description}</div>
                         <div className="mt-1 font-mono text-[10.5px] text-faint">{f.key}{f.engines?.length ? ` · ${f.engines.join(', ')}` : ''}</div>
-                        {unsupported && <div className="mt-1 text-amber">Not supported by current engine</div>}
+                        {unsupported && <div className="mt-1 text-amber">{t('common.notSupportedEngine')}</div>}
                       </>} />
-                      {f.advanced && <span className="rounded bg-surface-3 px-1 text-[9.5px] uppercase text-faint">adv</span>}
+                      {f.advanced && <span className="rounded bg-surface-3 px-1 text-[9.5px] uppercase text-faint" title={t('common.advanced')}>{t('common.advShort')}</span>}
                       <span className="ml-auto flex items-center gap-1">
                         {changed && (
-                          <button title="Reset to default" className="text-faint hover:text-amber" onClick={() => onChange(f.key, undefined)}>
+                          <button title={t('common.resetDefault')} className="text-faint hover:text-amber" onClick={() => onChange(f.key, undefined)}>
                             <RotateCcw size={11} />
                           </button>
                         )}
@@ -142,7 +146,7 @@ export function ParamForm({ fields, values, onChange, engine, showAdvanced: show
           )}
         </div>
       ))}
-      {groups.length === 0 && <div className="py-4 text-center text-[12px] text-muted">No parameters</div>}
+      {groups.length === 0 && <div className="py-4 text-center text-[12px] text-muted">{t('common.noParams')}</div>}
     </div>
   );
 }

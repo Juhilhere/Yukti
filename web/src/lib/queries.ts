@@ -26,14 +26,20 @@ export const useSchema = () => useQuery({ queryKey: qk.schema, queryFn: () => ap
 export const usePresets = () => useQuery({ queryKey: qk.presets, queryFn: () => api.get<Preset[]>('/api/presets') });
 
 /* ---- tiny global UI store: model loader modal + last generation stats ---- */
-type UIState = { loaderOpen: boolean; loaderModelId: string | null; lastGen: { tok_per_s: number; model: string; engine: string } | null };
-let ui: UIState = { loaderOpen: false, loaderModelId: null, lastGen: null };
+type UIState = {
+  loaderOpen: boolean; loaderModelId: string | null; lastGen: { tok_per_s: number; model: string; engine: string } | null;
+  /** problem-report dialog: null = closed; otherwise text to prefill (e.g. the error that was shown) */
+  report: { about?: string } | null;
+};
+let ui: UIState = { loaderOpen: false, loaderModelId: null, lastGen: null, report: null };
 const subs = new Set<() => void>();
 function set(p: Partial<UIState>) { ui = { ...ui, ...p }; subs.forEach((f) => f()); }
 export const uiStore = {
   openLoader: (modelId?: string | null) => set({ loaderOpen: true, loaderModelId: modelId ?? null }),
   closeLoader: () => set({ loaderOpen: false, loaderModelId: null }),
   setLastGen: (g: UIState['lastGen']) => set({ lastGen: g }),
+  openReport: (about?: string) => set({ report: { about } }),
+  closeReport: () => set({ report: null }),
 };
 export function useUI(): UIState {
   return useSyncExternalStore((cb) => { subs.add(cb); return () => { subs.delete(cb); }; }, () => ui);

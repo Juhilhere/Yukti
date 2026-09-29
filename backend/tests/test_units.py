@@ -84,3 +84,35 @@ def test_ollama_url_and_options():
 def test_diagnose_ollama_variant():
     from app.engine import diagnose
     assert "Ollama engine" in diagnose(["llama_model_load: error loading model: error loading model hyperparameters: key not found in model: gemma3.attention.layer_norm_rms_epsilon"])
+
+
+def test_server_messages_follow_request_language(app_client):
+    r = app_client.post("/api/auth/login", json={"username": "ravi.e", "password": "wrong"}, headers={"X-Lang": "hi"})
+    assert r.json()["detail"]["message"] == "उपयोगकर्ता नाम या पासवर्ड गलत है।"
+    r = app_client.post("/api/auth/login", json={"username": "ravi.e", "password": "wrong"})
+    assert r.json()["detail"]["message"] == "Invalid username or password."
+
+
+def test_tr_patterns_keep_variables_and_translate_nested_messages():
+    from app.i18n import tr, tr_facts
+    assert tr("Access granted: Operations documents for 4 h", "hi") == "पहुँच मंज़ूर: Operations के दस्तावेज़, 4 घंटे के लिए"
+    assert tr("Preparing knowledge base (2/9)", "kn") == "ಜ್ಞಾನ ಭಂಡಾರ ಸಿದ್ಧವಾಗುತ್ತಿದೆ (2/9)"
+    nested = "llama-server did not become ready within 30 minutes and was stopped. Model file not found"
+    assert tr(nested, "hi").endswith("मॉडल फ़ाइल नहीं मिली")
+    assert tr("Something nobody translated", "hi") == "Something nobody translated"
+    assert tr("Access granted: Operations documents for 4 h") == "Access granted: Operations documents for 4 h"
+    facts = [{"note": "Public source", "value": "11.67", "candidates": [{"source_label": "CMMS work orders"}]}]
+    out = tr_facts(facts, "kn")
+    assert out[0]["note"] == "ಸಾರ್ವಜನಿಕ ಮೂಲ" and out[0]["value"] == "11.67" and facts[0]["note"] == "Public source"
+
+
+def test_every_translation_has_hindi_and_kannada():
+    from app.i18n_messages import MESSAGES, PATTERNS
+    for en, t in MESSAGES.items():
+        assert t.get("hi") and t.get("kn"), en
+    for rx, t in PATTERNS:
+        assert t.get("hi") and t.get("kn"), rx.pattern
+        for lang in ("hi", "kn"):  # every placeholder must be a named group of its pattern
+            import string
+            names = {f for _, f, _, _ in string.Formatter().parse(t[lang]) if f}
+            assert names <= set(rx.groupindex), (rx.pattern, lang, names)

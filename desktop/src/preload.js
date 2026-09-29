@@ -21,6 +21,8 @@ if (location.protocol === 'file:') {
     cancelInstall: () => ipcRenderer.invoke('yukti:cancelInstall'),
     back: () => ipcRenderer.invoke('yukti:back'),
     openLogs: (which) => ipcRenderer.invoke('yukti:openLogs', which),
+    setLang: (l) => ipcRenderer.invoke('yukti:setLang', l),
+    report: (req) => ipcRenderer.invoke('yukti:report', req),
     onInstallProgress: on('install:progress'),
     // startup page
     splashInit: () => ipcRenderer.invoke('yukti:splashInit'),

@@ -1,3 +1,5 @@
+import { getLang, tr } from './i18n';
+import { recordProblem } from './diagnostics';
 // Fetch wrapper: cookie session + CSRF header + global 401/403 handling.
 
 export class ApiError extends Error {
@@ -35,12 +37,13 @@ export function buildHeaders(method: string, body?: unknown, extra?: HeadersInit
   if (body !== undefined && !(body instanceof FormData) && !h.has('Content-Type')) h.set('Content-Type', 'application/json');
   if (UNSAFE.has(method.toUpperCase()) && csrfToken) h.set('X-CSRF-Token', csrfToken);
   h.set('Accept', h.get('Accept') || 'application/json');
+  h.set('X-Lang', getLang());  // the server translates its messages (errors, notices) into the chosen language
   return h;
 }
 
 export async function parseError(res: Response): Promise<ApiError> {
   let code = `http_${res.status}`;
-  let message = res.statusText || `Request failed (${res.status})`;
+  let message = res.statusText || tr('err.requestFailed', { status: res.status });
   let detail: Record<string, unknown> | null = null;
   try {
     const j = await res.json();
@@ -81,10 +84,12 @@ export async function request<T = unknown>(method: string, path: string, body?: 
     });
   } catch (e) {
     if ((e as Error)?.name === 'AbortError') throw e;
-    throw new ApiError(0, 'network', 'Cannot reach the Yukti server');
+    recordProblem('api', `${method} ${path}: server not reachable`);
+    throw new ApiError(0, 'network', tr('err.network', 'Yukti cannot reach its server. If Yukti was just started, wait a moment; otherwise restart the Yukti app.'));
   }
   if (!res.ok) {
     const err = await parseError(res);
+    if (res.status >= 500 || res.status === 0) recordProblem('api', `${method} ${path}: ${res.status} ${err.code} ${err.message}`);
     if (!opts.silent) notifyError(err, path);
     throw err;
   }
@@ -112,7 +117,7 @@ export function qs(params: Record<string, string | number | undefined | null>) {
 
 /** Download a file (GET, with cookie) and save it via a blob link. */
 export async function downloadFile(url: string, fallbackName = 'download') {
-  const res = await fetch(url, { credentials: 'include' });
+  const res = await fetch(url, { credentials: 'include', headers: { 'X-Lang': getLang() } });
   if (!res.ok) throw await parseError(res);
   const blob = await res.blob();
   const cd = res.headers.get('content-disposition') || '';

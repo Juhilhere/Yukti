@@ -62,7 +62,7 @@ _SHIPPED_LAYA = DATA / "store" / "laya"
 if _SHIPPED_LAYA.exists() and STORE.resolve() != (DATA / "store").resolve() and not (STORE / "laya").exists():
     shutil.copytree(_SHIPPED_LAYA, STORE / "laya")
 
-VERSION = "0.3.0"
+VERSION = "0.4.0"
 # Production by default. Demonstration mode (sample accounts listed on the login page, rehearsal reset) is enabled only
 # explicitly: YUKTI_TIER=demo, or a file named DEMO_MODE in the install folder (delete it for production use).
 TIER = os.environ.get("YUKTI_TIER") or ("demo" if (ROOT / "DEMO_MODE").exists() else "prod")

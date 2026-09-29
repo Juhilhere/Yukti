@@ -49,7 +49,8 @@ def _now() -> datetime:
 
 
 def err(status: int, code: str, message: str) -> HTTPException:
-    return HTTPException(status_code=status, detail={"code": code, "message": message})
+    from .i18n import tr  # messages are written in English and shown in the user's language
+    return HTTPException(status_code=status, detail={"code": code, "message": tr(message)})
 
 
 def active_grants(user_id: str) -> list[dict[str, Any]]:

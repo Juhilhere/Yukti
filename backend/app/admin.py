@@ -22,6 +22,7 @@ from . import audit, engine
 from .auth import ROLE_PERMS, Ctx, current, err, hash_password, strong_password_problem
 from .config import BLOBS, CLEARANCE_LABELS, DB_PATH, ROOT, STORE, USER_MODELS
 from .db import db, ex, get_setting, j, new_id, now_iso, q, q1, set_setting, uj
+from .i18n import get_lang, tr
 from .llm_params import DEFAULT_LOAD, DEFAULT_PREDICTION
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -79,7 +80,7 @@ def users(ctx: Ctx = Depends(current)) -> list[dict[str, Any]]:
 @router.get("/roles")
 def roles(ctx: Ctx = Depends(current)) -> list[dict[str, Any]]:
     ctx.require("users.manage")
-    return [{"role": r, "description": ROLE_DESC.get(r, ""), "permissions": ROLE_PERMS.get(r, [])} for r in ROLE_DESC]
+    return [{"role": r, "description": tr(ROLE_DESC.get(r, "")), "permissions": ROLE_PERMS.get(r, [])} for r in ROLE_DESC]
 
 
 def _validate(body: dict[str, Any], creating: bool) -> None:
@@ -269,7 +270,8 @@ def put_ai(body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str, Any]:
             if f["type"] in ("int", "float", "number") and ((f.get("min") is not None and v < f["min"]) or (f.get("max") is not None and v > f["max"])):
                 raise ValueError
         except (TypeError, ValueError):
-            raise err(422, "invalid", f"{f['label']}: '{pred.get(k)}' is not a valid value")
+            from .i18n_params import param_label
+            raise err(422, "invalid", f"{param_label(f['label'], get_lang())}: '{pred.get(k)}' is not a valid value")
         pred[k] = v
     new["prediction"] = pred
     set_setting("ai_settings", new, ctx.actor)
@@ -342,7 +344,7 @@ def feedback_list(ctx: Ctx = Depends(current)) -> list[dict[str, Any]]:
         ids = [x.get("document_id") for x in (meta.get("sources") or []) if isinstance(x, dict)]
         from . import rag
         visible = all((d := q1("SELECT * FROM documents WHERE id=?", (i,))) is None or rag.can_read(ctx.subject, d) for i in ids)             and not (meta.get("denied") or {}).get("count")
-        hidden = "[hidden: this conversation used documents outside your access]"
+        hidden = tr("[hidden: this conversation used documents outside your access]")
         out.append({"message_id": f["message_id"], "user": u.get("username"), "rating": f["rating"], "comment": f["comment"],
                     "question": (qn or {}).get("content") if visible else hidden,
                     "answer_excerpt": (m.get("content") or "")[:300] if visible else hidden, "created_at": f["created_at"]})
@@ -426,7 +428,7 @@ def restore_backup(name: str, ctx: Ctx = Depends(current)) -> dict[str, Any]:
     (stage / ".from").write_text(name, encoding="utf-8")
     audit.write(ctx.actor, "admin.backup.restore_staged", f"backup:{name}")
     return {"ok": True, "restart_required": True, "pending": name,
-            "message": "Backup checked and staged. Restart Yukti to replace the current data with it."}
+            "message": tr("Backup checked and staged. Restart Yukti to replace the current data with it.")}
 
 
 @router.get("/backups/restore-pending")
@@ -460,7 +462,7 @@ def restart_server(ctx: Ctx = Depends(current)) -> dict[str, Any]:
         os._exit(75)
 
     threading.Thread(target=bye, daemon=True).start()
-    return {"ok": True, "message": "Yukti is restarting; this page reconnects when it is back."}
+    return {"ok": True, "message": tr("Yukti is restarting; this page reconnects when it is back.")}
 
 
 def apply_pending_restore() -> bool:

@@ -5,13 +5,14 @@ export type UIMessage = Message & {
   error?: { code: string; message: string } | null;
 };
 
+/** Example questions on the empty chat screen; values are i18n keys (the translated prompt is sent as the question). */
 export const SUGGESTIONS: { title: string; prompt: string; tag: string }[] = [
-  { tag: 'Trip response', title: 'A2 tripped at 02:15', prompt: 'A2 tripped at 02:15 — give me the isolation and restart dossier' },
-  { tag: 'Process limits', title: 'MDEA amine strength', prompt: 'What is the MDEA amine strength limit for the amine unit?' },
-  { tag: 'Compliance', title: 'Expiring certificates', prompt: 'Which certificates expire in the next 30 days?' },
-  { tag: 'Maintenance', title: 'CDU-1 work orders', prompt: 'Summarise open work orders for CDU-1' },
-  { tag: 'MRPL facts', title: 'Capacity & complexity', prompt: "What is MRPL's refining capacity, Nelson complexity and main process units?" },
-  { tag: 'Products', title: 'Product slate & PP grades', prompt: "List MRPL's product slate and polypropylene grades" },
+  { tag: 'chat.sugg.trip.tag', title: 'chat.sugg.trip.title', prompt: 'chat.sugg.trip.prompt' },
+  { tag: 'chat.sugg.amine.tag', title: 'chat.sugg.amine.title', prompt: 'chat.sugg.amine.prompt' },
+  { tag: 'chat.sugg.certs.tag', title: 'chat.sugg.certs.title', prompt: 'chat.sugg.certs.prompt' },
+  { tag: 'chat.sugg.wo.tag', title: 'chat.sugg.wo.title', prompt: 'chat.sugg.wo.prompt' },
+  { tag: 'chat.sugg.mrpl.tag', title: 'chat.sugg.mrpl.title', prompt: 'chat.sugg.mrpl.prompt' },
+  { tag: 'chat.sugg.products.tag', title: 'chat.sugg.products.title', prompt: 'chat.sugg.products.prompt' },
 ];
 
 /** Replace bare [S1] markers with markdown links that we render as citation pills. */

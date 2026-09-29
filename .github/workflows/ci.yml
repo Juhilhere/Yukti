@@ -48,6 +48,8 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - run: npm ci
       - run: npx tsc --noEmit
+      - name: Translations complete (English / Hindi / Kannada)
+        run: node scripts/i18n-check.mjs
       - run: npm run build
       - name: No external URLs in bundle (offline product)
         shell: bash

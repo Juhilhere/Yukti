@@ -10,9 +10,10 @@ import {
 import { api } from '../lib/api';
 import { AMBER, AXIS, CYAN, GRID, OTHER, SERIES, SURFACE, axisProps, tooltipStyle } from '../lib/chartTheme';
 import { useDepartments } from '../lib/queries';
-import { cx, fmtDate } from '../lib/format';
+import { cx } from '../lib/format';
 import { Badge, Card, ErrorBox, Tabs, Tip } from '../components/ui';
 import { DataTable, type Column } from '../components/DataTable';
+import { locale, tr, useLang, useT } from '../lib/i18n';
 
 /* ============================== types ============================== */
 type Num = number | string | null | undefined;
@@ -70,7 +71,7 @@ function fmtN(v: unknown, digits?: number): string {
   const n = toNum(v);
   if (n === null) return txt(v) || '—';
   const d = digits ?? (Math.abs(n) >= 100 ? 0 : Math.abs(n) >= 10 ? 1 : 2);
-  return n.toLocaleString('en-IN', { maximumFractionDigits: d, minimumFractionDigits: 0 });
+  return n.toLocaleString(locale(), { maximumFractionDigits: d, minimumFractionDigits: 0 });
 }
 /** Chronological key for "FY2023-24", "2023-24", "FY24", "2024", "Q1 FY25". */
 function fyKey(s: unknown): number {
@@ -92,10 +93,19 @@ function dateKey(s: unknown): number {
   return y ? Date.UTC(Number(y[1]), 0, 1) : 0;
 }
 function isUrl(u: unknown): u is string { return typeof u === 'string' && /^https?:\/\//i.test(u.trim()); }
-function host(u: string): string { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return 'other'; } }
+function host(u: string): string { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return tr('company.other'); } }
+/** Date in the chosen language (falls back to the raw text when it is not a date). */
+function fmtDateL(s: string): string {
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? s : d.toLocaleDateString(locale(), { day: '2-digit', month: 'short', year: 'numeric' });
+}
+/** Fill {name} placeholders of a translated sentence with React nodes (keeps styled values inside one translated string). */
+function fillNodes(str: string, nodes: Record<string, ReactNode>): ReactNode[] {
+  return str.split(/(\{\w+\})/).map((part, i) => { const m = /^\{(\w+)\}$/.exec(part); return m && m[1] in nodes ? <span key={i}>{nodes[m[1]]}</span> : part; });
+}
 function groupBy<T>(xs: T[], key: (x: T) => string): [string, T[]][] {
   const m = new Map<string, T[]>();
-  xs.forEach((x) => { const k = key(x) || 'Other'; if (!m.has(k)) m.set(k, []); m.get(k)!.push(x); });
+  xs.forEach((x) => { const k = key(x) || tr('company.other'); if (!m.has(k)) m.set(k, []); m.get(k)!.push(x); });
   return [...m.entries()];
 }
 
@@ -112,14 +122,17 @@ function SrcLink({ url, title, className }: { url?: string | null; title?: strin
   );
 }
 function ConfDot({ c }: { c?: string | null }) {
+  const t = useT();
   const k = txt(c).toLowerCase();
   const cls = k === 'high' ? 'bg-ok' : k === 'medium' ? 'bg-amber' : k === 'low' ? 'bg-faint' : 'bg-border-strong';
-  return <Tip side="top" text={`Confidence: ${k || 'unrated'}`}><span className={cx('inline-block h-1.5 w-1.5 rounded-full', cls)} /></Tip>;
+  const level = k === 'high' ? t('company.conf.high') : k === 'medium' ? t('company.conf.medium') : k === 'low' ? t('company.conf.low') : k || t('company.conf.unrated');
+  return <Tip side="top" text={t('company.confidence', { level })}><span className={cx('inline-block h-1.5 w-1.5 rounded-full', cls)} /></Tip>;
 }
-function NoData({ text = 'No public data captured for this section' }: { text?: string }) {
+function NoData({ text }: { text?: string }) {
+  const t = useT();
   return (
     <div className="flex items-center justify-center gap-2 rounded-md border border-dashed border-border px-3 py-6 text-[12px] text-faint">
-      <Info size={13} /> {text}
+      <Info size={13} /> {text ?? t('company.noData')}
     </div>
   );
 }
@@ -179,42 +192,42 @@ function buildKpis(d: CompanyPayload, facts: Fact[]): Kpi[] {
   const thr = arr(d.refinery?.throughput);
   const out: (Kpi | null)[] = [];
 
-  out.push(fromFact('cap', 'Refining capacity', <Factory size={14} />,
+  out.push(fromFact('cap', tr('company.kpi.capacity'), <Factory size={14} />,
     find([/refin\w*[ _]capacity|capacity[ _]\w*refin|nameplate|crude[ _]capacity|mmtpa/, /(^|\W)capacity/], /polyprop|pp\b|power|storage|tank|berth|sulphur/), 'MMTPA'));
-  out.push(fromFact('nci', 'Nelson Complexity Index', <Gauge size={14} />, find([/nelson|\bnci\b|complexity/]), 'NCI'));
+  out.push(fromFact('nci', tr('company.kpi.nci'), <Gauge size={14} />, find([/nelson|\bnci\b|complexity/]), 'NCI'));
 
   const lt = latest(thr, (r) => r.crude_mmt);
   const ltFact = find([/throughput|crude[ _]process|crude[ _]run/]);
-  out.push(lt ? { id: 'thr', label: 'Crude throughput', icon: <Zap size={14} />, value: fmtN(lt.crude_mmt), unit: 'MMT', period: txt(lt.fy), url: lt.source_url }
-    : fromFact('thr', 'Crude throughput', <Zap size={14} />, ltFact, 'MMT'));
+  out.push(lt ? { id: 'thr', label: tr('company.kpi.throughput'), icon: <Zap size={14} />, value: fmtN(lt.crude_mmt), unit: 'MMT', period: txt(lt.fy), url: lt.source_url }
+    : fromFact('thr', tr('company.kpi.throughput'), <Zap size={14} />, ltFact, 'MMT'));
 
   const lg = latest(fin, (r) => r.grm_usd_bbl);
   const grmFact = find([/\bgrm\b|gross[ _]refining[ _]margin/]);
-  out.push(lg ? { id: 'grm', label: 'Gross refining margin', icon: <TrendingUp size={14} />, value: fmtN(lg.grm_usd_bbl, 2), unit: 'US$/bbl', period: txt(lg.fy), url: lg.source_url }
-    : fromFact('grm', 'Gross refining margin', <TrendingUp size={14} />, grmFact, 'US$/bbl'));
+  out.push(lg ? { id: 'grm', label: tr('company.kpi.grm'), icon: <TrendingUp size={14} />, value: fmtN(lg.grm_usd_bbl, 2), unit: 'US$/bbl', period: txt(lg.fy), url: lg.source_url }
+    : fromFact('grm', tr('company.kpi.grm'), <TrendingUp size={14} />, grmFact, 'US$/bbl'));
 
   const lr = latest(fin, (r) => r.revenue_cr);
   const revFact = find([/revenue|turnover|income[ _]from[ _]operations/]);
-  out.push(lr ? { id: 'rev', label: 'Revenue', icon: <IndianRupee size={14} />, value: fmtN(lr.revenue_cr, 0), unit: '₹ cr', period: txt(lr.fy), url: lr.source_url }
-    : fromFact('rev', 'Revenue', <IndianRupee size={14} />, revFact, '₹ cr'));
+  out.push(lr ? { id: 'rev', label: tr('company.kpi.revenue'), icon: <IndianRupee size={14} />, value: fmtN(lr.revenue_cr, 0), unit: '₹ cr', period: txt(lr.fy), url: lr.source_url }
+    : fromFact('rev', tr('company.kpi.revenue'), <IndianRupee size={14} />, revFact, '₹ cr'));
 
   const lp = latest(fin, (r) => r.pat_cr);
   const patFact = find([/\bpat\b|profit[ _]after[ _]tax|net[ _]profit/]);
-  out.push(lp ? { id: 'pat', label: 'Profit after tax', icon: <Landmark size={14} />, value: fmtN(lp.pat_cr, 0), unit: '₹ cr', period: txt(lp.fy), url: lp.source_url }
-    : fromFact('pat', 'Profit after tax', <Landmark size={14} />, patFact, '₹ cr'));
+  out.push(lp ? { id: 'pat', label: tr('company.kpi.pat'), icon: <Landmark size={14} />, value: fmtN(lp.pat_cr, 0), unit: '₹ cr', period: txt(lp.fy), url: lp.source_url }
+    : fromFact('pat', tr('company.kpi.pat'), <Landmark size={14} />, patFact, '₹ cr'));
 
-  out.push(fromFact('emp', 'Employees', <Users size={14} />, find([/employee|headcount|manpower|workforce/]), 'people'));
-  out.push(fromFact('ret', 'Retail outlets', <Store size={14} />, find([/retail|outlet|fuel[ _]station/]), 'outlets'));
+  out.push(fromFact('emp', tr('company.kpi.employees'), <Users size={14} />, find([/employee|headcount|manpower|workforce/]), tr('company.unit.people')));
+  out.push(fromFact('ret', tr('company.kpi.retail'), <Store size={14} />, find([/retail|outlet|fuel[ _]station/]), tr('company.unit.outlets')));
 
   const prodFact = find([/(number|no\.?|count)[ _]?(of[ _])?products|products?[ _](count|number)|product[ _]slate/]);
   const prodN = arr(d.products?.products).length;
-  out.push(fromFact('prod', 'Products', <Package size={14} />, prodFact, 'products')
-    ?? (prodN ? { id: 'prod', label: 'Products', icon: <Package size={14} />, value: String(prodN), unit: 'in catalog', period: 'captured' } : null));
+  out.push(fromFact('prod', tr('company.kpi.products'), <Package size={14} />, prodFact, tr('company.unit.products'))
+    ?? (prodN ? { id: 'prod', label: tr('company.kpi.products'), icon: <Package size={14} />, value: String(prodN), unit: tr('company.unit.inCatalog'), period: tr('company.captured') } : null));
 
   const unitFact = find([/process[ _]units|(number|no\.?|count)[ _]?(of[ _])?units/]);
   const unitN = arr(d.refinery?.units).length;
-  out.push(fromFact('units', 'Process units', <Cpu size={14} />, unitFact, 'units')
-    ?? (unitN ? { id: 'units', label: 'Process units', icon: <Cpu size={14} />, value: String(unitN), unit: 'catalogued', period: 'captured' } : null));
+  out.push(fromFact('units', tr('company.kpi.units'), <Cpu size={14} />, unitFact, tr('company.unit.units'))
+    ?? (unitN ? { id: 'units', label: tr('company.kpi.units'), icon: <Cpu size={14} />, value: String(unitN), unit: tr('company.unit.listed'), period: tr('company.captured') } : null));
 
   return out.filter((k): k is Kpi => !!k);
 }
@@ -238,10 +251,11 @@ function KpiTile({ k }: { k: Kpi }) {
 
 /* ============================== tabs ============================== */
 function FactCard({ f }: { f: Fact }) {
+  const t = useT();
   return (
     <div className="flex flex-col rounded-md border border-border bg-surface-2/40 px-3 py-2">
       <div className="flex items-center gap-1.5 text-[11px] text-muted">
-        <ConfDot c={f.confidence} /><span className="truncate">{txt(f.label) || txt(f.key) || 'Fact'}</span>
+        <ConfDot c={f.confidence} /><span className="truncate">{txt(f.label) || txt(f.key) || t('company.fact')}</span>
         <SrcLink url={f.source_url} title={f.source_title} className="ml-auto" />
       </div>
       <div className="mt-0.5 flex items-baseline gap-1">
@@ -254,9 +268,10 @@ function FactCard({ f }: { f: Fact }) {
 }
 
 function Leadership({ d }: { d: CompanyPayload }) {
+  const t = useT();
   const rows = arr(d.corporate?.leadership);
   return (
-    <Sec title="Leadership" icon={<Users size={14} />} count={rows.length}>
+    <Sec title={t('company.leadership')} icon={<Users size={14} />} count={rows.length}>
       {rows.length === 0 ? <NoData /> : (
         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {rows.map((l, i) => {
@@ -267,7 +282,7 @@ function Leadership({ d }: { d: CompanyPayload }) {
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-medium">{txt(l.name) || '—'}</div>
                   <div className="truncate text-[11.5px] text-muted">{txt(l.role)}</div>
-                  {txt(l.since) && <div className="font-mono text-[10.5px] text-faint">since {txt(l.since)}</div>}
+                  {txt(l.since) && <div className="font-mono text-[10.5px] text-faint">{t('company.since', { year: txt(l.since) })}</div>}
                 </div>
                 <SrcLink url={l.source_url} />
               </div>
@@ -283,16 +298,17 @@ function OverviewTab({ d }: { d: CompanyPayload }) {
   const facts = [...arr(d.corporate?.facts), ...arr(d.refinery?.facts)];
   const subs = arr(d.corporate?.subsidiaries_jvs);
   const awards = [...arr(d.corporate?.awards)].sort((a, b) => fyKey(b.year) - fyKey(a.year));
+  const t = useT();
   return (
     <div className="space-y-4">
-      <Sec title="Key facts" icon={<Database size={14} />} count={facts.length}
-        actions={<span className="flex items-center gap-2 text-[10.5px] text-faint"><span className="flex items-center gap-1"><ConfDot c="high" />high</span><span className="flex items-center gap-1"><ConfDot c="medium" />medium</span><span className="flex items-center gap-1"><ConfDot c="low" />low</span></span>}>
+      <Sec title={t('company.keyFacts')} icon={<Database size={14} />} count={facts.length}
+        actions={<span className="flex items-center gap-2 text-[10.5px] text-faint"><span className="flex items-center gap-1"><ConfDot c="high" />{t('company.conf.high')}</span><span className="flex items-center gap-1"><ConfDot c="medium" />{t('company.conf.medium')}</span><span className="flex items-center gap-1"><ConfDot c="low" />{t('company.conf.low')}</span></span>}>
         {facts.length === 0 ? <NoData /> : (
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">{facts.map((f, i) => <FactCard key={i} f={f} />)}</div>
         )}
       </Sec>
       <div className="grid gap-4 xl:grid-cols-2">
-        <Sec title="Ownership, subsidiaries & JVs" icon={<Network size={14} />} count={subs.length}>
+        <Sec title={t('company.subsidiaries')} icon={<Network size={14} />} count={subs.length}>
           {subs.length === 0 ? <NoData /> : (
             <ul className="divide-y divide-border/60">
               {subs.map((s, i) => (
@@ -306,7 +322,7 @@ function OverviewTab({ d }: { d: CompanyPayload }) {
             </ul>
           )}
         </Sec>
-        <Sec title="Awards & recognition" icon={<Award size={14} />} count={awards.length}>
+        <Sec title={t('company.awards')} icon={<Award size={14} />} count={awards.length}>
           {awards.length === 0 ? <NoData /> : (
             <ul className="max-h-[260px] divide-y divide-border/60 overflow-y-auto">
               {awards.map((a, i) => (
@@ -327,21 +343,22 @@ function OverviewTab({ d }: { d: CompanyPayload }) {
 
 type UnitRow = NonNullable<NonNullable<CompanyPayload['refinery']>['units']>[number];
 function RefineryTab({ d }: { d: CompanyPayload }) {
+  const t = useT();
   const [q, setQ] = useState('');
   const [byPhase, setByPhase] = useState(true);
   const units = arr(d.refinery?.units);
   const s = q.trim().toLowerCase();
   const filtered = units.filter((u) => !s || [u.code, u.name, u.phase, u.licensor, u.purpose].some((x) => txt(x).toLowerCase().includes(s)));
   const cols: Column<UnitRow>[] = [
-    { key: 'code', header: 'Code', mono: true, width: 90, render: (u) => <span className="text-cyan">{txt(u.code) || '—'}</span>, sortValue: (u) => txt(u.code) },
-    { key: 'name', header: 'Unit', render: (u) => <span className="font-medium">{txt(u.name) || '—'}</span>, sortValue: (u) => txt(u.name) },
-    { key: 'phase', header: 'Phase', width: 90, render: (u) => txt(u.phase) || '—', sortValue: (u) => txt(u.phase) },
-    { key: 'capacity', header: 'Capacity', width: 130, mono: true, render: (u) => toNum(u.capacity) !== null ? <>{fmtN(u.capacity)} <span className="text-faint">{txt(u.unit)}</span></> : (txt(u.capacity) || '—'), sortValue: (u) => toNum(u.capacity) },
-    { key: 'licensor', header: 'Licensor', width: 140, render: (u) => txt(u.licensor) || '—', sortValue: (u) => txt(u.licensor) },
-    { key: 'purpose', header: 'Purpose', render: (u) => <span className="text-[12px] text-muted">{txt(u.purpose)}</span> },
+    { key: 'code', header: t('company.col.code'), mono: true, width: 90, render: (u) => <span className="text-cyan">{txt(u.code) || '—'}</span>, sortValue: (u) => txt(u.code) },
+    { key: 'name', header: t('company.col.unit'), render: (u) => <span className="font-medium">{txt(u.name) || '—'}</span>, sortValue: (u) => txt(u.name) },
+    { key: 'phase', header: t('company.col.phase'), width: 90, render: (u) => txt(u.phase) || '—', sortValue: (u) => txt(u.phase) },
+    { key: 'capacity', header: t('company.col.capacity'), width: 130, mono: true, render: (u) => toNum(u.capacity) !== null ? <>{fmtN(u.capacity)} <span className="text-faint">{txt(u.unit)}</span></> : (txt(u.capacity) || '—'), sortValue: (u) => toNum(u.capacity) },
+    { key: 'licensor', header: t('company.col.licensor'), width: 140, render: (u) => txt(u.licensor) || '—', sortValue: (u) => txt(u.licensor) },
+    { key: 'purpose', header: t('company.col.purpose'), render: (u) => <span className="text-[12px] text-muted">{txt(u.purpose)}</span> },
     { key: 'src', header: '', width: 28, render: (u) => <SrcLink url={u.source_url} /> },
   ];
-  const groups = byPhase ? groupBy(filtered, (u) => txt(u.phase) || 'Unspecified').sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true })) : [['All units', filtered] as [string, UnitRow[]]];
+  const groups = byPhase ? groupBy(filtered, (u) => txt(u.phase) || t('company.unspecified')).sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true })) : [[t('company.allUnits'), filtered] as [string, UnitRow[]]];
   const thr = [...arr(d.refinery?.throughput)].sort((a, b) => fyKey(a.fy) - fyKey(b.fy))
     .map((r) => ({ fy: txt(r.fy), crude: toNum(r.crude_mmt), util: toNum(r.utilisation_pct) })).filter((r) => r.fy);
   const hasCrude = thr.some((r) => r.crude !== null);
@@ -350,12 +367,12 @@ function RefineryTab({ d }: { d: CompanyPayload }) {
   const basket = arr(d.refinery?.crude_basket);
   return (
     <div className="space-y-4">
-      <Sec title="Process units" icon={<Cpu size={14} />} count={units.length}
+      <Sec title={t('company.kpi.units')} icon={<Cpu size={14} />} count={units.length}
         actions={<>
-          <SearchBox value={q} onChange={setQ} placeholder="Search code, licensor, purpose…" />
-          <button className={cx('btn btn-sm', byPhase && '!border-cyan/50 !text-cyan')} onClick={() => setByPhase((v) => !v)}><Layers size={12} /> Group by phase</button>
+          <SearchBox value={q} onChange={setQ} placeholder={t('company.searchUnits')} />
+          <button className={cx('btn btn-sm', byPhase && '!border-cyan/50 !text-cyan')} onClick={() => setByPhase((v) => !v)}><Layers size={12} /> {t('company.groupByPhase')}</button>
         </>} bodyClass="p-0">
-        {units.length === 0 ? <div className="p-3"><NoData /></div> : filtered.length === 0 ? <div className="p-6 text-center text-muted">No unit matches “{q}”</div> : (
+        {units.length === 0 ? <div className="p-3"><NoData /></div> : filtered.length === 0 ? <div className="p-6 text-center text-muted">{t('company.noUnitMatch', { q })}</div> : (
           <div>
             {groups.map(([g, rows]) => (
               <div key={g}>
@@ -367,35 +384,35 @@ function RefineryTab({ d }: { d: CompanyPayload }) {
         )}
       </Sec>
       <div className="grid gap-4 xl:grid-cols-2">
-        <Sec title="Crude throughput" icon={<BarChart3 size={14} />} count={thr.length}>
+        <Sec title={t('company.kpi.throughput')} icon={<BarChart3 size={14} />} count={thr.length}>
           {!hasCrude ? <NoData /> : (
             <ChartBox>
               <BarChart data={thr} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                 <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="fy" {...axisProps} />
                 <YAxis {...axisProps} axisLine={false} width={40} unit="" />
-                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.04)' }} formatter={(v: unknown) => [`${fmtN(v)} MMT`, 'Crude processed']} />
-                <Bar dataKey="crude" name="Crude processed (MMT)" fill={CYAN} radius={[4, 4, 0, 0]} maxBarSize={36} />
+                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.04)' }} formatter={(v: unknown) => [`${fmtN(v)} MMT`, t('company.crudeProcessed')]} />
+                <Bar dataKey="crude" name={t('company.crudeProcessedMmt')} fill={CYAN} radius={[4, 4, 0, 0]} maxBarSize={36} />
               </BarChart>
             </ChartBox>
           )}
         </Sec>
-        <Sec title="Capacity utilisation" icon={<Gauge size={14} />} count={thr.filter((r) => r.util !== null).length}>
+        <Sec title={t('company.utilisationTitle')} icon={<Gauge size={14} />} count={thr.filter((r) => r.util !== null).length}>
           {!hasUtil ? <NoData /> : (
             <ChartBox>
               <LineChart data={thr} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
                 <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="fy" {...axisProps} />
                 <YAxis {...axisProps} axisLine={false} width={44} unit="%" domain={['auto', 'auto']} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(v: unknown) => [`${fmtN(v, 1)}%`, 'Utilisation']} />
-                <Line dataKey="util" name="Utilisation %" stroke={AMBER} strokeWidth={2} dot={{ r: 4, fill: AMBER, stroke: SURFACE, strokeWidth: 2 }} connectNulls />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v: unknown) => [`${fmtN(v, 1)}%`, t('company.utilisation')]} />
+                <Line dataKey="util" name={t('company.utilisationPct')} stroke={AMBER} strokeWidth={2} dot={{ r: 4, fill: AMBER, stroke: SURFACE, strokeWidth: 2 }} connectNulls />
               </LineChart>
             </ChartBox>
           )}
         </Sec>
       </div>
       <div className="grid gap-4 xl:grid-cols-[3fr_2fr]">
-        <Sec title="Infrastructure & logistics" icon={<Globe2 size={14} />} count={infra.length}>
+        <Sec title={t('company.infra')} icon={<Globe2 size={14} />} count={infra.length}>
           {infra.length === 0 ? <NoData /> : (
             <div className="grid gap-2 sm:grid-cols-2">
               {infra.map((x, i) => (
@@ -407,7 +424,7 @@ function RefineryTab({ d }: { d: CompanyPayload }) {
             </div>
           )}
         </Sec>
-        <Sec title="Crude basket" icon={<FlaskConical size={14} />} count={basket.length}>
+        <Sec title={t('company.crudeBasket')} icon={<FlaskConical size={14} />} count={basket.length}>
           {basket.length === 0 ? <NoData /> : (
             <ul className="divide-y divide-border/60">
               {basket.map((b, i) => (
@@ -427,18 +444,19 @@ function RefineryTab({ d }: { d: CompanyPayload }) {
 
 type GradeRow = NonNullable<NonNullable<CompanyPayload['products']>['pp_grades']>[number];
 function ProductsTab({ d }: { d: CompanyPayload }) {
+  const t = useT();
   const [q, setQ] = useState('');
   const [metric, setMetric] = useState<'production_kt' | 'sales_kt' | 'export_kt'>('production_kt');
   const products = arr(d.products?.products);
   const s = q.trim().toLowerCase();
   const shown = products.filter((p) => !s || [p.name, p.category, p.spec_standard, p.uses, p.markets, p.brand_or_grades].some((x) => txt(x).toLowerCase().includes(s)));
-  const cats = groupBy(shown, (p) => txt(p.category) || 'Other').sort((a, b) => b[1].length - a[1].length);
+  const cats = groupBy(shown, (p) => txt(p.category) || t('company.other')).sort((a, b) => b[1].length - a[1].length);
   const grades = arr(d.products?.pp_grades);
   const gradeCols: Column<GradeRow>[] = [
-    { key: 'grade', header: 'Grade', mono: true, width: 120, render: (g) => <span className="text-cyan">{txt(g.grade) || '—'}</span>, sortValue: (g) => txt(g.grade) },
-    { key: 'mfi', header: 'MFI (g/10 min)', mono: true, width: 110, render: (g) => fmtN(g.mfi), sortValue: (g) => toNum(g.mfi) },
-    { key: 'process', header: 'Process / type', width: 150, render: (g) => txt(g.process) || '—', sortValue: (g) => txt(g.process) },
-    { key: 'applications', header: 'Applications', render: (g) => <span className="text-[12px] text-muted">{txt(g.applications)}</span> },
+    { key: 'grade', header: t('company.col.grade'), mono: true, width: 120, render: (g) => <span className="text-cyan">{txt(g.grade) || '—'}</span>, sortValue: (g) => txt(g.grade) },
+    { key: 'mfi', header: t('company.col.mfi'), mono: true, width: 110, render: (g) => fmtN(g.mfi), sortValue: (g) => toNum(g.mfi) },
+    { key: 'process', header: t('company.col.process'), width: 150, render: (g) => txt(g.process) || '—', sortValue: (g) => txt(g.process) },
+    { key: 'applications', header: t('company.col.applications'), render: (g) => <span className="text-[12px] text-muted">{txt(g.applications)}</span> },
     { key: 'src', header: '', width: 28, render: (g) => <SrcLink url={g.source_url} /> },
   ];
 
@@ -466,9 +484,9 @@ function ProductsTab({ d }: { d: CompanyPayload }) {
   const launches = [...arr(d.products?.launches)].sort((a, b) => dateKey(b.date) - dateKey(a.date));
   return (
     <div className="space-y-4">
-      <Sec title="Product catalog" icon={<Package size={14} />} count={products.length}
-        actions={<SearchBox value={q} onChange={setQ} placeholder="Search products, specs, markets…" />}>
-        {products.length === 0 ? <NoData /> : shown.length === 0 ? <div className="py-6 text-center text-muted">No product matches “{q}”</div> : (
+      <Sec title={t('company.catalog')} icon={<Package size={14} />} count={products.length}
+        actions={<SearchBox value={q} onChange={setQ} placeholder={t('company.searchProducts')} />}>
+        {products.length === 0 ? <NoData /> : shown.length === 0 ? <div className="py-6 text-center text-muted">{t('company.noProductMatch', { q })}</div> : (
           <div className="space-y-4">
             {cats.map(([cat, ps2]) => (
               <div key={cat}>
@@ -481,8 +499,8 @@ function ProductsTab({ d }: { d: CompanyPayload }) {
                         {txt(p.spec_standard) && <Badge tone="cyan" mono>{txt(p.spec_standard)}</Badge>}
                         {txt(p.brand_or_grades) && <Badge tone="amber">{txt(p.brand_or_grades)}</Badge>}
                       </div>
-                      {txt(p.uses) && <div className="mt-1.5 text-[12px] text-muted"><span className="text-faint">Uses · </span>{txt(p.uses)}</div>}
-                      {txt(p.markets) && <div className="mt-0.5 text-[12px] text-muted"><span className="text-faint">Markets · </span>{txt(p.markets)}</div>}
+                      {txt(p.uses) && <div className="mt-1.5 text-[12px] text-muted"><span className="text-faint">{t('company.uses')} · </span>{txt(p.uses)}</div>}
+                      {txt(p.markets) && <div className="mt-0.5 text-[12px] text-muted"><span className="text-faint">{t('company.markets')} · </span>{txt(p.markets)}</div>}
                     </div>
                   ))}
                 </div>
@@ -491,11 +509,11 @@ function ProductsTab({ d }: { d: CompanyPayload }) {
           </div>
         )}
       </Sec>
-      <Sec title="Production & sales by year" icon={<BarChart3 size={14} />} count={ps.length}
-        actions={<div className="flex gap-1">{([['production_kt', 'Production'], ['sales_kt', 'Sales'], ['export_kt', 'Exports']] as const).map(([k, l]) => (
+      <Sec title={t('company.prodSales')} icon={<BarChart3 size={14} />} count={ps.length}
+        actions={<div className="flex gap-1">{([['production_kt', t('company.m.production')], ['sales_kt', t('company.m.sales')], ['export_kt', t('company.m.exports')]] as const).map(([k, l]) => (
           <button key={k} onClick={() => setMetric(k)} className={cx('rounded border px-2 py-0.5 text-[11.5px]', metric === k ? 'border-cyan bg-cyan/10 text-cyan' : 'border-border text-muted hover:text-text')}>{l}</button>
         ))}</div>}>
-        {chart.data.length === 0 ? <NoData text={ps.length ? 'No values captured for this measure' : undefined} /> : (
+        {chart.data.length === 0 ? <NoData text={ps.length ? t('company.noValues') : undefined} /> : (
           <ChartBox h={260}>
             <BarChart data={chart.data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
@@ -504,18 +522,18 @@ function ProductsTab({ d }: { d: CompanyPayload }) {
               <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.04)' }} formatter={(v: unknown, n: unknown) => [`${fmtN(v, 0)} kt`, String(n)]} />
               <Legend wrapperStyle={{ fontSize: 11, color: AXIS }} iconType="square" iconSize={9} />
               {chart.keys.map((k, i) => (
-                <Bar key={k} dataKey={k} stackId="a" fill={k === 'Other' ? OTHER : SERIES[i % SERIES.length]} stroke={SURFACE} strokeWidth={1}
+                <Bar key={k} dataKey={k} name={k === 'Other' ? t('company.other') : k} stackId="a" fill={k === 'Other' ? OTHER : SERIES[i % SERIES.length]} stroke={SURFACE} strokeWidth={1}
                   radius={i === chart.keys.length - 1 ? [4, 4, 0, 0] : undefined} maxBarSize={44} />
               ))}
             </BarChart>
           </ChartBox>
         )}
       </Sec>
-      <Sec title="Polypropylene grades" icon={<FlaskConical size={14} />} count={grades.length} bodyClass="p-0">
+      <Sec title={t('company.ppGrades')} icon={<FlaskConical size={14} />} count={grades.length} bodyClass="p-0">
         {grades.length === 0 ? <div className="p-3"><NoData /></div> : <DataTable rows={grades} columns={gradeCols} rowKey={(g) => `${txt(g.grade)}-${grades.indexOf(g)}`} maxHeight="360px" />}
       </Sec>
       <div className="grid gap-4 xl:grid-cols-2">
-        <Sec title="Marketing network" icon={<Store size={14} />} count={mkt.length}>
+        <Sec title={t('company.marketing')} icon={<Store size={14} />} count={mkt.length}>
           {mkt.length === 0 ? <NoData /> : (
             <div className="grid gap-2 sm:grid-cols-2">
               {mkt.map((m, i) => (
@@ -527,7 +545,7 @@ function ProductsTab({ d }: { d: CompanyPayload }) {
             </div>
           )}
         </Sec>
-        <Sec title="Product launches" icon={<Zap size={14} />} count={launches.length}>
+        <Sec title={t('company.launches')} icon={<Zap size={14} />} count={launches.length}>
           {launches.length === 0 ? <NoData /> : (
             <ul className="max-h-[300px] divide-y divide-border/60 overflow-y-auto">
               {launches.map((l, i) => (
@@ -553,55 +571,56 @@ function FinancialsTab({ d }: { d: CompanyPayload }) {
   const has = (k: 'revenue' | 'ebitda' | 'pat' | 'grm') => data.some((r) => r[k] !== null);
   const quarters = [...arr(d.finance_esg?.quarters)].sort((a, b) => fyKey(b.quarter) - fyKey(a.quarter));
   const ratings = [...arr(d.finance_esg?.ratings)].sort((a, b) => dateKey(b.date) - dateKey(a.date));
+  const t = useT();
   const finCols: Column<FinRow>[] = [
-    { key: 'fy', header: 'Year', mono: true, width: 100, render: (r) => <span className="text-cyan">{txt(r.fy)}</span>, sortValue: (r) => fyKey(r.fy) },
-    { key: 'revenue_cr', header: 'Revenue ₹ cr', mono: true, className: 'text-right', render: (r) => fmtN(r.revenue_cr, 0), sortValue: (r) => toNum(r.revenue_cr) },
-    { key: 'ebitda_cr', header: 'EBITDA ₹ cr', mono: true, className: 'text-right', render: (r) => fmtN(r.ebitda_cr, 0), sortValue: (r) => toNum(r.ebitda_cr) },
-    { key: 'pat_cr', header: 'PAT ₹ cr', mono: true, className: 'text-right', render: (r) => <span className={cx((toNum(r.pat_cr) ?? 0) < 0 && 'text-red-300')}>{fmtN(r.pat_cr, 0)}</span>, sortValue: (r) => toNum(r.pat_cr) },
-    { key: 'grm_usd_bbl', header: 'GRM $/bbl', mono: true, className: 'text-right', render: (r) => fmtN(r.grm_usd_bbl, 2), sortValue: (r) => toNum(r.grm_usd_bbl) },
-    { key: 'throughput_mmt', header: 'Throughput MMT', mono: true, className: 'text-right', render: (r) => fmtN(r.throughput_mmt), sortValue: (r) => toNum(r.throughput_mmt) },
+    { key: 'fy', header: t('company.col.year'), mono: true, width: 100, render: (r) => <span className="text-cyan">{txt(r.fy)}</span>, sortValue: (r) => fyKey(r.fy) },
+    { key: 'revenue_cr', header: t('company.col.revenue'), mono: true, className: 'text-right', render: (r) => fmtN(r.revenue_cr, 0), sortValue: (r) => toNum(r.revenue_cr) },
+    { key: 'ebitda_cr', header: t('company.col.ebitda'), mono: true, className: 'text-right', render: (r) => fmtN(r.ebitda_cr, 0), sortValue: (r) => toNum(r.ebitda_cr) },
+    { key: 'pat_cr', header: t('company.col.pat'), mono: true, className: 'text-right', render: (r) => <span className={cx((toNum(r.pat_cr) ?? 0) < 0 && 'text-red-300')}>{fmtN(r.pat_cr, 0)}</span>, sortValue: (r) => toNum(r.pat_cr) },
+    { key: 'grm_usd_bbl', header: t('company.col.grm'), mono: true, className: 'text-right', render: (r) => fmtN(r.grm_usd_bbl, 2), sortValue: (r) => toNum(r.grm_usd_bbl) },
+    { key: 'throughput_mmt', header: t('company.col.throughput'), mono: true, className: 'text-right', render: (r) => fmtN(r.throughput_mmt), sortValue: (r) => toNum(r.throughput_mmt) },
     { key: 'src', header: '', width: 28, render: (r) => <SrcLink url={r.source_url} /> },
   ];
   const qCols: Column<QRow>[] = [
-    { key: 'quarter', header: 'Quarter', mono: true, render: (r) => <span className="text-cyan">{txt(r.quarter)}</span>, sortValue: (r) => fyKey(r.quarter) },
-    { key: 'revenue_cr', header: 'Revenue ₹ cr', mono: true, className: 'text-right', render: (r) => fmtN(r.revenue_cr, 0), sortValue: (r) => toNum(r.revenue_cr) },
-    { key: 'pat_cr', header: 'PAT ₹ cr', mono: true, className: 'text-right', render: (r) => <span className={cx((toNum(r.pat_cr) ?? 0) < 0 && 'text-red-300')}>{fmtN(r.pat_cr, 0)}</span>, sortValue: (r) => toNum(r.pat_cr) },
-    { key: 'grm_usd_bbl', header: 'GRM $/bbl', mono: true, className: 'text-right', render: (r) => fmtN(r.grm_usd_bbl, 2), sortValue: (r) => toNum(r.grm_usd_bbl) },
+    { key: 'quarter', header: t('company.col.quarter'), mono: true, render: (r) => <span className="text-cyan">{txt(r.quarter)}</span>, sortValue: (r) => fyKey(r.quarter) },
+    { key: 'revenue_cr', header: t('company.col.revenue'), mono: true, className: 'text-right', render: (r) => fmtN(r.revenue_cr, 0), sortValue: (r) => toNum(r.revenue_cr) },
+    { key: 'pat_cr', header: t('company.col.pat'), mono: true, className: 'text-right', render: (r) => <span className={cx((toNum(r.pat_cr) ?? 0) < 0 && 'text-red-300')}>{fmtN(r.pat_cr, 0)}</span>, sortValue: (r) => toNum(r.pat_cr) },
+    { key: 'grm_usd_bbl', header: t('company.col.grm'), mono: true, className: 'text-right', render: (r) => fmtN(r.grm_usd_bbl, 2), sortValue: (r) => toNum(r.grm_usd_bbl) },
     { key: 'src', header: '', width: 28, render: (r) => <SrcLink url={r.source_url} /> },
   ];
   const crFmt = (v: unknown) => { const n = toNum(v); return n === null ? '' : Math.abs(n) >= 1000 ? `${(n / 1000).toFixed(0)}k` : String(n); };
   return (
     <div className="space-y-4">
       <div className="grid gap-4 xl:grid-cols-3">
-        <Sec title="Revenue from operations" icon={<IndianRupee size={14} />}>
+        <Sec title={t('company.revenueOps')} icon={<IndianRupee size={14} />}>
           {!has('revenue') ? <NoData /> : (
             <ChartBox>
               <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                 <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="fy" {...axisProps} />
                 <YAxis {...axisProps} axisLine={false} width={44} tickFormatter={crFmt} />
-                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.04)' }} formatter={(v: unknown) => [`₹ ${fmtN(v, 0)} cr`, 'Revenue']} />
+                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.04)' }} formatter={(v: unknown) => [t('company.rsCr', { v: fmtN(v, 0) }), t('company.kpi.revenue')]} />
                 <Bar dataKey="revenue" fill={CYAN} radius={[4, 4, 0, 0]} maxBarSize={34} />
               </BarChart>
             </ChartBox>
           )}
         </Sec>
-        <Sec title="EBITDA & PAT (₹ cr)" icon={<Landmark size={14} />}>
+        <Sec title={t('company.ebitdaPat')} icon={<Landmark size={14} />}>
           {!has('pat') && !has('ebitda') ? <NoData /> : (
             <ChartBox>
               <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barGap={2}>
                 <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="fy" {...axisProps} />
                 <YAxis {...axisProps} axisLine={false} width={44} tickFormatter={crFmt} />
-                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.04)' }} formatter={(v: unknown, n: unknown) => [`₹ ${fmtN(v, 0)} cr`, String(n)]} />
+                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.04)' }} formatter={(v: unknown, n: unknown) => [t('company.rsCr', { v: fmtN(v, 0) }), String(n)]} />
                 <Legend wrapperStyle={{ fontSize: 11, color: AXIS }} iconType="square" iconSize={9} />
                 {has('ebitda') && <Bar dataKey="ebitda" name="EBITDA" fill={SERIES[0]} radius={[4, 4, 0, 0]} maxBarSize={22} />}
-                {has('pat') && <Bar dataKey="pat" name="PAT" fill={SERIES[1]} radius={[4, 4, 0, 0]} maxBarSize={22} />}
+                {has('pat') && <Bar dataKey="pat" name={t('company.patLegend')} fill={SERIES[1]} radius={[4, 4, 0, 0]} maxBarSize={22} />}
               </BarChart>
             </ChartBox>
           )}
         </Sec>
-        <Sec title="Gross refining margin" icon={<TrendingUp size={14} />}>
+        <Sec title={t('company.kpi.grm')} icon={<TrendingUp size={14} />}>
           {!has('grm') ? <NoData /> : (
             <ChartBox>
               <LineChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
@@ -615,14 +634,14 @@ function FinancialsTab({ d }: { d: CompanyPayload }) {
           )}
         </Sec>
       </div>
-      <Sec title="Annual financials" icon={<BarChart3 size={14} />} count={fin.length} bodyClass="p-0">
+      <Sec title={t('company.annualFin')} icon={<BarChart3 size={14} />} count={fin.length} bodyClass="p-0">
         {fin.length === 0 ? <div className="p-3"><NoData /></div> : <DataTable rows={[...fin].reverse()} columns={finCols} rowKey={(r) => `${txt(r.fy)}-${fin.indexOf(r)}`} />}
       </Sec>
       <div className="grid gap-4 xl:grid-cols-[3fr_2fr]">
-        <Sec title="Quarterly results" icon={<CalendarClock size={14} />} count={quarters.length} bodyClass="p-0">
+        <Sec title={t('company.quarterly')} icon={<CalendarClock size={14} />} count={quarters.length} bodyClass="p-0">
           {quarters.length === 0 ? <div className="p-3"><NoData /></div> : <DataTable rows={quarters} columns={qCols} rowKey={(r) => `${txt(r.quarter)}-${quarters.indexOf(r)}`} maxHeight="340px" />}
         </Sec>
-        <Sec title="Credit ratings" icon={<ShieldCheck size={14} />} count={ratings.length}>
+        <Sec title={t('company.ratings')} icon={<ShieldCheck size={14} />} count={ratings.length}>
           {ratings.length === 0 ? <NoData /> : (
             <ul className="space-y-2">
               {ratings.map((r, i) => (
@@ -646,9 +665,10 @@ function FinancialsTab({ d }: { d: CompanyPayload }) {
 function SustainTab({ d }: { d: CompanyPayload }) {
   const esg = arr(d.finance_esg?.esg);
   const dig = arr(d.finance_esg?.digital);
+  const t = useT();
   return (
     <div className="space-y-4">
-      <Sec title="ESG metrics" icon={<Leaf size={14} />} count={esg.length}>
+      <Sec title={t('company.esg')} icon={<Leaf size={14} />} count={esg.length}>
         {esg.length === 0 ? <NoData /> : (
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
             {esg.map((m, i) => (
@@ -664,7 +684,7 @@ function SustainTab({ d }: { d: CompanyPayload }) {
           </div>
         )}
       </Sec>
-      <Sec title="Digital & technology initiatives" icon={<Cpu size={14} />} count={dig.length}>
+      <Sec title={t('company.digital')} icon={<Cpu size={14} />} count={dig.length}>
         {dig.length === 0 ? <NoData /> : (
           <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
             {dig.map((x, i) => (
@@ -682,6 +702,7 @@ function SustainTab({ d }: { d: CompanyPayload }) {
 
 function OrgTab({ d }: { d: CompanyPayload }) {
   const dirQ = useDepartments();
+  const t = useT();
   const [q, setQ] = useState('');
   const managers = new Map((dirQ.data ?? []).map((x) => [x.name.trim().toLowerCase(), x.manager_name] as const));
   const corp = arr(d.corporate?.departments).filter((x) => txt(x.name));
@@ -689,12 +710,12 @@ function OrgTab({ d }: { d: CompanyPayload }) {
   const depts = corp.length ? corp : (dirQ.data ?? []).map((x) => ({ code: x.code, name: x.name, group: x.group, description: x.description, evidence_url: null }));
   const s = q.trim().toLowerCase();
   const shown = depts.filter((x) => !s || [x.code, x.name, x.group, x.description].some((v) => txt(v).toLowerCase().includes(s)));
-  const groups = groupBy(shown, (x) => txt(x.group) || 'Other').sort((a, b) => a[0].localeCompare(b[0]));
+  const groups = groupBy(shown, (x) => txt(x.group) || t('company.other')).sort((a, b) => a[0].localeCompare(b[0]));
   return (
     <div className="space-y-4">
-      <Sec title="Departments" icon={<Network size={14} />} count={depts.length}
-        actions={<><span className="text-[11px] text-faint">{groups.length} groups</span><SearchBox value={q} onChange={setQ} placeholder="Search departments…" /></>}>
-        {depts.length === 0 ? <NoData /> : shown.length === 0 ? <div className="py-6 text-center text-muted">No department matches “{q}”</div> : (
+      <Sec title={t('company.departments')} icon={<Network size={14} />} count={depts.length}
+        actions={<><span className="text-[11px] text-faint">{t('company.groups', { n: groups.length })}</span><SearchBox value={q} onChange={setQ} placeholder={t('company.searchDepts')} /></>}>
+        {depts.length === 0 ? <NoData /> : shown.length === 0 ? <div className="py-6 text-center text-muted">{t('company.noDeptMatch', { q })}</div> : (
           <div className="space-y-4">
             {groups.map(([g, ds]) => (
               <div key={g}>
@@ -710,7 +731,7 @@ function OrgTab({ d }: { d: CompanyPayload }) {
                           <SrcLink url={x.evidence_url} className="ml-auto" />
                         </div>
                         {txt(x.description) && <div className="mt-1 line-clamp-3 text-[12px] text-muted">{txt(x.description)}</div>}
-                        {mgr && <div className="mt-1 text-[11px] text-faint">Approver · <span className="text-muted">{mgr}</span></div>}
+                        {mgr && <div className="mt-1 text-[11px] text-faint">{t('company.approver')} · <span className="text-muted">{mgr}</span></div>}
                       </div>
                     );
                   })}
@@ -728,9 +749,10 @@ function OrgTab({ d }: { d: CompanyPayload }) {
 function TimelineTab({ d }: { d: CompanyPayload }) {
   const tl = [...arr(d.corporate?.timeline)].sort((a, b) => fyKey(a.year) - fyKey(b.year));
   const news = [...arr(d.finance_esg?.news)].sort((a, b) => dateKey(b.date) - dateKey(a.date));
+  const t = useT();
   return (
     <div className="grid gap-4 xl:grid-cols-2">
-      <Sec title="Corporate timeline" icon={<CalendarClock size={14} />} count={tl.length}>
+      <Sec title={t('company.timeline')} icon={<CalendarClock size={14} />} count={tl.length}>
         {tl.length === 0 ? <NoData /> : (
           <ol className="relative ml-2 border-l border-border-strong">
             {tl.map((t, i) => (
@@ -746,13 +768,13 @@ function TimelineTab({ d }: { d: CompanyPayload }) {
           </ol>
         )}
       </Sec>
-      <Sec title="News & announcements" icon={<Newspaper size={14} />} count={news.length}>
+      <Sec title={t('company.news')} icon={<Newspaper size={14} />} count={news.length}>
         {news.length === 0 ? <NoData /> : (
           <ul className="max-h-[640px] space-y-2 overflow-y-auto pr-1">
             {news.map((n, i) => (
               <li key={i} className="rounded-md border border-border bg-surface-2/40 px-3 py-2">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-[10.5px] text-faint">{txt(n.date) ? (isNaN(Date.parse(txt(n.date))) ? txt(n.date) : fmtDate(txt(n.date))) : '—'}</span>
+                  <span className="font-mono text-[10.5px] text-faint">{txt(n.date) ? (isNaN(Date.parse(txt(n.date))) ? txt(n.date) : fmtDateL(txt(n.date))) : '—'}</span>
                   <SrcLink url={n.source_url} className="ml-auto" />
                 </div>
                 <div className="mt-0.5 font-medium">{txt(n.headline) || '—'}</div>
@@ -788,19 +810,20 @@ function collectSources(d: CompanyPayload): SrcEntry[] {
   walk(d, 'root');
   return [...m.values()];
 }
-const SECTION_LABEL: Record<string, string> = { corporate: 'Corporate', refinery: 'Refinery', products: 'Products', finance_esg: 'Finance & ESG' };
 function SourcesTab({ sources }: { sources: SrcEntry[] }) {
+  const t = useT();
+  const SECTION_LABEL: Record<string, string> = { corporate: t('company.sec.corporate'), refinery: t('company.sec.refinery'), products: t('company.sec.products'), finance_esg: t('company.sec.finance') };
   const groups = groupBy(sources, (s) => host(s.url)).sort((a, b) => b[1].length - a[1].length);
   return (
-    <Sec title="Source register" icon={<Globe2 size={14} />} count={sources.length}
-      actions={<span className="text-[11px] text-faint">{groups.length} domains · deduplicated</span>}>
+    <Sec title={t('company.sources.title')} icon={<Globe2 size={14} />} count={sources.length}
+      actions={<span className="text-[11px] text-faint">{t('company.sources.domains', { n: groups.length })}</span>}>
       {sources.length === 0 ? <NoData /> : (
         <div className="grid gap-3 xl:grid-cols-2">
           {groups.map(([h, ss]) => (
             <div key={h} className="rounded-md border border-border">
               <div className="flex items-center gap-2 border-b border-border bg-surface-2/60 px-3 py-1.5">
                 <Globe2 size={12} className="text-cyan" /><span className="font-mono text-[12px] font-semibold">{h}</span>
-                <span className="ml-auto font-mono text-[10.5px] text-muted">{ss.length} url{ss.length === 1 ? '' : 's'} · {ss.reduce((n, s) => n + s.refs, 0)} refs</span>
+                <span className="ml-auto font-mono text-[10.5px] text-muted">{ss.length === 1 ? t('company.sources.linksOne', { refs: ss.reduce((n, s) => n + s.refs, 0) }) : t('company.sources.links', { n: ss.length, refs: ss.reduce((n, s) => n + s.refs, 0) })}</span>
               </div>
               <ul className="max-h-[300px] divide-y divide-border/50 overflow-y-auto">
                 {[...ss].sort((a, b) => b.refs - a.refs).map((s) => (
@@ -831,23 +854,26 @@ type TabId = 'overview' | 'refinery' | 'products' | 'financials' | 'esg' | 'org'
 export default function Company() {
   const q = useQuery({ queryKey: ['company'], queryFn: () => api.get<CompanyPayload>('/api/company'), staleTime: 10 * 60_000, retry: 1 });
   const [tab, setTab] = useState<TabId>('overview');
+  const t = useT();
+  const lang = useLang();
   const d: CompanyPayload = q.data && typeof q.data === 'object' ? q.data : {};
   const facts = useMemo(() => [...arr(d.corporate?.facts), ...arr(d.refinery?.facts), ...arr(d.products?.facts), ...arr(d.finance_esg?.facts)], [d]);
-  const kpis = useMemo(() => buildKpis(d, facts), [d, facts]);
+  // KPI labels come from tr(), so rebuild them when the language changes
+  const kpis = useMemo(() => buildKpis(d, facts), [d, facts, lang]);
   const sources = useMemo(() => collectSources(d), [d]);
   const srcCount = toNum(d.source_count) ?? sources.length;
   const retrieved = txt(d.retrieved_on);
-  const retrievedLabel = retrieved ? (isNaN(Date.parse(retrieved)) ? retrieved : fmtDate(retrieved)) : '—';
+  const retrievedLabel = retrieved ? (isNaN(Date.parse(retrieved)) ? retrieved : fmtDateL(retrieved)) : '—';
 
   const tabs: { id: TabId; label: ReactNode; count?: number }[] = [
-    { id: 'overview', label: 'Overview', count: arr(d.corporate?.facts).length + arr(d.refinery?.facts).length },
-    { id: 'refinery', label: 'Refinery & Units', count: arr(d.refinery?.units).length },
-    { id: 'products', label: 'Products', count: arr(d.products?.products).length },
-    { id: 'financials', label: 'Financials', count: arr(d.finance_esg?.financials).length },
-    { id: 'esg', label: 'Sustainability & Digital', count: arr(d.finance_esg?.esg).length + arr(d.finance_esg?.digital).length },
-    { id: 'org', label: 'Organisation', count: arr(d.corporate?.departments).length },
-    { id: 'timeline', label: 'Timeline & News', count: arr(d.corporate?.timeline).length + arr(d.finance_esg?.news).length },
-    { id: 'sources', label: 'Sources', count: sources.length },
+    { id: 'overview', label: t('company.tab.overview'), count: arr(d.corporate?.facts).length + arr(d.refinery?.facts).length },
+    { id: 'refinery', label: t('company.tab.refinery'), count: arr(d.refinery?.units).length },
+    { id: 'products', label: t('company.tab.products'), count: arr(d.products?.products).length },
+    { id: 'financials', label: t('company.tab.financials'), count: arr(d.finance_esg?.financials).length },
+    { id: 'esg', label: t('company.tab.esg'), count: arr(d.finance_esg?.esg).length + arr(d.finance_esg?.digital).length },
+    { id: 'org', label: t('company.tab.org'), count: arr(d.corporate?.departments).length },
+    { id: 'timeline', label: t('company.tab.timeline'), count: arr(d.corporate?.timeline).length + arr(d.finance_esg?.news).length },
+    { id: 'sources', label: t('company.tab.sources'), count: sources.length },
   ];
 
   return (
@@ -858,15 +884,15 @@ export default function Company() {
           <div className="flex min-w-0 items-start gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-amber/40 bg-amber/10 text-amber"><Building2 size={20} /></div>
             <div className="min-w-0">
-              <div className="label !text-[10px] !text-cyan">MRPL Intelligence</div>
-              <h1 className="text-[17px] font-semibold leading-tight">Mangalore Refinery and Petrochemicals Ltd — public-domain intelligence</h1>
+              <div className="label !text-[10px] !text-cyan">{t('nav.company')}</div>
+              <h1 className="text-[17px] font-semibold leading-tight">{t('company.title')}</h1>
               <div className="mt-1 max-w-4xl text-[12px] text-muted">
-                Compiled from MRPL website, annual reports, exchange filings, rating rationales and official social posts · retrieved <span className="font-mono text-text">{retrievedLabel}</span> · stored offline · <span className="font-mono text-text">{srcCount}</span> sources
+                {fillNodes(t('company.subtitle'), { date: <span className="font-mono text-text">{retrievedLabel}</span>, n: <span className="font-mono text-text">{srcCount}</span> })}
               </div>
             </div>
           </div>
           <span className="inline-flex items-center gap-1.5 rounded-full border border-amber/40 bg-amber/10 px-2.5 py-0.5 text-[11px] font-medium text-amber">
-            <Info size={12} /> Public information only · Team UniMinds is not affiliated with MRPL
+            <Info size={12} /> {t('company.disclaimer')}
           </span>
         </div>
       </div>
@@ -877,7 +903,7 @@ export default function Company() {
         <div className="space-y-4 p-4">
           {kpis.length > 0 ? (
             <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 lg:grid-cols-5">{kpis.map((k) => <KpiTile key={k.id} k={k} />)}</div>
-          ) : <NoData text="No headline figures captured yet" />}
+          ) : <NoData text={t('company.noKpis')} />}
           <Tabs tabs={tabs} value={tab} onChange={setTab} className="sticky top-0 z-10 -mx-4 overflow-x-auto bg-bg/95 px-4 backdrop-blur" />
           {tab === 'overview' && <OverviewTab d={d} />}
           {tab === 'refinery' && <RefineryTab d={d} />}

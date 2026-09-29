@@ -7,8 +7,8 @@ Produces <out>/ (upload the whole folder to your website, e.g. https://example.c
   files/<artifact>.partNN    server components split into parts (host file-size limits)
 
 Usage:
-  python ops/publish.py --package E:/yukti-build/Yukti-Server-0.3.0 --setup desktop/dist/Yukti-Setup-0.3.0.exe
-                        --out E:/yukti-build/publish --version 0.3.0 --part-mb 1900
+  python ops/publish.py --package E:/yukti-build/Yukti-Server-0.4.0 --setup desktop/dist/Yukti-Setup-0.4.0.exe
+                        --out E:/yukti-build/publish --version 0.4.0 --part-mb 1900
 """
 from __future__ import annotations
 
@@ -42,7 +42,7 @@ def make_zip(src_root: Path, members: list[Path], out: Path) -> None:
                 z.write(m, m.relative_to(src_root).as_posix())
 
 
-def split(file: Path, out_dir: Path, name: str, part_bytes: int) -> list[dict]:
+def split(file: Path, out_dir: Path, name: str, part_bytes: int, url_prefix: str = "files/") -> list[dict]:
     parts = []
     with file.open("rb") as f:
         i = 0
@@ -61,7 +61,7 @@ def split(file: Path, out_dir: Path, name: str, part_bytes: int) -> list[dict]:
             if n == 0:
                 data_path.unlink()
                 break
-            parts.append({"url": f"files/{data_path.name}", "size": n, "sha256": h.hexdigest().upper()})
+            parts.append({"url": f"{url_prefix}{data_path.name}", "size": n, "sha256": h.hexdigest().upper()})
             i += 1
     return parts
 
@@ -111,12 +111,17 @@ def main() -> None:
     ap.add_argument("--out", required=True, type=Path)
     ap.add_argument("--version", required=True)
     ap.add_argument("--part-mb", type=int, default=1900, help="max size of each uploaded file (host limit)")
+    ap.add_argument("--github", default="", help="owner/repo: publish as GitHub release assets (flat files, absolute versioned URLs)")
+    ap.add_argument("--tag", default="", help="release tag for --github (default v<version>)")
     a = ap.parse_args()
+    # GitHub release assets: one flat folder, each part < 2 GiB, URLs pinned to the tag (so the "latest" manifest always
+    # points at the parts of the same version)
+    gh_base = f"https://github.com/{a.github}/releases/download/{a.tag or 'v' + a.version}/" if a.github else ""
     pkg, out = a.package.resolve(), a.out.resolve()
     if out.exists():
         shutil.rmtree(out)
-    files = out / "files"
-    files.mkdir(parents=True)
+    files = out if gh_base else out / "files"
+    files.mkdir(parents=True, exist_ok=True)
     work = out.parent / (out.name + "-work")
     work.mkdir(exist_ok=True)
     part = a.part_mb * 2**20
@@ -142,11 +147,11 @@ def main() -> None:
             src = s["src"]
         print("hashing / splitting", s["name"], f"{src.stat().st_size / 2**20:.0f} MB")
         art = {k: v for k, v in s.items() if k not in ("members", "src")}
-        art.update({"size": src.stat().st_size, "sha256": sha256(src), "parts": split(src, files, s["name"], part)})
+        art.update({"size": src.stat().st_size, "sha256": sha256(src), "parts": split(src, files, s["name"], part, gh_base or "files/")})
         if s["kind"] == "file":
             art["dest"] = s["dest"]
         artifacts.append(art)
-    setup_name = f"Yukti-Setup-{a.version}.exe"
+    setup_name = a.setup.name if gh_base else f"Yukti-Setup-{a.version}.exe"   # GitHub: stable name for /releases/latest/download/
     shutil.copy2(a.setup, out / setup_name)
     manifest = {"product": "yukti-server", "version": a.version, "published_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
                 "desktop": {"file": setup_name, "size": (out / setup_name).stat().st_size, "sha256": sha256(out / setup_name)},
@@ -155,6 +160,11 @@ def main() -> None:
     total = sum(x["size"] for x in artifacts)
     rows = "".join(f"<tr><td>{x['label']}</td><td>{x['size'] / 2**20:,.0f} MB</td><td>{'NVIDIA GPUs only' if x.get('requires') == 'nvidia' else 'always'}</td></tr>"
                    for x in artifacts)
+    if gh_base:
+        shutil.rmtree(work)
+        print(f"\nGitHub release assets in {out} ({total / 2**30:.2f} GB of components) - upload every file to tag "
+              f"{a.tag or 'v' + a.version} of {a.github}, then sign manifest.json")
+        return
     (out / "index.html").write_text(PAGE.format(version=a.version, setup=setup_name, setup_mb=round(manifest["desktop"]["size"] / 2**20),
                                                 setup_sha=manifest["desktop"]["sha256"], server_gb=f"{total / 2**30:.1f}",
                                                 disk_gb=f"{total * 2.2 / 2**30:.0f}", rows=rows, published=manifest["published_at"]), encoding="utf-8")

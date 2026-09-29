@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Check, Copy } from 'lucide-react';
+import { useT } from '../../lib/i18n';
 
 export function copyText(text: string): Promise<boolean> {
   try {
@@ -21,8 +22,9 @@ function fallback(text: string): boolean {
 
 export function CopyButton({ text, label }: { text: string; label?: string }) {
   const [done, setDone] = useState(false);
+  const t = useT();
   return (
-    <button className="btn btn-ghost btn-sm" title="Copy" onClick={async () => {
+    <button className="btn btn-ghost btn-sm" title={done ? t('common.copied') : t('btn.copy')} onClick={async () => {
       await copyText(text);
       setDone(true);
       setTimeout(() => setDone(false), 1200);

@@ -10,48 +10,50 @@
 <main class="wrap">
   <header class="brand">
     <img src="../../build/icon.png" alt="Yukti">
-    <div><h1 id="title">Starting Yukti</h1><small id="sub">All-in-one mode · local server</small></div>
+    <div><h1 id="title">Starting Yukti</h1><small id="sub"></small></div>
     <span class="spacer"></span>
     <span class="muted" id="elapsed"></span>
   </header>
 
   <section class="card">
     <ol class="steps" id="steps">
-      <li id="s-server" class="active"><span class="ico"></span><span class="t">Starting server</span><span class="r"></span><span class="d"></span></li>
-      <li id="s-kb"><span class="ico"></span><span class="t">Preparing knowledge base</span><span class="r"></span><span class="d"></span></li>
-      <li id="s-model"><span class="ico"></span><span class="t">Loading AI model</span><span class="r"></span><span class="d"></span></li>
-      <li id="s-ready"><span class="ico"></span><span class="t">Ready</span><span class="r"></span><span class="d"></span></li>
+      <li id="s-server" class="active"><span class="ico"></span><span class="t" data-i18n="splash.step.server">Starting Yukti</span><span class="r"></span><span class="d"></span></li>
+      <li id="s-kb"><span class="ico"></span><span class="t" data-i18n="splash.step.kb">Preparing documents</span><span class="r"></span><span class="d"></span></li>
+      <li id="s-model"><span class="ico"></span><span class="t" data-i18n="splash.step.model">Loading the AI</span><span class="r"></span><span class="d"></span></li>
+      <li id="s-ready"><span class="ico"></span><span class="t" data-i18n="splash.step.ready">Ready</span><span class="r"></span><span class="d"></span></li>
     </ol>
   </section>
 
-  <div class="banner info hidden" id="slow">Still working… the first start prepares documents and can take a few minutes.</div>
+  <div class="banner info hidden" id="slow" data-i18n="splash.slow">Still working…</div>
 
   <div class="errpanel hidden" id="err">
-    <h3>Yukti could not start</h3>
+    <h3 data-i18n="splash.failed">Yukti could not start</h3>
     <div class="text" id="err-text"></div>
     <pre id="err-tail"></pre>
     <div class="actions">
-      <button class="primary" id="retry">Retry</button>
-      <button id="open" class="hidden">Open Yukti anyway</button>
-      <button id="logs">Open log folder</button>
-      <button id="settings2">Change setup</button>
+      <button class="primary" id="retry" data-i18n="splash.retry">Try again</button>
+      <button id="open" class="hidden" data-i18n="splash.open">Open Yukti anyway</button>
+      <button id="report" data-i18n="splash.report">Report this problem</button>
+      <button id="logs" data-i18n="splash.logs">Open log folder</button>
+      <button id="settings2" data-i18n="splash.change">Change setup</button>
     </div>
   </div>
 
   <details class="log" id="det">
-    <summary>Server log</summary>
+    <summary data-i18n="splash.details">Technical details</summary>
     <pre id="log"></pre>
   </details>
 
   <footer class="foot">
     <span id="stage"></span>
     <span class="actions">
-      <button id="settings">Change setup</button>
-      <button id="quit">Quit</button>
+      <button id="settings" data-i18n="splash.change">Change setup</button>
+      <button id="quit" data-i18n="splash.quit">Quit</button>
     </span>
   </footer>
 </main>
 <div class="toast" id="toast"></div>
+<script src="i18n.js"></script>
 <script src="splash.js"></script>
 </body>
 </html>

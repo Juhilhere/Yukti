@@ -4,11 +4,14 @@
 
 **Sovereign Industrial AI Workbench. Governed, cited, audited answers for the refinery floor, fully on-premise.**
 
-[![Version](https://img.shields.io/badge/version-0.3.0-f5a524)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.4.0-f5a524)](CHANGELOG.md)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078d4)](docs/DEPLOYMENT.md)
 [![Deployment](https://img.shields.io/badge/deployment-offline%20%2F%20on--prem-2ea44f)](docs/SECURITY_MODEL.md)
 [![SIH 2026](https://img.shields.io/badge/SIH%202026-SIH26117-6f42c1)](#team)
 [![CI](https://github.com/Juhilhere/Yukti/actions/workflows/ci.yml/badge.svg)](https://github.com/Juhilhere/Yukti/actions/workflows/ci.yml)
+
+### [⬇ Download Yukti for Windows](https://github.com/Juhilhere/Yukti/releases/latest/download/Yukti-Setup.exe)
+One file. Double-click it — Yukti installs, downloads its AI once and opens. English · हिंदी · ಕನ್ನಡ
 
 Smart India Hackathon 2026 · Problem statement **SIH26117** (Mangalore Refinery and Petrochemicals Ltd) · **Team UniMinds**
 
@@ -100,14 +103,19 @@ The full design is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Get started
 
-### For users: one zip, nothing else to install
+### For users: one download, one double-click
 
-1. Download **`Yukti-0.3.0-Windows.zip`** (one file: the app, the AI server, the llama.cpp CUDA and Vulkan engines and the model).
-2. Right-click it → **Extract All…**, open the folder and double-click **`Yukti.exe`**. No admin rights are needed.
-3. Yukti starts its bundled server and opens the sign-in page (about a minute on the first start). Desktop and Start-menu shortcuts are
-   created. Data is kept in `%LOCALAPPDATA%\Yukti`, so extracting a newer version later keeps everything.
-4. Sign in with the account your administrator gave you. On employee PCs of a plant deployment, use **File → Switch server → Connect**
-   to use the central server instead.
+1. Download **[Yukti-Setup.exe](https://github.com/Juhilhere/Yukti/releases/latest/download/Yukti-Setup.exe)** — the only file you need.
+2. Double-click it. It installs in a few seconds (no questions, no admin rights) and opens Yukti. If Windows shows
+   *“Windows protected your PC”*, choose **More info → Run anyway**.
+3. Yukti sets itself up: it downloads its AI once (about 3.4 GB — the server, the AI engine for your computer and the model),
+   checks every piece, and continues by itself if the internet drops. Then it starts and shows the sign-in page.
+4. Sign in. From now on Yukti works **without internet**. Choose English, हिंदी or ಕನ್ನಡ at any time.
+
+Something not working? **Help → Report a problem** in Yukti fills in the technical details for you.
+Uninstall from *Windows Settings → Apps*; it asks before deleting your documents and chats.
+
+For PCs without internet, the offline package (`ops\release-site.ps1` → one zip with everything) can be copied by USB.
 
 See the [User Guide](docs/USER_GUIDE.md).
 

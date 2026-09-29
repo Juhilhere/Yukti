@@ -29,9 +29,9 @@ export function SourcesRow({ msgId, sources }: { msgId: string; sources: Source[
             </div>
             <div className="mt-1 line-clamp-1 font-medium text-[12.5px] group-hover:text-cyan">{s.title}</div>
             <div className="mt-1 flex flex-wrap items-center gap-1">
-              <Badge mono tone="muted">Rev {s.revision || '—'}</Badge>
+              <Badge mono tone="muted">{t('sources.rev', { rev: s.revision || '—' })}</Badge>
               <StatusChip status={s.status} />
-              <Badge mono tone="muted">p.{s.page}</Badge>
+              <Badge mono tone="muted">{t('sources.page', { n: s.page })}</Badge>
               {s.classification && <StatusChip status={s.classification} />}
               <ProvenanceBadges isExample={s.is_example} isPublic={s.is_public} />
             </div>
@@ -52,9 +52,9 @@ export function DeniedCard({ denied, question, suggest }: { denied: Denied; ques
     <div className="mt-3 flex items-center gap-3 rounded-md border border-amber/40 bg-amber/[0.06] px-3 py-2">
       <ShieldAlert size={16} className="shrink-0 text-amber" />
       <div className="min-w-0 flex-1 text-[12.5px]">
-        <span className="font-semibold text-amber">{denied.count} source{denied.count === 1 ? '' : 's'} withheld by policy</span>
+        <span className="font-semibold text-amber">{t(denied.count === 1 ? 'sources.withheldOne' : 'sources.withheldMany', { n: denied.count })}</span>
         {depts.length > 0 && <span className="text-muted"> ({depts.join(', ')})</span>}
-        <div className="text-[11.5px] text-muted">Your clearance or department does not cover these documents. The answer above uses only what you may read.</div>
+        <div className="text-[11.5px] text-muted">{t('sources.withheldBody')}</div>
       </div>
       <button className="btn btn-sm !border-amber/50 !text-amber" onClick={() => setOpen(true)}>{t('btn.requestAccess')}</button>
       <AccessRequestDialog open={open} onClose={() => setOpen(false)} departments={depts} context={question} suggest={suggest} />

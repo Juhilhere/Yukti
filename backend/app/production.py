@@ -109,7 +109,8 @@ def _check_numbers(m: dict[str, Any]) -> list[str]:
 def save_model(m: dict[str, Any], by: str) -> dict[str, Any]:
     bad = _check_numbers(m)
     if bad:
-        raise ValueError(" ".join(bad[:6]))
+        from .i18n import tr
+        raise ValueError(" ".join(tr(b) for b in bad[:6]))
     clean = {"units": m.get("units", []), "products": m.get("products", []), "crude_cost_usd_t": m.get("crude_cost_usd_t"),
              "notes": m.get("notes", "")}
     set_setting("production_model", clean, by)

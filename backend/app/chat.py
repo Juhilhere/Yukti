@@ -9,6 +9,7 @@ from . import audit, engine, mrpl_facts, rag
 from . import laya as laya_mod
 from .auth import Ctx
 from .db import ex, j, new_id, now_iso, q, q1, uj
+from .i18n import tr, tr_facts
 from .policy import pdp
 
 YUKTI_SYSTEM = """You are Yukti, the sovereign industrial AI workbench of a refinery. You run fully on-premise.
@@ -97,7 +98,7 @@ async def run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | No
             yield chunk
     except Exception as e:  # noqa: BLE001
         engine.log(f"[chat] turn failed: {e!r}")
-        yield _sse("error", {"code": "internal", "message": "The answer was interrupted by a server error. Please try again."})
+        yield _sse("error", {"code": "internal", "message": tr("The answer was interrupted by a server error. Please try again.")})
 
 
 async def _run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | None, prediction: dict[str, Any],
@@ -105,7 +106,7 @@ async def _run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | N
     _STOP.discard(chat_id)
     chat = q1("SELECT * FROM chats WHERE id=? AND user_id=?", (chat_id, ctx.user["id"]))
     if not chat:
-        yield _sse("error", {"code": "not_found", "message": "Chat not found"})
+        yield _sse("error", {"code": "not_found", "message": tr("Chat not found")})
         return
     if not regenerate:
         ex("INSERT INTO messages(id, chat_id, role, content, created_at) VALUES(?,?,?,?,?)",
@@ -132,10 +133,10 @@ async def _run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | N
     guard = {"category": cat, "decision": decision, "rule_ids": gd.matched, "reason": gd.reason,
              "model": "base model + Company Guardrails (Heretic domain model: planned)" if cat in ("process_chemistry", "hazmat_handling", "formulation_confidential") else "base"}
     meta["guard"] = guard
-    yield _sse("guard", guard)
+    yield _sse("guard", _guard_out(guard))
     audit.write(ctx.actor, "chat.guard", f"chat:{chat_id}", {"category": cat, "decision": decision, "rules": gd.matched})
     if not gd.allowed:
-        msg = GUARD_REFUSAL.get(cat, f"This request is blocked by company guardrail {', '.join(gd.matched)}: {gd.reason}")
+        msg = tr(GUARD_REFUSAL.get(cat, f"This request is blocked by company guardrail {', '.join(gd.matched)}: {gd.reason}"))
         for w in re.findall(r"\S+\s*", msg):
             yield _sse("token", {"t": w})
         mid = new_id()
@@ -166,7 +167,7 @@ async def _run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | N
             if main:
                 facts = rag.dossier_facts(ctx.subject, main)
                 meta["facts"] = facts
-                yield _sse("facts", {"facts": facts, "tag": main})
+                yield _sse("facts", {"facts": tr_facts(facts), "tag": main})
         if not facts and mrpl_facts.looks_like_company_question(content):
             pub = mrpl_facts.fact_search(content, 10)
             if pub:
@@ -190,7 +191,7 @@ async def _run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | N
                                "candidates": cands})
                 facts = facts + pf
                 meta["facts"] = facts
-                yield _sse("facts", {"facts": facts, "tag": "MRPL"})
+                yield _sse("facts", {"facts": tr_facts(facts), "tag": "MRPL"})
         parts = []
         for s in sources:
             parts.append(f"<doc id=\"{s['id']}\" ref=\"{s['doc_number']} rev {s['revision']} ({s['status']}) p.{s['page']} — {s['title']}\">\n"
@@ -205,6 +206,10 @@ async def _run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | N
 
     # 4) Build messages
     sys_parts = [YUKTI_SYSTEM]
+    from .i18n import answer_language_instruction
+    lang_line = answer_language_instruction()
+    if lang_line:
+        sys_parts.append(lang_line)
     if system_prompt:
         sys_parts.append("Additional instructions from the user:\n" + system_prompt)
     msgs: list[dict[str, Any]] = [{"role": "system", "content": "\n\n".join(sys_parts)}]
@@ -241,7 +246,7 @@ async def _run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | N
             reasoning_parts.append(ev["t"])
             yield _sse("reasoning", {"t": ev["t"]})
         elif ev["type"] == "error":
-            yield _sse("error", {"code": ev["code"], "message": ev["message"]})
+            yield _sse("error", {"code": ev["code"], "message": tr(ev["message"])})
             audit.write(ctx.actor, "chat.error", f"chat:{chat_id}", {"code": ev["code"]})
             _record(ctx, route, None, ev["code"])
             # keep the turn (route, guard, sources, withheld documents, the error) so it survives refresh and reload,
@@ -279,6 +284,13 @@ async def _run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | N
 def message_out(m: dict[str, Any]) -> dict[str, Any]:
     meta = uj(m.get("meta_json"), {})
     return {"id": m["id"], "role": m["role"], "content": m["content"], "created_at": m["created_at"],
-            "reasoning": m.get("reasoning"), "route": meta.get("route"), "guard": meta.get("guard"),
-            "sources": meta.get("sources"), "denied": meta.get("denied"), "facts": meta.get("facts"), "stats": meta.get("stats"),
-            "error": meta.get("error")}
+            "reasoning": m.get("reasoning"), "route": meta.get("route"), "guard": _guard_out(meta.get("guard")),
+            "sources": meta.get("sources"), "denied": meta.get("denied"), "facts": tr_facts(meta.get("facts")), "stats": meta.get("stats"),
+            "error": {**meta["error"], "message": tr(meta["error"].get("message"))} if isinstance(meta.get("error"), dict) else meta.get("error")}
+
+
+def _guard_out(g: Any) -> Any:
+    """Guardrail decision as shown to the user (stored in English, shown in the reader's language)."""
+    if not isinstance(g, dict):
+        return g
+    return {**g, "reason": tr(g.get("reason")), "model": tr(g.get("model"))}

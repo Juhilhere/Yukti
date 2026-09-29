@@ -6,6 +6,7 @@
 // Offline by design: no telemetry, no auto-update, no CDN.
 'use strict';
 const SUPPORT_EMAIL = 'juhilprogramming@gmail.com';  // problem reports (Help menu)
+const YI = require('./ui/i18n.js');
 const { app, BrowserWindow, Menu, Tray, dialog, ipcMain, shell, nativeImage, session } = require('electron');
 const { spawn, execFile } = require('child_process');
 const fs = require('fs');
@@ -62,6 +63,10 @@ function ensureShortcuts() {
   log(`[shortcut] Desktop and Start-menu shortcuts point to ${exe}`);
 }
 
+// Language of the desktop screens and menus: chosen by the user, else the Windows display language (Hindi / Kannada / English)
+const lang = () => config.lang || YI.fromLocale(app.getLocale());
+const T = (k, v) => YI.t(lang(), k, v);
+
 function distribution() {
   try { return JSON.parse(fs.readFileSync(path.join(ROOT, 'distribution.json'), 'utf8')); } catch { return {}; }
 }
@@ -104,7 +109,7 @@ async function health(base, timeoutMs = 4000) {
   const ctl = new AbortController();
   const t = setTimeout(() => ctl.abort(), timeoutMs);
   try {
-    const r = await fetch(base + '/api/health', { signal: ctl.signal, cache: 'no-store' });
+    const r = await fetch(base + '/api/health', { signal: ctl.signal, cache: 'no-store', headers: { 'X-Lang': lang() } });
     if (!r.ok) return { ok: false, error: `HTTP ${r.status}` };
     const j = await r.json();
     if (!j || j.ok !== true) return { ok: false, error: 'Not a Yukti server (unexpected /api/health reply)' };
@@ -238,7 +243,7 @@ function startLocalServer(installRoot, port) {
     if (!quitting && !stopping && server === me && page === 'app' && activeUrl === me.url) {
       bootSeq++;
       showSplash();
-      failStart('The local Yukti server stopped unexpectedly.');
+      failStart(T('main.stopped'));
     }
     updateTray();
   });
@@ -280,7 +285,7 @@ async function bootLocal() {
   const live = () => seq === bootSeq && !quitting;
   lastStatus = null;
   showSplash();
-  setStatus({ step: 'check', text: 'Looking for a running Yukti server on this PC…', secs: 0 });
+  setStatus({ step: 'check', text: T('main.checking'), secs: 0 });
   let base = null;
   if (serverAlive() && server.root === config.installRoot) base = server.url;       // ours, still running
   else {
@@ -301,7 +306,7 @@ async function bootLocal() {
     let port = DEFAULT_PORT;
     if (!(await portFree(DEFAULT_PORT))) {  // also when another Yukti installation holds 8000
       port = await firstFreePort();
-      if (!port) return failStart(`Port ${DEFAULT_PORT} is used by another program and no free port was found in ${PORT_RANGE[0]}–${PORT_RANGE[1]}.`);
+      if (!port) return failStart(T('main.portBusy', { a: PORT_RANGE[0], b: PORT_RANGE[1] }));
       log(`[yukti-desktop] port ${DEFAULT_PORT} is used by another program — starting Yukti on port ${port} instead.`);
     }
     if (!live()) return;
@@ -322,7 +327,7 @@ async function waitReadyThenOpen(base, live) {
   let upSince = null;
   let h = { ok: false };
   while (live()) {
-    if (own && own.exited) return failStart(own.error || 'The Yukti server process exited during start-up.');
+    if (own && own.exited) return failStart(own.error || T('main.exited'));
     h = await health(base, 2500);
     if (!live()) return;
     const secs = Math.round((Date.now() - t0) / 1000);
@@ -332,7 +337,7 @@ async function waitReadyThenOpen(base, live) {
       const j = h.raw || {};
       if (j.engine === 'error') {
         log(`[yukti-desktop] AI engine reported an error${j.error ? ': ' + j.error : ''} — opening Yukti anyway.`);
-        setStatus({ ...lastStatus, notice: 'The AI model could not be loaded. Yukti opens anyway — an administrator can load a model under Models.' });
+        setStatus({ ...lastStatus, notice: T('main.modelNotice') });
         await sleep(2000);
         if (live()) openApp(base, true);
         return;
@@ -346,7 +351,7 @@ async function waitReadyThenOpen(base, live) {
       }
     }
     if (Date.now() - t0 > limit) {
-      return failStart(`Yukti did not become ready within ${Math.round(limit / 60000)} minutes.`, { canOpen: h.ok });
+      return failStart(T('main.notReady', { n: Math.round(limit / 60000) }), { canOpen: h.ok });
     }
     await sleep(1000);
   }
@@ -391,7 +396,7 @@ function createWindow() {
   win.once('ready-to-show', () => win.show());
   win.webContents.on('did-fail-load', (_e, code, desc, url, isMain) => {
     if (isMain && code !== -3 && page === 'app') {
-      dialog.showMessageBox(win, { type: 'error', title: 'Yukti', message: `Could not load ${url}`, detail: `${desc} (${code}). Use File → Switch server… or File → Reload.` });
+      dialog.showMessageBox(win, { type: 'error', title: 'Yukti', message: T('main.loadFailed', { url }), detail: T('main.loadFailedDetail', { desc, code }) });
     }
   });
   lockDown(win.webContents);
@@ -428,7 +433,9 @@ function openApp(base, saveOk) {
   if (saveOk && !config.startedOnce) { config.startedOnce = true; saveConfig(); }
   activeUrl = base;
   page = 'app';
-  ensureWin().loadURL(base + '/');
+  const syncLang = config.webLang !== lang();
+  if (syncLang) { config.webLang = lang(); saveConfig(); }
+  ensureWin().loadURL(base + (syncLang ? `/?lang=${lang()}` : '/'));
   showWin();
   buildMenu();
   ensureTray();
@@ -478,13 +485,13 @@ function setupSession() {
   ses.on('will-download', (_e, item) => {
     const def = path.join(app.getPath('downloads'), item.getFilename());
     const parent = BrowserWindow.getFocusedWindow() || win;
-    const target = dialog.showSaveDialogSync(parent, { title: 'Save file', defaultPath: def });
+    const target = dialog.showSaveDialogSync(parent, { title: T('main.saveFile'), defaultPath: def });
     if (!target) { item.cancel(); return; }
     item.setSavePath(target);
     item.once('done', (_ev, state) => {
       if (parent && !parent.isDestroyed()) parent.setProgressBar(-1);
       if (state !== 'completed' && state !== 'cancelled') {
-        dialog.showMessageBox(parent, { type: 'error', title: 'Download failed', message: `Download ${state}: ${path.basename(target)}` });
+        dialog.showMessageBox(parent, { type: 'error', title: T('main.downloadFailed'), message: `${T('main.downloadFailed')}: ${path.basename(target)}` });
       }
     });
     item.on('updated', () => {
@@ -495,12 +502,37 @@ function setupSession() {
 }
 
 // ------------------------------------------------------------ menu / tray / about
-function modeLabel() { return config.mode === 'local' ? 'All-in-one (this PC)' : config.mode === 'remote' ? 'Plant network client' : 'Not set up yet'; }
+function modeLabel() { return config.mode === 'local' ? T('about.mode.local') : config.mode === 'remote' ? T('about.mode.remote') : T('about.mode.none'); }
+
+/** Opens the email app with a problem report (context + recent desktop log); also saves the full report as a file. */
+function reportProblem(context) {
+  const lines = logBuf.slice(-60).join('\n');
+  const body = [`Yukti ${app.getVersion()} · Windows ${require('os').release()} · ${lang()}`, '', 'What went wrong:', context || '-', '',
+    '--- recent log ---', lines].join('\n');
+  const file = path.join(app.getPath('downloads'), `yukti-problem-report-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')}.txt`);
+  try { fs.writeFileSync(file, body, 'utf8'); } catch { /* downloads folder not writable */ }
+  let short = body.length > 1600 ? body.slice(0, 1600) + `\n…\n(full report: ${file})` : body;
+  shell.openExternal(`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(`[Yukti ${app.getVersion()}] ${T('main.reportSubject')}`)}&body=${encodeURIComponent(short)}`);
+}
+function reportFromMenu() {
+  // inside Yukti the guided report dialog of the web app is used; elsewhere (setup / start-up) the desktop report
+  if (page === 'app' && win && !win.isDestroyed()) win.webContents.executeJavaScript("location.hash = 'report-problem'").catch(() => reportProblem(''));
+  else reportProblem(lastStatus && lastStatus.error ? lastStatus.error : '');
+}
+function setLanguage(l) {
+  if (!YI.LANGS.includes(l)) return;
+  config.lang = l; saveConfig();
+  buildMenu(); updateTray();
+  if (page === 'app' && win && !win.isDestroyed()) {   // switch the open Yukti page too
+    config.webLang = l; saveConfig();
+    win.webContents.executeJavaScript(`try { localStorage.setItem('yukti.lang', '${l}'); } catch (e) {} location.reload();`).catch(() => {});
+  } else if (win && !win.isDestroyed()) win.webContents.reload();
+}
 
 function about() {
   const owns = serverAlive() ? ` — server started by this app (port ${server.port})` : '';
   dialog.showMessageBox(win || undefined, {
-    type: 'info', title: 'About Yukti', icon: winIcon(),
+    type: 'info', title: T('menu.about'), icon: winIcon(),
     message: `Yukti ${app.getVersion()}`,
     detail: `Sovereign Industrial AI Workbench\n\nConnected server: ${activeUrl || '(none)'}\nMode: ${modeLabel()}${owns}\n\nElectron ${process.versions.electron} · Chromium ${process.versions.chrome}\nOffline build — no telemetry, no auto-update.
 
@@ -510,21 +542,23 @@ Report a problem: ${SUPPORT_EMAIL}`,
 
 function buildMenu() {
   const tpl = [
-    { label: 'File', submenu: [
-      { label: 'Switch server / Install or update…', accelerator: 'CmdOrCtrl+Shift+S', enabled: page !== 'setup', click: () => { bootSeq++; showSetup(); } },
-      { label: 'Reload', accelerator: 'CmdOrCtrl+R', click: () => win && win.webContents.reload() },
+    { label: T('menu.file'), submenu: [
+      { label: T('menu.switch'), accelerator: 'CmdOrCtrl+Shift+S', enabled: page !== 'setup', click: () => { bootSeq++; showSetup(); } },
+      { label: T('menu.reload'), accelerator: 'CmdOrCtrl+R', click: () => win && win.webContents.reload() },
       { type: 'separator' },
-      { label: 'Quit', accelerator: 'CmdOrCtrl+Q', click: () => quitApp() },
+      { label: T('menu.quit'), accelerator: 'CmdOrCtrl+Q', click: () => quitApp() },
     ] },
     { label: 'Edit', submenu: [{ role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }] },
-    { label: 'View', submenu: [
+    { label: T('menu.language'), submenu: YI.LANGS.map((l) => ({ label: YI.t(l, 'lang.name'), type: 'radio', checked: lang() === l, click: () => setLanguage(l) })) },
+    { label: T('menu.view'), submenu: [
       { role: 'zoomIn', accelerator: 'CmdOrCtrl+=' }, { role: 'zoomOut' }, { role: 'resetZoom' },
       { type: 'separator' }, { role: 'togglefullscreen' },
       ...(DEBUG ? [{ type: 'separator' }, { role: 'toggleDevTools' }] : []),
     ] },
-    { label: 'Help', submenu: [{ label: 'Open log folder', click: () => openLogs() },
-      { label: 'Report a problem…', click: () => shell.openExternal(`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(`[Yukti ${app.getVersion()}] Problem report`)}`) },
-      { type: 'separator' }, { label: 'About Yukti', click: about }] },
+    { label: T('menu.help'), submenu: [
+      { label: T('menu.report'), click: reportFromMenu },
+      { label: T('menu.logs'), click: () => openLogs() },
+      { type: 'separator' }, { label: T('menu.about'), click: about }] },
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(tpl));
 }
@@ -546,15 +580,15 @@ async function serverStatus() {
   const h = await health(base, 4000);
   const j = h.raw || {};
   const detail = h.ok ? `Server: ${base}\nVersion: ${h.version}\nEngine: ${h.engine}${j.stage ? `\nStatus: ${j.stage}` : ''}\nMode: ${modeLabel()}` : `Server: ${base}\nUnreachable: ${h.error}\nMode: ${modeLabel()}`;
-  dialog.showMessageBox({ type: h.ok ? 'info' : 'warning', title: 'Yukti server status', message: h.ok ? 'Yukti server is online' : 'Yukti server is not responding', detail, icon: winIcon() });
+  dialog.showMessageBox({ type: h.ok ? 'info' : 'warning', title: T('main.statusTitle'), message: h.ok ? T('main.online') : T('main.offline'), detail, icon: winIcon() });
 }
 function updateTray() {
   if (!tray) return;
   tray.setContextMenu(Menu.buildFromTemplate([
-    { label: 'Open Yukti', click: showMainWin },
-    { label: 'Server status', click: serverStatus },
+    { label: T('menu.open'), click: showMainWin },
+    { label: T('menu.status'), click: serverStatus },
     { type: 'separator' },
-    { label: serverAlive() ? 'Quit (stops local server)' : 'Quit', click: () => quitApp() },
+    { label: T('menu.quit'), click: () => quitApp() },
   ]));
 }
 
@@ -588,16 +622,16 @@ handle('yukti:getConfig', () => {
     installRoot: config.mode === 'local' && serverKind(config.installRoot) ? config.installRoot : (bundledServer() || config.installRoot),
     bundled: bundledServer(),
     dest: config.mode === 'local' && config.installRoot && fs.existsSync(path.join(config.installRoot, 'installed.json')) ? config.installRoot : DEFAULT_DEST,
-    manifestUrl: manifestUrl(), version: app.getVersion(), connected: activeUrl, canGoBack, notice,
+    manifestUrl: manifestUrl(), version: app.getVersion(), connected: activeUrl, canGoBack, notice, lang: lang(),
     serverRunning: serverAlive() ? server.url : null,
   };
 });
 handle('yukti:test', async (_e, url) => {
-  let base; try { base = normUrl(url); } catch { return { ok: false, error: 'Invalid URL' }; }
+  let base; try { base = normUrl(url); } catch { return { ok: false, error: T('main.badUrl') }; }
   return { base, ...(await health(base, 5000)), raw: undefined };
 });
 handle('yukti:browseRoot', async () => {
-  const r = await dialog.showOpenDialog(win || undefined, { title: 'Select a folder', properties: ['openDirectory', 'createDirectory'], defaultPath: config.installRoot });
+  const r = await dialog.showOpenDialog(win || undefined, { title: T('main.selectFolder'), properties: ['openDirectory', 'createDirectory'], defaultPath: config.installRoot });
   return r.canceled ? null : r.filePaths[0];
 });
 handle('yukti:back', () => {
@@ -607,9 +641,9 @@ handle('yukti:back', () => {
 handle('yukti:openLogs', (_e, which) => { openLogs(which); return true; });
 handle('yukti:connect', async (_e, req) => {
   if (req.mode === 'remote') {
-    let base; try { base = normUrl(req.serverUrl); } catch { return { ok: false, error: 'Invalid URL' }; }
+    let base; try { base = normUrl(req.serverUrl); } catch { return { ok: false, error: T('main.badUrl') }; }
     const h = await health(base, 5000);
-    if (!h.ok) return { ok: false, error: `Cannot reach Yukti at ${base}: ${h.error}` };
+    if (!h.ok) return { ok: false, error: T('main.cannotReach', { base, err: h.error }) };
     if (serverAlive() && server.url !== base) await stopLocalServer();     // switching away from all-in-one mode
     config.mode = 'remote'; config.serverUrl = base; saveConfig();
     bootSeq++;
@@ -618,7 +652,7 @@ handle('yukti:connect', async (_e, req) => {
   }
   if (req.mode === 'local') {
     const root = String(req.installRoot || '').trim();
-    if (!serverKind(root)) return { ok: false, error: `No Yukti Server at ${root} (expected yukti-server.exe)` };
+    if (!serverKind(root)) return { ok: false, error: T('main.noServerAt', { root }) };
     if (config.installRoot !== root) config.startedOnce = false;
     config.mode = 'local'; config.installRoot = root; saveConfig();
     setImmediate(bootLocal);
@@ -644,7 +678,7 @@ handle('yukti:install', async (_e, req = {}) => {
   const url = String(req.manifestUrl || '').trim();
   const dest = String(req.dest || '').trim() || DEFAULT_DEST;
   if (!/^https?:\/\//i.test(url)) return { ok: false, error: "Enter the download source (the manifest.json URL from your organisation's Yukti page)." };
-  if (installAbort) return { ok: false, error: 'An installation is already running.' };
+  if (installAbort) return { ok: false, error: T('main.installRunning') };
   installAbort = new AbortController();
   const send = (p) => {
     if (p.message && p.phase !== 'download') log(`[install] ${p.message}`);
@@ -667,7 +701,9 @@ handle('yukti:install', async (_e, req = {}) => {
   } finally { installAbort = null; }
 });
 handle('yukti:cancelInstall', () => { if (installAbort) installAbort.abort(); return true; });
-handle('yukti:splashInit', () => ({ logs: logBuf.slice(-500), status: lastStatus, port: server ? server.port : config.localPort, version: app.getVersion() }));
+handle('yukti:splashInit', () => ({ logs: logBuf.slice(-500), status: lastStatus, port: server ? server.port : config.localPort, version: app.getVersion(), lang: lang() }));
+handle('yukti:setLang', (_e, l) => { if (YI.LANGS.includes(l)) { config.lang = l; saveConfig(); buildMenu(); updateTray(); } return { ok: true, lang: lang() }; });
+handle('yukti:report', (_e, req = {}) => { reportProblem(String((req && req.context) || '').slice(0, 4000)); return { ok: true }; });
 handle('yukti:splashAction', async (_e, action) => {
   if (action === 'settings') { bootSeq++; showSetup(); }
   else if (action === 'retry') {
@@ -704,15 +740,15 @@ if (!app.requestSingleInstanceLock()) {
       }
     }
     if (runningFromZipPreview()) {
-      showSetup('Yukti is running from inside the zip file, so its server is not available. Close Yukti, right-click the zip → Extract All…, then open Yukti.exe from the extracted folder.');
+      showSetup(T('main.zip'));
       return;
     }
     if (config.mode === 'local' && serverKind(config.installRoot)) bootLocal();
     else if (config.mode === 'remote') {
       const h = await health(config.serverUrl, 4000);
       if (h.ok) openApp(config.serverUrl);
-      else showSetup(`Could not reach the Yukti server at ${config.serverUrl} (${h.error}). Check the network, or choose another option.`);
-    } else if (config.mode === 'local') showSetup(`No Yukti Server found at ${config.installRoot}. Install it again or pick the folder.`);
+      else showSetup(`${T('main.unreachable', { url: config.serverUrl })} (${h.error})`);
+    } else if (config.mode === 'local') showSetup(T('main.noServer'));
     else showSetup();
   });
 

@@ -35,8 +35,8 @@ export default function DocumentView() {
   const [confirmDel, setConfirmDel] = useState(false);
   const del = useMutation({
     mutationFn: () => api.del(`/api/documents/${encodeURIComponent(id)}`),
-    onSuccess: () => { toast.success('Document deleted'); qc.invalidateQueries({ queryKey: ['documents'] }); nav('/knowledge', { replace: true }); },
-    onError: (e) => toast.error('Delete failed', errMsg(e)),
+    onSuccess: () => { toast.success(t('doc.deleted')); qc.invalidateQueries({ queryKey: ['documents'] }); nav('/knowledge', { replace: true }); },
+    onError: (e) => toast.error(t('doc.deleteFailed'), errMsg(e)),
   });
 
   const pages: DocPage[] = useMemo(() => (Array.isArray(doc.data?.pages) ? (doc.data!.pages as DocPage[]) : []), [doc.data]);
@@ -57,10 +57,10 @@ export default function DocumentView() {
     }
   }, [pageParam, pages.length]);
 
-  if (doc.isLoading) return <Loading label="Loading document…" />;
-  if (doc.error) return <div className="p-5"><Link to="/knowledge" className="btn btn-sm btn-ghost mb-3"><ArrowLeft size={13} /> Knowledge</Link><ErrorBox error={doc.error} onRetry={() => doc.refetch()} /></div>;
+  if (doc.isLoading) return <Loading label={t('doc.loading')} />;
+  if (doc.error) return <div className="p-5"><Link to="/knowledge" className="btn btn-sm btn-ghost mb-3"><ArrowLeft size={13} /> {t('nav.knowledge')}</Link><ErrorBox error={doc.error} onRetry={() => doc.refetch()} /></div>;
   const d = doc.data;
-  if (!d) return <EmptyState title="Document not found" />;
+  if (!d) return <EmptyState title={t('doc.notFound')} />;
 
   // HODs (documents.upload) may delete only documents of their own department.
   const canDelete = !!me?.permissions?.includes('documents.upload') && !!d.department && d.department === me?.user.department;
@@ -74,47 +74,47 @@ export default function DocumentView() {
   return (
     <div className="flex h-full flex-col">
       <PageHeader icon={<FileText size={18} />}
-        title={<span className="flex flex-wrap items-center gap-2">{d.title || '(untitled)'} <StatusChip status={d.status} /><ProvenanceBadges isExample={d.is_example} isPublic={d.is_public} /></span>}
-        subtitle={<span className="font-mono">{d.doc_number || '—'} · Rev {d.revision || '—'}</span>}
+        title={<span className="flex flex-wrap items-center gap-2">{d.title || t('knowledge.untitled')} <StatusChip status={d.status} /><ProvenanceBadges isExample={d.is_example} isPublic={d.is_public} /></span>}
+        subtitle={<span className="font-mono">{d.doc_number || '—'} · {t('sources.rev', { rev: d.revision || '—' })}</span>}
         actions={<>
           <Link to="/knowledge" className="btn btn-sm"><ArrowLeft size={13} /> {t('btn.back')}</Link>
-          <a className="btn btn-sm btn-cyan" href={`/api/documents/${encodeURIComponent(d.id)}/file`} target="_blank" rel="noreferrer"><ExternalLink size={13} /> Open original</a>
+          <a className="btn btn-sm btn-cyan" href={`/api/documents/${encodeURIComponent(d.id)}/file`} target="_blank" rel="noreferrer"><ExternalLink size={13} /> {t('doc.openOriginal')}</a>
           {canDelete && <button className="btn btn-sm btn-danger" onClick={() => setConfirmDel(true)}><Trash2 size={13} /> {t('btn.delete')}</button>}
         </>} />
-      <Modal open={confirmDel} onClose={() => setConfirmDel(false)} width={440} title="Delete document?" icon={<Trash2 size={14} className="text-danger" />}
+      <Modal open={confirmDel} onClose={() => setConfirmDel(false)} width={440} title={t('doc.deleteQ')} icon={<Trash2 size={14} className="text-danger" />}
         footer={<>
           <button className="btn btn-ghost" onClick={() => setConfirmDel(false)}>{t('btn.cancel')}</button>
           <button className="btn btn-danger" disabled={del.isPending} onClick={() => del.mutate()}>{del.isPending ? <Spinner size={12} /> : <Trash2 size={12} />}{t('btn.delete')}</button>
         </>}>
-        <div className="text-[12.5px]">Remove <span className="font-medium">{d.title}</span> ({d.doc_number || '—'}) from the knowledge base? It will no longer be retrieved in answers. The deletion is recorded in the audit log.</div>
+        <div className="text-[12.5px]">{t('doc.deleteBody', { title: d.title, no: d.doc_number || '—' })}</div>
       </Modal>
       <div className="flex min-h-0 flex-1">
         <aside className="w-[260px] shrink-0 space-y-3 overflow-y-auto border-r border-border p-4">
           <div className="space-y-2 text-[12px]">
             {[
-              ['Type', <Badge mono key="t" title={d.doc_type}>{docTypeLabel(d.doc_type)}</Badge>],
-              ['Department', d.department || '—'],
-              ['Classification', <StatusChip key="c" status={d.classification} />],
-              ['Created', fmtDate(d.created_at)],
-              ['Size', <span key="s" className="font-mono">{fmtBytes(d.size_bytes)}</span>],
-              ['Pages', <span key="p" className="font-mono">{pages.length} <span className="text-cyan">{digital}d</span>/<span className="text-amber">{scanned}s</span></span>],
-              ['Avg OCR conf', avgConf !== null ? <span key="o" className="font-mono">{avgConf}%</span> : '—'],
+              [t('doc.f.type'), <Badge mono key="t" title={d.doc_type}>{docTypeLabel(d.doc_type)}</Badge>],
+              [t('doc.f.department'), d.department || '—'],
+              [t('doc.f.class'), <StatusChip key="c" status={d.classification} />],
+              [t('doc.f.created'), fmtDate(d.created_at)],
+              [t('doc.f.size'), <span key="s" className="font-mono">{fmtBytes(d.size_bytes)}</span>],
+              [t('doc.f.pages'), <span key="p" className="font-mono" title={t('knowledge.pageModesTip')}>{pages.length} <span className="text-cyan">{t('knowledge.pagesDigital', { n: digital })}</span>/<span className="text-amber">{t('knowledge.pagesScanned', { n: scanned })}</span></span>],
+              [t('doc.f.ocr'), avgConf !== null ? <span key="o" className="font-mono">{avgConf}%</span> : '—'],
             ].map(([k, v], i) => (
               <div key={i} className="flex items-center justify-between gap-2"><span className="text-muted">{k}</span><span className="text-right">{v}</span></div>
             ))}
           </div>
           {(d.asset_tags ?? []).length > 0 && (
             <div>
-              <div className="label mb-1.5">Asset tags</div>
-              <div className="flex flex-wrap gap-1">{d.asset_tags.map((t) => <Badge key={t} mono tone="cyan">{t}</Badge>)}</div>
+              <div className="label mb-1.5">{t('doc.assetTags')}</div>
+              <div className="flex flex-wrap gap-1">{d.asset_tags.map((tag) => <Badge key={tag} mono tone="cyan">{tag}</Badge>)}</div>
             </div>
           )}
           <div>
-            <div className="label mb-1.5">Pages</div>
+            <div className="label mb-1.5">{t('doc.f.pages')}</div>
             <div className="grid grid-cols-5 gap-1">
               {pages.map((p) => (
                 <button key={p.page_no} onClick={() => setSp({ page: String(p.page_no) }, { replace: true })}
-                  title={`${p.mode}${confPct(p.ocr_conf) !== null ? ` · OCR ${confPct(p.ocr_conf)}%` : ''}`}
+                  title={`${t(`doc.mode.${p.mode}`, p.mode)}${confPct(p.ocr_conf) !== null ? ` · ${t('doc.ocrPct', { n: confPct(p.ocr_conf) })}` : ''}`}
                   className={cx('rounded border py-1 font-mono text-[11px] hover:border-cyan',
                     pageParam === p.page_no ? 'border-cyan bg-cyan/10 text-cyan' : 'border-border',
                     p.mode !== 'digital' && pageParam !== p.page_no && 'text-amber')}>
@@ -127,10 +127,10 @@ export default function DocumentView() {
         <div className="min-w-0 flex-1 overflow-y-auto p-4">
           <div className="relative mb-3 max-w-sm">
             <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-faint" />
-            <input className="input !pl-8" placeholder="Find in extracted text…" value={filter} onChange={(e) => setFilter(e.target.value)} />
+            <input className="input !pl-8" placeholder={t('doc.findPh')} value={filter} onChange={(e) => setFilter(e.target.value)} />
           </div>
-          {pages.length === 0 && <EmptyState title="No extracted pages" hint="The document may still be processing." />}
-          {pages.length > 0 && visible.length === 0 && <EmptyState title="No page contains that text" />}
+          {pages.length === 0 && <EmptyState title={t('doc.noPages')} hint={t('doc.noPagesHint')} />}
+          {pages.length > 0 && visible.length === 0 && <EmptyState title={t('doc.noPageMatch')} />}
           <div className="space-y-3">
             {visible.map((p) => {
               const cp = confPct(p.ocr_conf);
@@ -138,15 +138,15 @@ export default function DocumentView() {
                 <div key={p.page_no} ref={(el) => { pageRefs.current[p.page_no] = el; }}
                   className={cx('scroll-mt-3 rounded-md border bg-surface', pageParam === p.page_no ? 'border-cyan' : 'border-border')}>
                   <div className="flex items-center gap-2 border-b border-border px-3 py-1.5">
-                    <span className="font-mono text-[12px] font-medium">Page {p.page_no}</span>
+                    <span className="font-mono text-[12px] font-medium">{t('doc.page', { n: p.page_no })}</span>
                     <Badge tone={p.mode === 'digital' ? 'cyan' : p.mode === 'scanned' ? 'amber' : 'violet'} mono>
-                      {p.mode === 'digital' ? <FileText size={10} /> : <ScanLine size={10} />}{p.mode}
+                      {p.mode === 'digital' ? <FileText size={10} /> : <ScanLine size={10} />}{t(`doc.mode.${p.mode}`, p.mode)}
                     </Badge>
-                    {cp !== null && <Badge tone={confTone(p.ocr_conf)} mono>OCR {cp}%</Badge>}
-                    {pageParam === p.page_no && <Badge tone="cyan" className="ml-auto">cited page</Badge>}
+                    {cp !== null && <Badge tone={confTone(p.ocr_conf)} mono>{t('doc.ocrPct', { n: cp })}</Badge>}
+                    {pageParam === p.page_no && <Badge tone="cyan" className="ml-auto">{t('doc.citedPage')}</Badge>}
                   </div>
                   <pre className="whitespace-pre-wrap break-words px-3 py-2.5 font-sans text-[12.5px] leading-relaxed text-text/90">
-                    {highlight(p.text || '(no text extracted)', filter)}
+                    {highlight(p.text || t('doc.noText'), filter)}
                   </pre>
                 </div>
               );

@@ -7,6 +7,7 @@ import type { DayCount, Usage } from '../../lib/types';
 import { cx, fmtDuration, fmtMB, num } from '../../lib/format';
 import { AMBER, AXIS, CYAN, GRID, axisProps, tooltipStyle } from '../../lib/chartTheme';
 import { Card, Dot, EmptyState, ErrorBox, Loading, Meter, StatusChip } from '../../components/ui';
+import { useT } from '../../lib/i18n';
 
 const v = (x: unknown, d = 0) => (typeof x === 'number' && isFinite(x) ? num(x, d) : '—');
 
@@ -22,11 +23,12 @@ function Tile({ icon, label, value, unit, sub, tone }: { icon: ReactNode; label:
 }
 
 function DayChart({ data, color, name }: { data: DayCount[]; color: string; name: string }) {
-  if (!data?.length) return <EmptyState title="No data recorded in this period" />;
+  const t = useT();
+  if (!data?.length) return <EmptyState title={t('admin.usage.noDataPeriod')} />;
   const total = data.reduce((a, b) => a + (b.count ?? 0), 0);
   return (
     <div>
-      <div className="mb-1 font-mono text-[11px] text-muted">total {num(total, 0)}</div>
+      <div className="mb-1 font-mono text-[11px] text-muted">{t('admin.usage.total', { n: num(total, 0) })}</div>
       <div className="h-[200px]">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 6, right: 8, left: 0, bottom: 0 }}>
@@ -43,8 +45,9 @@ function DayChart({ data, color, name }: { data: DayCount[]; color: string; name
 }
 
 function Bars({ data }: { data: Record<string, number> }) {
+  const t = useT();
   const rows = Object.entries(data ?? {}).sort((a, b) => b[1] - a[1]);
-  if (!rows.length) return <div className="py-4 text-center text-[12px] text-faint">No data recorded</div>;
+  if (!rows.length) return <div className="py-4 text-center text-[12px] text-faint">{t('admin.usage.noData')}</div>;
   const max = Math.max(1, ...rows.map(([, x]) => x));
   return (
     <div className="space-y-1.5">
@@ -68,75 +71,76 @@ function KV({ rows }: { rows: [string, ReactNode][] }) {
 }
 
 export default function UsageHealth() {
+  const t = useT();
   const [days, setDays] = useState(14);
   const q = useQuery({ queryKey: ['admin', 'usage', days], queryFn: () => api.get<Usage>(`/api/admin/usage?days=${days}`), refetchInterval: 15_000 });
   const u = q.data;
   return (
     <div className="space-y-4 p-5">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[12px] text-muted">Period</span>
+        <span className="text-[12px] text-muted">{t('admin.usage.period')}</span>
         {[7, 14, 30].map((d) => (
-          <button key={d} onClick={() => setDays(d)} className={cx('rounded border px-2 py-0.5 text-[11.5px]', days === d ? 'border-cyan bg-cyan/10 text-cyan' : 'border-border text-muted hover:text-text')}>{d} days</button>
+          <button key={d} onClick={() => setDays(d)} className={cx('rounded border px-2 py-0.5 text-[11.5px]', days === d ? 'border-cyan bg-cyan/10 text-cyan' : 'border-border text-muted hover:text-text')}>{t('admin.usage.days', { n: d })}</button>
         ))}
-        <span className="ml-auto flex items-center gap-1.5 text-[11px] text-muted"><Dot tone={q.isFetching ? 'cyan' : 'ok'} pulse={q.isFetching} />Auto-refresh every 15 s · only measured values shown (— = not measured)</span>
+        <span className="ml-auto flex items-center gap-1.5 text-[11px] text-muted"><Dot tone={q.isFetching ? 'cyan' : 'ok'} pulse={q.isFetching} />{t('admin.usage.autoRefresh')}</span>
       </div>
       {q.isLoading && <Loading />}
       {q.error ? <ErrorBox error={q.error} onRetry={() => q.refetch()} /> : null}
       {u && <>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">
-          <Tile icon={<Users size={13} />} label="Users" value={v(u.users?.total)} sub={<>active 7d {v(u.users?.active_7d)} · disabled {v(u.users?.disabled)} · locked {v(u.users?.locked)}</>} />
-          <Tile icon={<Activity size={13} />} label="Active sessions" value={v(u.sessions_active)} tone="cyan" />
-          <Tile icon={<Zap size={13} />} label="Answers" value={v(u.perf?.answers)} />
-          <Tile icon={<ShieldAlert size={13} />} label="Errors (24 h)" value={v(u.errors_24h)} tone={(u.errors_24h ?? 0) > 0 ? 'danger' : 'ok'} />
-          <Tile icon={<ThumbsUp size={13} />} label="Rated helpful" value={v(u.feedback?.up)} tone="ok" />
-          <Tile icon={<ThumbsDown size={13} />} label="Rated not helpful" value={v(u.feedback?.down)} tone="amber" />
+          <Tile icon={<Users size={13} />} label={t('admin.usage.users')} value={v(u.users?.total)} sub={t('admin.usage.usersSub', { active: v(u.users?.active_7d), disabled: v(u.users?.disabled), locked: v(u.users?.locked) })} />
+          <Tile icon={<Activity size={13} />} label={t('admin.usage.sessions')} value={v(u.sessions_active)} tone="cyan" />
+          <Tile icon={<Zap size={13} />} label={t('admin.usage.answers')} value={v(u.perf?.answers)} />
+          <Tile icon={<ShieldAlert size={13} />} label={t('admin.usage.errors24')} value={v(u.errors_24h)} tone={(u.errors_24h ?? 0) > 0 ? 'danger' : 'ok'} />
+          <Tile icon={<ThumbsUp size={13} />} label={t('admin.usage.ratedUp')} value={v(u.feedback?.up)} tone="ok" />
+          <Tile icon={<ThumbsDown size={13} />} label={t('admin.usage.ratedDown')} value={v(u.feedback?.down)} tone="amber" />
         </div>
 
         <div className="grid gap-4 xl:grid-cols-2">
-          <Card title="Queries per day"><DayChart data={u.queries_per_day} color={CYAN} name="Queries" /></Card>
-          <Card title="Policy denials per day"><DayChart data={u.denials_per_day} color={AMBER} name="Denials" /></Card>
+          <Card title={t('admin.usage.queriesPerDay')}><DayChart data={u.queries_per_day} color={CYAN} name={t('admin.usage.queries')} /></Card>
+          <Card title={t('admin.usage.denialsPerDay')}><DayChart data={u.denials_per_day} color={AMBER} name={t('admin.usage.denials')} /></Card>
         </div>
 
         <div className="grid gap-4 xl:grid-cols-2">
-          <Card title="By intent (Laya)"><Bars data={u.by_intent} /></Card>
-          <Card title="By department"><Bars data={u.by_department} /></Card>
+          <Card title={t('admin.usage.byIntent')}><Bars data={u.by_intent} /></Card>
+          <Card title={t('admin.usage.byDept')}><Bars data={u.by_department} /></Card>
         </div>
 
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <Tile icon={<Gauge size={13} />} label="Avg speed" value={v(u.perf?.avg_tok_per_s, 1)} unit="tok/s" tone="cyan" />
-          <Tile icon={<Gauge size={13} />} label="Avg TTFT" value={v(u.perf?.avg_ttft_ms)} unit="ms" />
-          <Tile icon={<Gauge size={13} />} label="p95 TTFT" value={v(u.perf?.p95_ttft_ms)} unit="ms" />
-          <Tile icon={<Gauge size={13} />} label="Avg total time" value={typeof u.perf?.avg_total_ms === 'number' ? num(u.perf.avg_total_ms / 1000, 2) : '—'} unit="s" />
+          <Tile icon={<Gauge size={13} />} label={t('admin.usage.avgSpeed')} value={v(u.perf?.avg_tok_per_s, 1)} unit={t('admin.usage.tokPerS')} tone="cyan" />
+          <Tile icon={<Gauge size={13} />} label={t('admin.usage.avgTtft')} value={v(u.perf?.avg_ttft_ms)} unit={t('admin.usage.ms')} />
+          <Tile icon={<Gauge size={13} />} label={t('admin.usage.p95Ttft')} value={v(u.perf?.p95_ttft_ms)} unit={t('admin.usage.ms')} />
+          <Tile icon={<Gauge size={13} />} label={t('admin.usage.avgTotal')} value={typeof u.perf?.avg_total_ms === 'number' ? num(u.perf.avg_total_ms / 1000, 2) : '—'} unit={t('admin.usage.sec')} />
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <Card title="Knowledge" icon={<BookOpen size={13} className="text-cyan" />}>
+          <Card title={t('admin.usage.knowledge')} icon={<BookOpen size={13} className="text-cyan" />}>
             <KV rows={[
-              ['Documents', v(u.knowledge?.documents)], ['Pages', v(u.knowledge?.pages)], ['Scanned pages', v(u.knowledge?.scanned_pages)],
-              ['Chunks', v(u.knowledge?.chunks)], ['Example documents', v(u.knowledge?.examples)],
+              [t('admin.usage.documents'), v(u.knowledge?.documents)], [t('admin.usage.pages'), v(u.knowledge?.pages)], [t('admin.usage.scanned'), v(u.knowledge?.scanned_pages)],
+              [t('admin.usage.chunks'), v(u.knowledge?.chunks)], [t('admin.usage.examples'), v(u.knowledge?.examples)],
             ]} />
           </Card>
-          <Card title="Inference engine" icon={<Cpu size={13} className="text-cyan" />}>
+          <Card title={t('admin.usage.engineCard')} icon={<Cpu size={13} className="text-cyan" />}>
             <KV rows={[
-              ['Status', u.engine?.status ? <StatusChip status={u.engine.status} /> : '—'], ['Engine', u.engine?.engine ?? '—'],
-              ['Model', u.engine?.model_name ?? '—'], ['Uptime', typeof u.engine?.uptime_s === 'number' ? fmtDuration(u.engine.uptime_s) : '—'],
-              ['Requests', v(u.engine?.requests)],
+              [t('admin.usage.status'), u.engine?.status ? <StatusChip status={u.engine.status} /> : '—'], [t('admin.usage.engine'), u.engine?.engine ?? '—'],
+              [t('admin.usage.model'), u.engine?.model_name ?? '—'], [t('admin.usage.uptime'), typeof u.engine?.uptime_s === 'number' ? fmtDuration(u.engine.uptime_s) : '—'],
+              [t('admin.usage.requests'), v(u.engine?.requests)],
             ]} />
           </Card>
-          <Card title="Hardware" icon={<MemoryStick size={13} className="text-cyan" />}>
+          <Card title={t('admin.usage.hardware')} icon={<MemoryStick size={13} className="text-cyan" />}>
             <KV rows={[
-              ['GPU', u.gpu?.name ?? 'none detected'],
+              ['GPU', u.gpu?.name ?? t('admin.usage.noGpu')],
               ['VRAM', u.gpu ? `${fmtMB(u.gpu.vram_used_mb)} / ${fmtMB(u.gpu.vram_total_mb)}` : '—'],
-              ['GPU util', typeof u.gpu?.util_pct === 'number' ? `${num(u.gpu.util_pct, 0)}%` : '—'],
+              [t('admin.usage.gpuUtil'), typeof u.gpu?.util_pct === 'number' ? `${num(u.gpu.util_pct, 0)}%` : '—'],
               ['RAM', u.ram ? `${fmtMB(u.ram.used_mb)} / ${fmtMB(u.ram.total_mb)}` : '—'],
             ]} />
           </Card>
-          <Card title="Storage & audit" icon={<HardDrive size={13} className="text-cyan" />}>
+          <Card title={t('admin.usage.storage')} icon={<HardDrive size={13} className="text-cyan" />}>
             <KV rows={[
-              ['Disk free', typeof u.disk?.free_gb === 'number' ? `${num(u.disk.free_gb, 1)} GB` : '—'],
-              ['Disk total', typeof u.disk?.total_gb === 'number' ? `${num(u.disk.total_gb, 1)} GB` : '—'],
-              ['Audit records', v(u.audit?.records)],
-              ['Audit head', u.audit?.head ? <span title={u.audit.head}><ScrollText size={11} className="mr-1 inline" />{u.audit.head.slice(0, 12)}</span> : '—'],
+              [t('admin.usage.diskFree'), typeof u.disk?.free_gb === 'number' ? `${num(u.disk.free_gb, 1)} GB` : '—'],
+              [t('admin.usage.diskTotal'), typeof u.disk?.total_gb === 'number' ? `${num(u.disk.total_gb, 1)} GB` : '—'],
+              [t('admin.usage.auditRecords'), v(u.audit?.records)],
+              [t('admin.usage.auditHead'), u.audit?.head ? <span title={u.audit.head}><ScrollText size={11} className="mr-1 inline" />{u.audit.head.slice(0, 12)}</span> : '—'],
             ]} />
           </Card>
         </div>

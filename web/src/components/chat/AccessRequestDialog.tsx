@@ -7,6 +7,7 @@ import { toast } from '../Toast';
 import { cx } from '../../lib/format';
 import { useDepartments, type Department } from '../../lib/queries';
 import type { AccessRequest } from '../../lib/types';
+import { useT } from '../../lib/i18n';
 
 const norm = (s: string | null | undefined) => (s ?? '').trim().toLowerCase();
 
@@ -26,18 +27,19 @@ function DeptRow({ d, selected, pinned, onPick }: { d: Department; selected: boo
 function DepartmentPicker({ value, onChange, all, withheld, loading }: {
   value: string; onChange: (name: string) => void; all: Department[]; withheld: Department[]; loading: boolean;
 }) {
+  const t = useT();
   const [q, setQ] = useState('');
   const groups = useMemo(() => {
     const withheldNames = new Set(withheld.map((d) => norm(d.name)));
     const m = new Map<string, Department[]>();
     all.filter((d) => !withheldNames.has(norm(d.name))).forEach((d) => {
-      const g = d.group?.trim() || 'Other';
+      const g = d.group?.trim() || t('access.otherGroup');
       if (!m.has(g)) m.set(g, []);
       m.get(g)!.push(d);
     });
     return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]))
       .map(([g, ds]) => [g, [...ds].sort((a, b) => a.name.localeCompare(b.name))] as const);
-  }, [all, withheld]);
+  }, [all, withheld, t]);
 
   const s = norm(q);
   const match = (d: Department) => !s || [d.name, d.code, d.group, d.description, d.manager_name].some((x) => norm(x).includes(s));
@@ -50,14 +52,14 @@ function DepartmentPicker({ value, onChange, all, withheld, loading }: {
       <div className="flex items-center gap-2 border-b border-border px-2.5">
         <Search size={13} className="shrink-0 text-faint" />
         <input className="w-full bg-transparent py-1.5 text-[12.5px] outline-none placeholder:text-faint" value={q}
-          onChange={(e) => setQ(e.target.value)} placeholder={`Search ${all.length ? `${all.length} ` : ''}departments, codes, approvers…`} />
+          onChange={(e) => setQ(e.target.value)} placeholder={all.length ? t('access.searchN', { n: all.length }) : t('access.search')} />
         {loading && <Spinner size={12} />}
       </div>
       <div className="max-h-[220px] overflow-y-auto py-1">
         {pinned.length > 0 && (
           <div className="border-b border-border/60 pb-1">
             <div className="flex items-center gap-1.5 px-2.5 pb-0.5 pt-1.5 text-[10.5px] font-semibold uppercase tracking-wider text-amber">
-              <ShieldAlert size={11} /> Withheld in this answer
+              <ShieldAlert size={11} /> {t('access.withheldHere')}
             </div>
             {pinned.map((d) => <DeptRow key={`w-${d.name}`} d={d} pinned selected={sel === norm(d.name)} onPick={onChange} />)}
           </div>
@@ -71,7 +73,7 @@ function DepartmentPicker({ value, onChange, all, withheld, loading }: {
           </div>
         ))}
         {pinned.length === 0 && shownGroups.length === 0 && (
-          <div className="px-3 py-4 text-center text-[12px] text-muted">{loading ? 'Loading departments…' : 'No department matches'}</div>
+          <div className="px-3 py-4 text-center text-[12px] text-muted">{loading ? t('access.loadingDepts') : t('access.noMatch')}</div>
         )}
       </div>
     </div>
@@ -83,6 +85,7 @@ export function AccessRequestDialog({ open, onClose, departments, context, sugge
   /** department the question is about (Laya's route), used to preselect the right withheld department */
   suggest?: string;
 }) {
+  const t = useT();
   const deptQ = useDepartments();
   const all = useMemo(() => deptQ.data ?? [], [deptQ.data]);
   // Resolve withheld department labels (name or code) against the directory; unknown ones stay as plain entries.
@@ -116,7 +119,7 @@ export function AccessRequestDialog({ open, onClose, departments, context, sugge
   useEffect(() => {
     if (open) {
       setDept(pickDefault());
-      setJust(context ? `Needed to answer: "${context.slice(0, 160)}"` : '');
+      setJust(context ? t('access.justPrefill', { q: context.slice(0, 160) }) : '');
       setHours(2);
       setErr('');
     }
@@ -135,11 +138,11 @@ export function AccessRequestDialog({ open, onClose, departments, context, sugge
 
   const submit = async () => {
     const name = dept.trim();
-    if (!name || just.trim().length < 5) { setErr('Pick a department and give a short justification.'); return; }
+    if (!name || just.trim().length < 5) { setErr(t('access.errMissing')); return; }
     setBusy(true); setErr('');
     try {
       await api.post<AccessRequest>('/api/access-requests', { department: name, justification: just.trim(), hours });
-      toast.success('Access request sent', `${name} · ${hours}h — you will be notified when an approver decides.`);
+      toast.success(t('access.sent'), t('access.sentBody', { dept: name, h: hours }));
       onClose();
     } catch (e) {
       setErr(errMsg(e));
@@ -147,38 +150,38 @@ export function AccessRequestDialog({ open, onClose, departments, context, sugge
   };
 
   return (
-    <Modal open={open} onClose={onClose} title="Request time-bound access" icon={<KeyRound size={15} className="text-amber" />}
+    <Modal open={open} onClose={onClose} title={t('access.title')} icon={<KeyRound size={15} className="text-amber" />}
       footer={<>
-        <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
-        <button className="btn btn-primary" disabled={busy} onClick={submit}>{busy ? 'Sending…' : 'Send request'}</button>
+        <button className="btn btn-ghost" onClick={onClose}>{t('btn.cancel')}</button>
+        <button className="btn btn-primary" disabled={busy} onClick={submit}>{busy ? t('access.sending') : t('access.send')}</button>
       </>}>
       <div className="space-y-3">
-        <p className="text-[12px] text-muted">An approver for the owning department reviews this request. Grants expire automatically and every use is audited.</p>
+        <p className="text-[12px] text-muted">{t('access.intro')}</p>
         <div className="space-y-1">
           <div className="flex items-center justify-between text-[12px] font-medium text-muted">
-            <span>Department</span>
+            <span>{t('access.department')}</span>
             {dept && <span className="truncate pl-2 text-[11.5px] text-cyan">{dept}</span>}
           </div>
           {usePicker ? (
             <DepartmentPicker value={dept} onChange={setDept} all={all} withheld={withheld} loading={deptQ.isLoading} />
           ) : (
-            <input className="input" value={dept} onChange={(e) => setDept(e.target.value)} placeholder="e.g. Maintenance" />
+            <input className="input" value={dept} onChange={(e) => setDept(e.target.value)} placeholder={t('access.deptPh')} />
           )}
           <div className="flex items-center gap-1.5 text-[11.5px] text-muted">
             <UserCheck size={12} className="shrink-0 text-faint" />
-            <span>Approver:</span>
-            <span className="truncate text-text">{selected?.manager_name || (dept ? 'Department head (per access policy)' : '—')}</span>
+            <span>{t('access.approver')}</span>
+            <span className="truncate text-text">{selected?.manager_name || (dept ? t('access.deptHead') : '—')}</span>
             {selected?.group && <span className="shrink-0 text-faint">· {selected.group}</span>}
           </div>
         </div>
-        <Field label="Justification">
-          <textarea className="input min-h-[80px]" value={just} onChange={(e) => setJust(e.target.value)} placeholder="Why do you need these documents?" />
+        <Field label={t('access.justification')}>
+          <textarea className="input min-h-[80px]" value={just} onChange={(e) => setJust(e.target.value)} placeholder={t('access.justPh')} />
         </Field>
-        <Field label="Duration">
+        <Field label={t('access.duration')}>
           <div className="flex gap-2">
             {[1, 2, 8].map((h) => (
               <button key={h} type="button" onClick={() => setHours(h)}
-                className={cx('btn btn-sm font-mono', hours === h && '!border-amber !text-amber !bg-amber/10')}>{h}h</button>
+                className={cx('btn btn-sm font-mono', hours === h && '!border-amber !text-amber !bg-amber/10')}>{t('access.hours', { h })}</button>
             ))}
           </div>
         </Field>

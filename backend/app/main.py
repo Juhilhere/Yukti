@@ -25,6 +25,7 @@ from . import scope
 from .db import ex, get_setting, init_db, j, new_id, now_iso, q, q1, set_setting, uj
 from .llm_params import DEFAULT_PREDICTION, schema, vllm_command
 from .policy import pdp
+from .i18n import answer_language_instruction, get_lang, tr, tr_list
 
 app = FastAPI(title="Yukti — Sovereign Industrial AI Workbench", version=VERSION, docs_url="/api/docs", openapi_url="/api/openapi.json")
 app.include_router(auth_router)
@@ -218,7 +219,16 @@ def system(ctx: Ctx = Depends(current)) -> dict[str, Any]:
 @app.get("/api/engines")
 async def engines(ctx: Ctx = Depends(current)) -> list[dict[str, Any]]:
     ctx.require("models.manage")
-    return list(await asyncio.gather(*(engine.probe(e) for e in engine.ENGINE_IDS)))
+    return [_probe_out(p) for p in await asyncio.gather(*(engine.probe(e) for e in engine.ENGINE_IDS))]
+
+
+def _probe_out(p: dict[str, Any]) -> dict[str, Any]:
+    """Engine status as shown to the administrator: name, description and problem in the user's language."""
+    return {**p, **{k: tr(p[k]) for k in ("name", "description", "error") if p.get(k)}}
+
+
+def _engine_out(pub: dict[str, Any]) -> dict[str, Any]:
+    return {**pub, "error": tr(pub.get("error"))} if pub.get("error") else pub
 
 
 @app.put("/api/engines/{eid}")
@@ -242,7 +252,7 @@ async def set_engine(eid: str, body: dict[str, Any], ctx: Ctx = Depends(current)
     if h:
         _ALLOWED_HOSTS.add(h)
     audit.write(ctx.actor, "engine.configured", f"engine:{eid}", {"base_url": body.get("base_url")})
-    return await engine.probe(eid)
+    return _probe_out(await engine.probe(eid))
 
 
 @app.delete("/api/engines/{eid}")
@@ -253,7 +263,7 @@ async def reset_engine(eid: str, ctx: Ctx = Depends(current)) -> dict[str, Any]:
         raise err(404, "not_found", "Unknown engine")
     ex("DELETE FROM engines WHERE id=?", (eid,))
     audit.write(ctx.actor, "engine.reset", f"engine:{eid}")
-    return await engine.probe(eid)
+    return _probe_out(await engine.probe(eid))
 
 
 @app.get("/api/models")
@@ -277,7 +287,7 @@ async def models(ctx: Ctx = Depends(current)) -> list[dict[str, Any]]:
 
 @app.get("/api/models/loaded")
 def loaded(ctx: Ctx = Depends(current)) -> dict[str, Any]:
-    pub = engine.state.public()
+    pub = _engine_out(engine.state.public())
     if "models.manage" not in ctx.perms:
         return {k: pub[k] for k in ("status", "engine", "model_name")}
     return pub
@@ -299,7 +309,7 @@ def load_model(body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str, A
     res = engine.load(eid, body["model_id"], body.get("load_config") or {})
     set_setting("last_loaded_model", {"engine": eid, "model_id": body["model_id"], "load_config": body.get("load_config") or {}}, ctx.actor)
     audit.write(ctx.actor, "model.load", f"model:{body['model_id']}", {"engine": body.get("engine"), "config": body.get("load_config")})
-    return res
+    return _engine_out(res)
 
 
 @app.post("/api/models/unload")
@@ -314,7 +324,8 @@ def unload_model(ctx: Ctx = Depends(current)) -> dict[str, Any]:
 @app.get("/api/params/schema")
 def params_schema(ctx: Ctx = Depends(current)) -> dict[str, Any]:
     ctx.require("ai.settings")
-    return schema(engine.scan_models())
+    from .i18n_params import translate_schema
+    return translate_schema(schema(engine.scan_models()), get_lang())  # translated copy; the module lists stay English
 
 
 @app.post("/api/models/command-preview")
@@ -450,7 +461,7 @@ def _recheck_sources(m: dict[str, Any], ctx: Ctx) -> dict[str, Any]:
         if d and rag.can_read(ctx.subject, d, "cite"):
             out.append(sr)
         elif isinstance(sr, dict):
-            out.append({**sr, "snippet": "", "withheld": True, "title": "Document no longer available to you"})
+            out.append({**sr, "snippet": "", "withheld": True, "title": tr("Document no longer available to you")})
     return {**m, "sources": out}
 
 
@@ -582,7 +593,8 @@ def job(jid: str, ctx: Ctx = Depends(current)) -> dict[str, Any]:
     r = q1("SELECT * FROM jobs WHERE id=?", (jid,))
     if not r or (r.get("created_by") and r["created_by"] != ctx.actor and "admin" not in ctx.subject.roles):
         raise err(404, "not_found", "Job not found")
-    return {"id": r["id"], "status": r["status"], "stages": uj(r["stages_json"], []), "document_id": r["document_id"], "error": r["error"]}
+    stages = [{**s, "name": tr(s.get("name")), "detail": tr(s.get("detail"))} for s in uj(r["stages_json"], []) if isinstance(s, dict)]
+    return {"id": r["id"], "status": r["status"], "stages": stages, "document_id": r["document_id"], "error": tr(r["error"])}
 
 
 def _doc_or_403(did: str, ctx: Ctx) -> dict[str, Any]:
@@ -643,7 +655,7 @@ def _ar_out(r: dict[str, Any], ctx: Ctx) -> dict[str, Any]:
         label = f"A {r['department']} document"
     else:
         label = f"{r['department']} documents" + (f" ({r['doc_type']})" if r["doc_type"] else "")
-    return {"id": r["id"], "requester": req.get("username"), "requester_name": req.get("display_name"), "resource_label": label,
+    return {"id": r["id"], "requester": req.get("username"), "requester_name": req.get("display_name"), "resource_label": tr(label),
             "department": r["department"], "justification": r["justification"], "hours": r["hours"], "state": r["state"],
             "created_at": r["created_at"], "decided_at": r["decided_at"], "approver_name": appr.get("display_name"), "note": r["note"]}
 
@@ -755,7 +767,7 @@ def grants(ctx: Ctx = Depends(current)) -> list[dict[str, Any]]:
     for g in q("SELECT * FROM grants WHERE user_id=? AND revoked_at IS NULL AND expires_at>? ORDER BY expires_at", (ctx.user["id"], now_iso())):
         a = user_by_id(g["approved_by"]) or {}
         lvl = g.get("max_classification")
-        out.append({"id": g["id"], "scope": f"{g['department']} documents" + (f" up to {CLEARANCE_LABELS[int(lvl)]}" if lvl is not None else ""),
+        out.append({"id": g["id"], "scope": tr(f"{g['department']} documents" + (f" up to {CLEARANCE_LABELS[int(lvl)]}" if lvl is not None else "")),
                     "expires_at": g["expires_at"], "approved_by": a.get("display_name")})
     return out
 
@@ -808,14 +820,15 @@ def alerts(ctx: Ctx = Depends(current)) -> list[dict[str, Any]]:
         if not scope.asset_visible(ctx.subject, r):
             continue
         dl = (date.fromisoformat(r["expires_on"]) - today).days
-        out.append({"id": r["id"], "severity": "red" if dl <= 7 else "amber", "title": f"{r['tag']} {r['type']} " + (f"expired {-dl} d ago" if dl < 0 else f"expires in {dl} d"),
+        out.append({"id": r["id"], "severity": "red" if dl <= 7 else "amber", "title": tr(f"{r['tag']} {r['type']} " + (f"expired {-dl} d ago" if dl < 0 else f"expires in {dl} d")),
                     "detail": f"{r['name']} · {r['ref_no']}", "tag": r["tag"], "due": r["expires_on"], "created_at": now_iso()})
     return out
 
 
 @app.get("/api/notifications")
 def notifications(ctx: Ctx = Depends(current)) -> list[dict[str, Any]]:
-    return [{"id": n["id"], "kind": n["kind"], "title": n["title"], "body": n["body"], "created_at": n["created_at"],
+    # stored in English (written for whoever reads them later); shown in the reader's language
+    return [{"id": n["id"], "kind": n["kind"], "title": tr(n["title"]), "body": tr(n["body"]), "created_at": n["created_at"],
              "read": bool(n["read_at"]), "link": n["link"]}
             for n in q("SELECT * FROM notifications WHERE user_id=? ORDER BY created_at DESC LIMIT 50", (ctx.user["id"],))]
 
@@ -902,13 +915,18 @@ def finding_action(fid: str, body: dict[str, Any], ctx: Ctx = Depends(current)) 
 @app.get("/api/production/overview")
 def prod_overview(ctx: Ctx = Depends(current)) -> dict[str, Any]:
     ctx.require("production.view")
-    return production.overview()
+    ov = production.overview()
+    return {**ov, "note": tr(ov.get("note"))}
+
+
+def _model_out(m: dict[str, Any]) -> dict[str, Any]:
+    return {**m, "missing": tr_list(m.get("missing"))}
 
 
 @app.get("/api/production/model")
 def prod_model(ctx: Ctx = Depends(current)) -> dict[str, Any]:
     ctx.require("production.view")
-    return production.get_model()
+    return _model_out(production.get_model())
 
 
 @app.put("/api/production/model")
@@ -919,7 +937,7 @@ def prod_model_put(body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[st
     except ValueError as e:
         raise err(422, "invalid", str(e))
     audit.write(ctx.actor, "production.model.saved", "production_model", {"complete": m["complete"], "missing": len(m["missing"])})
-    return m
+    return _model_out(m)
 
 
 @app.post("/api/production/scenario")
@@ -927,7 +945,7 @@ async def prod_scenario(body: dict[str, Any], ctx: Ctx = Depends(current)) -> di
     ctx.require("production.view")
     res = production.solve(body)
     if res.get("error"):
-        raise HTTPException(status_code=422, detail={"code": "model_incomplete", "message": "The plant model is incomplete.", "missing": res["missing"]})
+        raise HTTPException(status_code=422, detail={"code": "model_incomplete", "message": tr("The plant model is incomplete."), "missing": tr_list(res["missing"])})
     top = sorted(res["delta_pct"].items(), key=lambda kv: -abs(kv[1]))[:5]
     facts = (f"Monthly margin baseline US$ {res['margin_usd']['baseline']:,.0f} vs scenario US$ {res['margin_usd']['scenario']:,.0f}. "
              "Largest product changes: " + ", ".join(f"{k} {v:+.1f}%" for k, v in top) + ". Binding: " + (", ".join(res["binding"]) or "none") + ".")
@@ -936,7 +954,8 @@ async def prod_scenario(body: dict[str, Any], ctx: Ctx = Depends(current)) -> di
         try:
             import re as _re
             txt = await asyncio.wait_for(engine.complete_once([
-                {"role": "system", "content": "Explain these refinery planning LP results to planners in 4 short bullet points. Use ONLY the numbers given. End with: 'Planners decide.'"},
+                {"role": "system", "content": "Explain these refinery planning LP results to planners in 4 short bullet points. Use ONLY the numbers given. End with: 'Planners decide.'"
+                 + (" " + answer_language_instruction() if answer_language_instruction() else "")},
                 {"role": "user", "content": facts}]), timeout=40)
             plain = facts.replace(",", "")  # compare numbers without thousands separators on both sides
             nums = [n for n in _re.findall(r"\d+(?:\.\d+)?", txt.replace(",", "")) if n not in ("4",)]
@@ -945,10 +964,11 @@ async def prod_scenario(body: dict[str, Any], ctx: Ctx = Depends(current)) -> di
             elif all(n in plain for n in nums):
                 explanation = txt
             else:
-                explanation = facts + " (AI wording withheld: it contained numbers that are not in the optimizer output.)"
+                explanation = tr(facts) + " " + tr("(AI wording withheld: it contained numbers that are not in the optimizer output.)")
         except Exception as e:  # noqa: BLE001
-            explanation = facts + f" (AI wording unavailable: {str(e)[:160]})"
-    res["explanation"] = explanation
+            explanation = tr(facts) + " " + tr(f"(AI wording unavailable: {str(e)[:160]})")
+    res["explanation"] = tr(explanation) if explanation == facts else explanation
+    res["assumptions"] = tr_list(res.get("assumptions"))
     audit.write(ctx.actor, "production.scenario", "scenario", {"inputs": body, "margin_usd": res["margin_usd"]})
     return res
 
@@ -1138,7 +1158,7 @@ def simulate(body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str, Any
     if not u or not d:
         raise err(404, "not_found", "user or document not found")
     dec = pdp.decide(subject_for(u), body.get("action", "read"), rag.doc_resource(d))
-    return {"effect": dec.effect, "matched": dec.matched, "reason": dec.reason}
+    return {"effect": dec.effect, "matched": dec.matched, "reason": tr(dec.reason)}
 
 
 @app.post("/api/admin/demo/reset")
@@ -1157,6 +1177,13 @@ def demo_reset(ctx: Ctx = Depends(current)) -> dict[str, Any]:
 _CSP = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; "
         "font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; "
         "frame-ancestors 'none'")
+
+
+@app.middleware("http")
+async def request_language(request: Request, call_next):  # type: ignore[no-untyped-def]
+    from .i18n import set_lang
+    set_lang(request.headers.get("x-lang") or request.query_params.get("lang"))
+    return await call_next(request)
 
 
 @app.middleware("http")
@@ -1196,10 +1223,10 @@ def health() -> dict[str, Any]:
         stage = "Ready (AI model failed to load)"
     else:
         stage = "Ready"
-    return {"ok": True, "version": VERSION, "engine": eng, "stage": stage, "instance": _INSTANCE,
+    return {"ok": True, "version": VERSION, "engine": eng, "stage": tr(stage), "instance": _INSTANCE,
             "progress": {"done": STARTUP["done"], "total": STARTUP["total"]} if not kr else None,
             "knowledge_ready": kr, "ready": kr and eng in ("ready", "idle", "error"),
-            "error": STARTUP["error"] or (engine.state.error if eng == "error" else None)}
+            "error": tr(STARTUP["error"] or (engine.state.error if eng == "error" else None))}
 
 
 # ------------------------------------------------------------------ SPA

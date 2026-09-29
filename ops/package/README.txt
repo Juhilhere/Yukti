@@ -1,4 +1,4 @@
-YUKTI SERVER 0.3.0 — self-contained, fully offline
+YUKTI SERVER 0.4.0 — self-contained, fully offline
 ===================================================
 Nothing else needs to be installed: no Python, no Bionic/LM Studio, no Ollama, no vLLM, no internet.
 

@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { api, ApiError, onForbidden, onPasswordChangeRequired, onUnauthorized, setCsrf } from './api';
 import type { Me } from './types';
 import { toast } from '../components/Toast';
+import { tr } from './i18n';
 
 type AuthCtx = {
   me: Me | null;
@@ -56,12 +57,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const off1 = onUnauthorized(() => {
-      if (status === 'authed' || me) toast.warn('Session expired', 'Please sign in again.');
+      if (status === 'authed' || me) toast.warn(tr('shell.idle.expired'), tr('shell.signInAgain'));
       apply(null);
       qc.clear();
       redirectToLogin();
     });
-    const off2 = onForbidden((e) => toast.error('Access denied by policy', e.message));
+    const off2 = onForbidden((e) => toast.error(tr('shell.accessDenied'), e.message));
     const off3 = onPasswordChangeRequired(() => setPwForced(true));
     return () => { off1(); off2(); off3(); };
   }, [apply, qc, status, me]);
@@ -79,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       if (all) {
         const r = await api.post<{ ok: boolean; revoked?: number }>('/api/auth/logout-all', {}, { silent: true });
-        toast.success('Signed out of all devices', r?.revoked !== undefined ? `${r.revoked} session(s) revoked` : undefined);
+        toast.success(tr('shell.signedOutAll'), r?.revoked !== undefined ? tr('shell.sessionsRevoked', { n: r.revoked }) : undefined);
       } else {
         await api.post('/api/auth/logout', {}, { silent: true });
       }

@@ -1,9 +1,12 @@
+import { ErrorBoundary } from '../components/ErrorBoundary';
+import { ReportProblem } from '../components/ReportProblem';
 import { useEffect, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Activity, Bell, BookOpen, Building2, Cpu, Factory, Globe2, HelpCircle, Inbox, KeyRound, LogOut, MemoryStick, MessageSquare,
   MonitorSmartphone, Settings, ShieldCheck, ShieldHalf, ScrollText, User2, Wrench, Gauge, Zap, AlertTriangle, CheckCheck,
+  Bug,
 } from 'lucide-react';
 import { useT } from '../lib/i18n';
 import { ADMIN_PERMS } from '../pages/admin/AdminLayout';
@@ -60,6 +63,7 @@ function UserMenu({ close }: { close: () => void }) {
       <MenuItem icon={<MonitorSmartphone size={13} />} onClick={() => { close(); nav('/account#sessions'); }}>{t('menu.sessions')}</MenuItem>
       <MenuItem icon={<Settings size={13} />} onClick={() => { close(); nav('/settings'); }}>{t('menu.settings')}</MenuItem>
       <MenuItem icon={<HelpCircle size={13} />} onClick={() => { close(); nav('/help'); }}>{t('menu.help')}</MenuItem>
+      <MenuItem icon={<Bug size={13} />} onClick={() => { close(); uiStore.openReport(); }}>{t('menu.report', 'Report a problem')}</MenuItem>
       <div className="border-t border-border px-3 py-2">
         <div className="mb-1.5 flex items-center gap-1.5 text-[11px] text-muted"><Globe2 size={11} />{t('menu.language')}</div>
         <LangSwitcher />
@@ -92,7 +96,7 @@ function Rail() {
   const initials = (me?.user.display_name || me?.user.username || '?').split(/\s+/).map((s) => s[0]).slice(0, 2).join('').toUpperCase();
   return (
     <nav className="flex w-14 shrink-0 flex-col items-center gap-1 border-r border-border bg-surface py-2">
-      <Tip text="Yukti — Sovereign Industrial AI Workbench"><NavLink to="/chat" className="mb-2 mt-0.5"><Logo size={30} /></NavLink></Tip>
+      <Tip text={`Yukti — ${t('login.title')}`}><NavLink to="/chat" className="mb-2 mt-0.5"><Logo size={30} /></NavLink></Tip>
       {top.filter((i) => can(i.perm)).map((i) => <RailLink key={i.to} item={i} />)}
       <div className="flex-1" />
       {bottom.filter((i) => can(i.perm)).map((i) => <RailLink key={i.to} item={i} />)}
@@ -110,21 +114,23 @@ function Rail() {
 
 /** Read-only model chip for employees (LLM configuration is admin-only). */
 function ModelChip() {
+  const t = useT();
   const loaded = useLoaded();
   const st = loaded.data;
   const ready = st?.status === 'ready';
   return (
-    <div title="The AI model is managed by your Yukti administrator"
+    <div title={t('shell.model.managedByAdmin')}
       className="flex h-8 min-w-[240px] max-w-[460px] items-center gap-2 rounded-md border border-border bg-surface-2 px-3">
       {st?.status === 'loading' ? <Spinner size={13} /> : <Dot tone={ready ? 'ok' : st?.status === 'error' ? 'danger' : 'muted'} />}
       <span className={cx('flex-1 truncate text-left', ready ? 'font-medium' : 'text-muted')}>
-        {ready ? st?.model_name ?? st?.model_id : st?.status === 'loading' ? 'AI model loading…' : 'AI model not loaded'}
+        {ready ? st?.model_name ?? st?.model_id : st?.status === 'loading' ? t('shell.model.loading') : t('shell.model.notLoaded')}
       </span>
     </div>
   );
 }
 
 function ModelPill() {
+  const t = useT();
   const loaded = useLoaded();
   const st = loaded.data;
   const ready = st?.status === 'ready';
@@ -136,11 +142,11 @@ function ModelPill() {
         ready ? 'border-border-strong bg-surface-2 hover:border-cyan/60' : 'border-dashed border-amber/60 bg-amber/5 hover:bg-amber/10')}>
       {loading ? <Spinner size={13} /> : <Dot tone={ready ? 'ok' : errored ? 'danger' : 'amber'} pulse={!ready && !errored} />}
       <span className={cx('flex-1 truncate text-left', ready ? 'font-medium' : 'text-amber')}>
-        {ready ? st?.model_name ?? st?.model_id : loading ? `Loading ${st?.model_name ?? st?.model_id ?? 'model'}…` : errored ? 'Load failed — click to retry' : 'Select a model to load'}
+        {ready ? st?.model_name ?? st?.model_id : loading ? t('shell.model.loadingName', { name: st?.model_name ?? st?.model_id ?? t('shell.model.theModel') }) : errored ? t('shell.model.loadFailed') : t('shell.model.select')}
       </span>
       {(ready || loading) && st?.engine && <Badge tone="cyan" mono>{ENGINE_LABEL[st.engine] ?? st.engine}</Badge>}
       {ready && typeof st?.ctx_used_pct === 'number' && (
-        <span className="flex items-center gap-1 font-mono text-[10.5px] text-muted" title="Context used">
+        <span className="flex items-center gap-1 font-mono text-[10.5px] text-muted" title={t('shell.model.ctxUsed')}>
           <span className="h-1.5 w-10 overflow-hidden rounded bg-surface-3"><span className="block h-full bg-cyan" style={{ width: `${Math.min(100, st.ctx_used_pct)}%` }} /></span>
           {Math.round(st.ctx_used_pct)}%
         </span>
@@ -151,6 +157,7 @@ function ModelPill() {
 }
 
 function Notifications() {
+  const t = useT();
   const nav = useNavigate();
   const qc = useQueryClient();
   const notes = useQuery({ queryKey: ['notifications'], queryFn: () => api.get<Notification[]>('/api/notifications'), refetchInterval: 20_000, retry: false });
@@ -163,7 +170,7 @@ function Notifications() {
   return (
     <Popover align="right" className="w-[380px]"
       trigger={(open, toggle) => (
-        <button onClick={toggle} className={cx('relative flex h-8 w-8 items-center justify-center rounded-md text-muted hover:bg-surface-2 hover:text-text', open && 'bg-surface-2 text-text')}>
+        <button onClick={toggle} title={t('shell.notif.title')} aria-label={t('shell.notif.title')} className={cx('relative flex h-8 w-8 items-center justify-center rounded-md text-muted hover:bg-surface-2 hover:text-text', open && 'bg-surface-2 text-text')}>
           <Bell size={16} />
           {unread + redAlerts > 0 && <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-amber ring-2 ring-surface" />}
         </button>
@@ -171,12 +178,12 @@ function Notifications() {
       {(close) => (
         <div className="max-h-[70vh] overflow-y-auto">
           <div className="flex items-center justify-between border-b border-border px-3 py-2">
-            <span className="font-semibold">Notifications</span>
-            <span className="font-mono text-[11px] text-muted">{unread} unread</span>
+            <span className="font-semibold">{t('shell.notif.title')}</span>
+            <span className="font-mono text-[11px] text-muted">{t('shell.notif.unread', { n: unread })}</span>
           </div>
           {(alerts.data ?? []).length > 0 && (
             <div className="border-b border-border">
-              <div className="label px-3 pt-2">Compliance alerts</div>
+              <div className="label px-3 pt-2">{t('shell.notif.alerts')}</div>
               {(alerts.data ?? []).slice(0, 8).map((a) => (
                 <button key={a.id} onClick={() => { close(); nav(a.tag ? `/assets?q=${encodeURIComponent(a.tag)}` : '/assets'); }} className="flex w-full items-start gap-2 px-3 py-2 text-left hover:bg-surface-3">
                   <AlertTriangle size={13} className={cx('mt-0.5 shrink-0', a.severity === 'red' ? 'text-danger' : a.severity === 'amber' ? 'text-amber' : 'text-cyan')} />
@@ -189,10 +196,10 @@ function Notifications() {
               ))}
             </div>
           )}
-          {notes.isLoading && <div className="flex items-center gap-2 p-3 text-muted"><Spinner /> Loading…</div>}
-          {notes.error ? <div className="p-3 text-[12px] text-muted">Notifications unavailable</div> : null}
+          {notes.isLoading && <div className="flex items-center gap-2 p-3 text-muted"><Spinner /> {t('common.loading')}</div>}
+          {notes.error ? <div className="p-3 text-[12px] text-muted">{t('shell.notif.unavailable')}</div> : null}
           {(notes.data ?? []).length === 0 && !notes.isLoading && !notes.error && (
-            <div className="flex flex-col items-center gap-1 p-6 text-muted"><CheckCheck size={18} /> All caught up</div>
+            <div className="flex flex-col items-center gap-1 p-6 text-muted"><CheckCheck size={18} /> {t('shell.notif.empty')}</div>
           )}
           {(notes.data ?? []).map((n) => (
             <button key={n.id} onClick={() => { void markRead(n); if (n.link) { close(); nav(n.link); } }}
@@ -212,6 +219,7 @@ function Notifications() {
 }
 
 function TopBar() {
+  const t = useT();
   const { me, isLlmAdmin } = useAuth();
   const sys = useSystem();
   const offline = sys.data ? sys.data.offline_guard : true;
@@ -219,14 +227,14 @@ function TopBar() {
     <header className="grid h-11 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-border bg-surface px-3">
       <div className="flex min-w-0 items-center gap-2">
         <span className="font-semibold tracking-tight">Yukti</span>
-        <span className="hidden truncate text-[11.5px] text-faint xl:inline">Sovereign Industrial AI Workbench</span>
+        <span className="hidden truncate text-[11.5px] text-faint xl:inline">{t('login.title')}</span>
       </div>
       {isLlmAdmin ? <ModelPill /> : <ModelChip />}
       <div className="flex items-center justify-end gap-2">
-        <Tip side="bottom" text={offline ? 'Offline guard active: outbound network blocked, all inference on-prem.' : 'Offline guard is OFF'}>
+        <Tip side="bottom" text={offline ? t('shell.offline.onTip') : t('shell.offline.offTip')}>
           <span className={cx('hidden items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium md:inline-flex',
             offline ? 'border-ok/40 bg-ok/10 text-green-300' : 'border-amber/40 bg-amber/10 text-amber')}>
-            <ShieldCheck size={12} /> {offline ? 'On-prem · offline' : 'Online'}
+            <ShieldCheck size={12} /> {offline ? t('shell.offline.on') : t('shell.offline.off')}
           </span>
         </Tip>
         <Notifications />
@@ -238,7 +246,7 @@ function TopBar() {
                   <div className="max-w-[160px] truncate text-[12px] font-medium">{me.user.display_name}</div>
                   <div className="max-w-[160px] truncate text-[10.5px] text-muted">{me.user.post}</div>
                 </div>
-                <Badge tone={me.user.clearance >= 3 ? 'amber' : 'cyan'} mono title={`Clearance ${me.user.clearance}`}>L{me.user.clearance} {me.user.clearance_label}</Badge>
+                <Badge tone={me.user.clearance >= 3 ? 'amber' : 'cyan'} mono title={t('shell.clearance', { n: me.user.clearance })}>L{me.user.clearance} {me.user.clearance_label}</Badge>
               </button>
             )}>
             {(close) => <UserMenu close={close} />}
@@ -250,6 +258,7 @@ function TopBar() {
 }
 
 function StatusBar() {
+  const t = useT();
   const sys = useSystem();
   const loaded = useLoaded();
   const { lastGen } = useUI();
@@ -261,25 +270,25 @@ function StatusBar() {
   );
   return (
     <footer className="flex h-6 shrink-0 items-center overflow-hidden border-t border-border bg-surface font-mono text-[10.5px] text-muted">
-      {sys.error && !s ? <Item><Dot tone="danger" /> system stats unavailable</Item> : null}
-      {s?.offline_guard && <Item title="All outbound network connections are blocked; nothing leaves this server"><Dot tone="ok" /> offline</Item>}
+      {sys.error && !s ? <Item><Dot tone="danger" /> {t('shell.status.statsUnavailable')}</Item> : null}
+      {s?.offline_guard && <Item title={t('shell.status.offlineTip')}><Dot tone="ok" /> {t('shell.status.offline')}</Item>}
       {s?.ram && <>
-        <Item title="System RAM"><MemoryStick size={11} /> RAM {fmtMB(s.ram.used_mb)} / {fmtMB(s.ram.total_mb)}
+        <Item title={t('shell.status.ram')}><MemoryStick size={11} /> RAM {fmtMB(s.ram.used_mb)} / {fmtMB(s.ram.total_mb)}
           <span className="h-1 w-8 overflow-hidden rounded bg-surface-3"><span className={cx('block h-full', ramPct > 85 ? 'bg-danger' : 'bg-cyan')} style={{ width: `${ramPct}%` }} /></span>
         </Item>
         <Item title={s.cpu?.name}><Cpu size={11} /> CPU {Math.round(s.cpu?.util_pct ?? 0)}%</Item>
         <Item title="GPU">
           <Gauge size={11} />
-          {s.gpu ? <>{s.gpu.name} · VRAM {fmtMB(s.gpu.vram_used_mb)} / {fmtMB(s.gpu.vram_total_mb)} · {Math.round(s.gpu.util_pct ?? 0)}%</> : 'No GPU (CPU inference)'}
+          {s.gpu ? <>{s.gpu.name} · VRAM {fmtMB(s.gpu.vram_used_mb)} / {fmtMB(s.gpu.vram_total_mb)} · {Math.round(s.gpu.util_pct ?? 0)}%</> : t('shell.status.noGpu')}
         </Item>
       </>}
-      <Item title="Engine & model">
+      <Item title={t('shell.status.engineModel')}>
         <Activity size={11} />
-        {st?.status === 'ready' ? <>{ENGINE_LABEL[st.engine ?? ''] ?? st.engine} · <span className="text-text">{st.model_name}</span></> : st?.status === 'loading' ? 'loading…' : 'no model loaded'}
+        {st?.status === 'ready' ? <>{ENGINE_LABEL[st.engine ?? ''] ?? st.engine} · <span className="text-text">{st.model_name}</span></> : st?.status === 'loading' ? t('shell.status.loading') : t('shell.status.noModel')}
       </Item>
-      {lastGen && <Item title="Last generation speed"><Zap size={11} className="text-amber" /> {lastGen.tok_per_s.toFixed(1)} tok/s</Item>}
+      {lastGen && <Item title={t('shell.status.lastSpeed')}><Zap size={11} className="text-amber" /> {lastGen.tok_per_s.toFixed(1)} tok/s</Item>}
       <div className="flex-1" />
-      {s?.llama_build && <Item title="llama.cpp build">llama.cpp {s.llama_build}</Item>}
+      {s?.llama_build && <Item title={t('shell.status.llamaBuild')}>llama.cpp {s.llama_build}</Item>}
       {s && <Item>Yukti v{s.version}</Item>}
     </footer>
   );
@@ -305,17 +314,25 @@ export function AppShell() {
   const loc = useLocation();
   const { isLlmAdmin } = useAuth();
   const key = loc.pathname.split('/')[1];
+  // the desktop app's Help > Report a problem (and any link to #report-problem) opens the report dialog
+  useEffect(() => {
+    const check = () => { if (window.location.hash === '#report-problem') { uiStore.openReport(); history.replaceState(null, '', window.location.pathname + window.location.search); } };
+    check();
+    window.addEventListener('hashchange', check);
+    return () => window.removeEventListener('hashchange', check);
+  }, []);
   return (
     <div className="flex h-full w-full overflow-hidden">
       <Rail />
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar />
         <main key={key} className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <Outlet />
+          <ErrorBoundary resetKey={loc.pathname}><Outlet /></ErrorBoundary>
         </main>
         <StatusBar />
       </div>
       {isLlmAdmin && <ModelLoader />}
+      <ReportProblem />
       <IdleWatcher />
       <Shortcuts />
     </div>

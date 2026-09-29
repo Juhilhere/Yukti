@@ -13,16 +13,17 @@ import { toast } from '../components/Toast';
 import { cx, fmtBytes, fmtDate } from '../lib/format';
 
 // value = policy document type (must match policies/core.yaml); role = only that role may add it (shared plant-wide)
-const DOC_TYPES: { value: string; label: string; role?: string }[] = [
-  { value: 'SOP', label: 'SOP' }, { value: 'drawing_pid', label: 'P&ID' }, { value: 'drawing_sld', label: 'Single-line diagram' },
-  { value: 'datasheet', label: 'Datasheet' }, { value: 'manual', label: 'Manual' }, { value: 'troubleshooting_guide', label: 'Troubleshooting guide' },
-  { value: 'process_manual', label: 'Process manual' }, { value: 'inspection_report', label: 'Inspection report' },
-  { value: 'calibration_certificate', label: 'Calibration certificate' }, { value: 'shift_log', label: 'Shift log' },
-  { value: 'work_order_export', label: 'Work orders (CMMS export)' }, { value: 'asset_register', label: 'Asset register' },
-  { value: 'audit_report', label: 'Audit report' }, { value: 'MSDS', label: 'MSDS (HSE only)', role: 'hse' },
-  { value: 'contact_list', label: 'Contact list (management only)', role: 'plant_manager' }, { value: 'other', label: 'Other' },
+// label / note are i18n keys
+const DOC_TYPES: { value: string; label: string; role?: string; note?: string }[] = [
+  { value: 'SOP', label: 'knowledge.type.SOP' }, { value: 'drawing_pid', label: 'knowledge.type.drawing_pid' }, { value: 'drawing_sld', label: 'knowledge.type.drawing_sld' },
+  { value: 'datasheet', label: 'knowledge.type.datasheet' }, { value: 'manual', label: 'knowledge.type.manual' }, { value: 'troubleshooting_guide', label: 'knowledge.type.troubleshooting_guide' },
+  { value: 'process_manual', label: 'knowledge.type.process_manual' }, { value: 'inspection_report', label: 'knowledge.type.inspection_report' },
+  { value: 'calibration_certificate', label: 'knowledge.type.calibration_certificate' }, { value: 'shift_log', label: 'knowledge.type.shift_log' },
+  { value: 'work_order_export', label: 'knowledge.type.work_order_export' }, { value: 'asset_register', label: 'knowledge.type.asset_register' },
+  { value: 'audit_report', label: 'knowledge.type.audit_report' }, { value: 'MSDS', label: 'knowledge.type.MSDS', role: 'hse', note: 'knowledge.type.hseOnly' },
+  { value: 'contact_list', label: 'knowledge.type.contact_list', role: 'plant_manager', note: 'knowledge.type.mgmtOnly' }, { value: 'other', label: 'knowledge.type.other' },
 ];
-const DOC_TYPE_LABEL: Record<string, string> = Object.fromEntries(DOC_TYPES.map((d) => [d.value, d.label.replace(/ \(.*\)$/, '')]));
+const DOC_TYPE_LABEL: Record<string, string> = Object.fromEntries(DOC_TYPES.map((d) => [d.value, d.label]));
 // must match rag.SUPPORTED_EXTS on the server
 const ACCEPT = '.pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp,.docx,.xlsx,.xlsm,.txt,.csv,.md,.log,.json,.xml';
 const CLASSIFICATIONS = ['PUBLIC', 'INTERNAL', 'RESTRICTED', 'CONFIDENTIAL'];
@@ -51,25 +52,25 @@ export default function Knowledge() {
   const rows = mine ? all.filter((d) => d.department === myDept) : all;
 
   const columns: Column<DocumentSummary>[] = [
-    { key: 'title', header: 'Title', render: (d) => <div className="min-w-[220px]"><div className="flex flex-wrap items-center gap-1.5 font-medium text-text">{d.title || '(untitled)'}<ProvenanceBadges isExample={d.is_example} isPublic={d.is_public} /></div><div className="text-[11px] text-faint">{fmtDate(d.created_at)} · {fmtBytes(d.size_bytes)}</div></div> },
-    { key: 'doc_number', header: 'Doc no', mono: true, render: (d) => <span className="text-cyan">{d.doc_number || '—'}</span> },
-    { key: 'revision', header: 'Rev', mono: true, render: (d) => d.revision || '—' },
-    { key: 'status', header: 'Status', render: (d) => <StatusChip status={d.status} /> },
-    { key: 'doc_type', header: 'Type', render: (d) => <Badge mono title={d.doc_type}>{DOC_TYPE_LABEL[d.doc_type] ?? (d.doc_type || '—')}</Badge> },
-    { key: 'department', header: 'Department', render: (d) => d.department || '—' },
-    { key: 'classification', header: 'Class', render: (d) => <StatusChip status={d.classification} /> },
+    { key: 'title', header: t('knowledge.col.title'), render: (d) => <div className="min-w-[220px]"><div className="flex flex-wrap items-center gap-1.5 font-medium text-text">{d.title || t('knowledge.untitled')}<ProvenanceBadges isExample={d.is_example} isPublic={d.is_public} /></div><div className="text-[11px] text-faint">{fmtDate(d.created_at)} · {fmtBytes(d.size_bytes)}</div></div> },
+    { key: 'doc_number', header: t('knowledge.col.docNo'), mono: true, render: (d) => <span className="text-cyan">{d.doc_number || '—'}</span> },
+    { key: 'revision', header: t('knowledge.col.rev'), mono: true, render: (d) => d.revision || '—' },
+    { key: 'status', header: t('knowledge.col.status'), render: (d) => <StatusChip status={d.status} /> },
+    { key: 'doc_type', header: t('knowledge.col.type'), render: (d) => <Badge mono title={d.doc_type}>{DOC_TYPE_LABEL[d.doc_type] ? t(DOC_TYPE_LABEL[d.doc_type]) : (d.doc_type || '—')}</Badge> },
+    { key: 'department', header: t('knowledge.col.department'), render: (d) => d.department || '—' },
+    { key: 'classification', header: t('knowledge.col.class'), render: (d) => <StatusChip status={d.classification} /> },
     {
-      key: 'pages', header: 'Pages', sortValue: (d) => d.pages, render: (d) => (
+      key: 'pages', header: t('knowledge.col.pages'), sortValue: (d) => d.pages, render: (d) => (
         <div className="flex items-center gap-1 font-mono text-[12px]">
           <span>{d.pages ?? 0}</span>
-          {d.page_modes && <span className="text-faint">(<span className="text-cyan">{d.page_modes.digital ?? 0}d</span>/<span className="text-amber">{d.page_modes.scanned ?? 0}s</span>)</span>}
+          {d.page_modes && <span className="text-faint" title={t('knowledge.pageModesTip')}>(<span className="text-cyan">{t('knowledge.pagesDigital', { n: d.page_modes.digital ?? 0 })}</span>/<span className="text-amber">{t('knowledge.pagesScanned', { n: d.page_modes.scanned ?? 0 })}</span>)</span>}
         </div>
       ),
     },
     {
-      key: 'asset_tags', header: 'Tags', sortValue: (d) => (d.asset_tags ?? []).join(','), render: (d) => (
+      key: 'asset_tags', header: t('knowledge.col.tags'), sortValue: (d) => (d.asset_tags ?? []).join(','), render: (d) => (
         <div className="flex max-w-[220px] flex-wrap gap-1">
-          {(d.asset_tags ?? []).slice(0, 4).map((t) => <Badge key={t} mono tone="muted">{t}</Badge>)}
+          {(d.asset_tags ?? []).slice(0, 4).map((tag) => <Badge key={tag} mono tone="muted">{tag}</Badge>)}
           {(d.asset_tags ?? []).length > 4 && <span className="text-[11px] text-faint">+{d.asset_tags.length - 4}</span>}
         </div>
       ),
@@ -82,13 +83,13 @@ export default function Knowledge() {
         actions={<>
           <div className="flex overflow-hidden rounded-md border border-border text-[12px]">
             <button className={cx('px-2.5 py-1', mine ? 'bg-surface-2 text-text' : 'text-muted hover:text-text')} onClick={() => setMine(true)}
-              title={myDept}>My department <span className="font-mono text-faint">{ownCount}</span></button>
+              title={myDept}>{t('knowledge.myDept')} <span className="font-mono text-faint">{ownCount}</span></button>
             <button className={cx('border-l border-border px-2.5 py-1', !mine ? 'bg-surface-2 text-text' : 'text-muted hover:text-text')} onClick={() => setMine(false)}
-              title="Your department, documents of your assigned plant units, public information and any time-bound grants">All I can access <span className="font-mono text-faint">{all.length}</span></button>
+              title={t('knowledge.allTip')}>{t('knowledge.all')} <span className="font-mono text-faint">{all.length}</span></button>
           </div>
           <div className="relative w-[280px]">
             <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-faint" />
-            <input className="input !pl-8" placeholder="Search title, doc no, tag…" value={q} onChange={(e) => setQ(e.target.value)} />
+            <input className="input !pl-8" placeholder={t('knowledge.searchPh')} value={q} onChange={(e) => setQ(e.target.value)} />
           </div>
           {canUpload
             ? <button className="btn btn-primary" onClick={() => setUploadOpen(true)}><Upload size={14} /> {t('btn.upload')}</button>
@@ -96,8 +97,8 @@ export default function Knowledge() {
         </>} />
       <div className="min-h-0 flex-1 overflow-hidden p-4">
         <div className="h-full overflow-hidden rounded-md border border-border bg-surface">
-          <QueryState q={docs} empty={rows.length === 0} emptyTitle={dq ? 'No documents match your search' : mine ? `No ${myDept ?? ''} documents yet` : 'No documents yet'}
-            emptyHint={canUpload ? 'Upload SOPs, P&IDs, datasheets, inspection reports — scanned pages are OCR’d on-prem.' : undefined}>
+          <QueryState q={docs} empty={rows.length === 0} emptyTitle={dq ? t('knowledge.noMatch') : mine ? t('knowledge.noDeptDocs', { dept: myDept ?? '' }) : t('knowledge.noDocs')}
+            emptyHint={canUpload ? t('knowledge.emptyHint') : undefined}>
             <DataTable rows={rows} columns={columns} rowKey={(d) => d.id} onRowClick={(d) => nav(`/knowledge/${d.id}`)} maxHeight="100%" />
           </QueryState>
         </div>
@@ -116,6 +117,7 @@ function StageIcon({ s }: { s: JobStage['status'] }) {
 }
 
 function JobStepper({ jobId, onDone }: { jobId: string; onDone: (docId: string) => void }) {
+  const t = useT();
   const job = useQuery({
     queryKey: ['job', jobId],
     queryFn: () => api.get<Job>(`/api/jobs/${jobId}`),
@@ -131,11 +133,11 @@ function JobStepper({ jobId, onDone }: { jobId: string; onDone: (docId: string) 
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
-        <span className="label">Ingestion job</span>
+        <span className="label">{t('knowledge.job')}</span>
         <span className="font-mono text-[11px] text-faint">{jobId}</span>
         <StatusChip status={j?.status ?? 'queued'} className="ml-auto" />
       </div>
-      {stages.length === 0 && <div className="flex items-center gap-2 text-muted"><Spinner /> Waiting for worker…</div>}
+      {stages.length === 0 && <div className="flex items-center gap-2 text-muted"><Spinner /> {t('knowledge.waiting')}</div>}
       <ol className="relative space-y-0">
         {stages.map((s, i) => (
           <li key={`${s.name}-${i}`} className="flex gap-3">
@@ -150,12 +152,13 @@ function JobStepper({ jobId, onDone }: { jobId: string; onDone: (docId: string) 
           </li>
         ))}
       </ol>
-      {j?.status === 'error' && <ErrorBox error={j.error || 'Ingestion failed'} />}
+      {j?.status === 'error' && <ErrorBox error={j.error || t('knowledge.jobFailed')} />}
     </div>
   );
 }
 
 function UploadDialog({ onClose }: { onClose: () => void }) {
+  const t = useT();
   const qc = useQueryClient();
   const nav = useNavigate();
   const [file, setFile] = useState<File | null>(null);
@@ -186,7 +189,7 @@ function UploadDialog({ onClose }: { onClose: () => void }) {
       if (rev) fd.append('revision', rev);
       return api.upload<{ document_id: string; job_id: string }>('/api/documents', fd);
     },
-    onSuccess: (r) => { setJob(r); toast('Upload accepted', { body: 'Ingestion pipeline started' }); },
+    onSuccess: (r) => { setJob(r); toast(t('knowledge.uploadAccepted'), { body: t('knowledge.uploadAcceptedBody') }); },
   });
 
   const pick = (f?: File | null) => {
@@ -196,21 +199,21 @@ function UploadDialog({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Modal open onClose={onClose} title="Upload document" icon={<FileUp size={15} className="text-amber" />} width={600}
+    <Modal open onClose={onClose} title={t('knowledge.uploadTitle')} icon={<FileUp size={15} className="text-amber" />} width={600}
       footer={job ? <>
-        {doneDoc && <button className="btn btn-cyan" onClick={() => { onClose(); nav(`/knowledge/${doneDoc}`); }}>Open document</button>}
-        <button className="btn" onClick={onClose}>{doneDoc ? 'Close' : 'Run in background'}</button>
+        {doneDoc && <button className="btn btn-cyan" onClick={() => { onClose(); nav(`/knowledge/${doneDoc}`); }}>{t('knowledge.openDoc')}</button>}
+        <button className="btn" onClick={onClose}>{doneDoc ? t('btn.close') : t('knowledge.background')}</button>
       </> : <>
-        <button className="btn" onClick={onClose}>Cancel</button>
+        <button className="btn" onClick={onClose}>{t('btn.cancel')}</button>
         <button className="btn btn-primary" disabled={!file || !dept || upload.isPending} onClick={() => upload.mutate()}>
-          {upload.isPending ? <Spinner /> : <Upload size={14} />} Upload & index
+          {upload.isPending ? <Spinner /> : <Upload size={14} />} {t('knowledge.uploadIndex')}
         </button>
       </>}>
       {job ? (
         <JobStepper jobId={job.job_id} onDone={(d) => {
           setDoneDoc(d || job.document_id);
           qc.invalidateQueries({ queryKey: ['documents'] });
-          toast.success('Document indexed', title || file?.name);
+          toast.success(t('knowledge.indexed'), title || file?.name);
         }} />
       ) : (
         <div className="space-y-3">
@@ -225,25 +228,25 @@ function UploadDialog({ onClose }: { onClose: () => void }) {
             {file ? (
               <><div className="font-medium">{file.name}</div><div className="font-mono text-[11px] text-muted">{fmtBytes(file.size)}</div></>
             ) : (
-              <><div className="font-medium">Drop a file here or click to browse</div><div className="text-[11.5px] text-muted">PDF (digital or scanned), images, DOCX, XLSX, CSV — processed fully on-prem</div></>
+              <><div className="font-medium">{t('knowledge.drop')}</div><div className="text-[11.5px] text-muted">{t('knowledge.dropHint')}</div></>
             )}
             <input ref={inputRef} type="file" className="hidden" accept={ACCEPT} onChange={(e) => pick(e.target.files?.[0])} />
           </div>
-          <Field label="Title"><input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Defaults to file name" /></Field>
+          <Field label={t('knowledge.f.title')}><input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('knowledge.f.titlePh')} /></Field>
           <div className="grid grid-cols-3 gap-3">
-            <Field label="Document type">
-              <select className="input" value={docType} onChange={(e) => setDocType(e.target.value)}>{DOC_TYPES.filter((d) => !d.role || me?.user.roles.includes(d.role)).map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}</select>
+            <Field label={t('knowledge.f.type')}>
+              <select className="input" value={docType} onChange={(e) => setDocType(e.target.value)}>{DOC_TYPES.filter((d) => !d.role || me?.user.roles.includes(d.role)).map((d) => <option key={d.value} value={d.value}>{d.note ? t(d.note, { type: t(d.label) }) : t(d.label)}</option>)}</select>
             </Field>
-            <Field label="Department">
-              <input className="input" value={dept} readOnly disabled title="Documents are always added to your own department" />
+            <Field label={t('knowledge.f.department')}>
+              <input className="input" value={dept} readOnly disabled title={t('knowledge.f.deptTip')} />
             </Field>
-            <Field label="Classification">
-              <select className="input" value={cls} onChange={(e) => setCls(e.target.value)}>{allowedCls.map((d) => <option key={d}>{d}</option>)}</select>
+            <Field label={t('knowledge.f.class')}>
+              <select className="input" value={cls} onChange={(e) => setCls(e.target.value)}>{allowedCls.map((d) => <option key={d} value={d}>{t(`knowledge.cls.${d}`, d)}</option>)}</select>
             </Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Document number"><input className="input font-mono" value={docNo} onChange={(e) => setDocNo(e.target.value)} placeholder="e.g. SOP-EL-014" /></Field>
-            <Field label="Revision"><input className="input font-mono" value={rev} onChange={(e) => setRev(e.target.value)} placeholder="e.g. R3" /></Field>
+            <Field label={t('knowledge.f.docNo')}><input className="input font-mono" value={docNo} onChange={(e) => setDocNo(e.target.value)} placeholder={t('knowledge.f.docNoPh')} /></Field>
+            <Field label={t('knowledge.f.rev')}><input className="input font-mono" value={rev} onChange={(e) => setRev(e.target.value)} placeholder={t('knowledge.f.revPh')} /></Field>
           </div>
           {upload.error && <ErrorBox error={upload.error} />}
           {!file && upload.isIdle && <EmptyHint />}
@@ -254,6 +257,7 @@ function UploadDialog({ onClose }: { onClose: () => void }) {
 }
 
 function EmptyHint() {
-  return <div className="text-[11.5px] text-faint">Pipeline: detect page modes → OCR scanned pages → extract entities & tags → chunk → embed → index.</div>;
+  const t = useT();
+  return <div className="text-[11.5px] text-faint">{t('knowledge.pipeline')}</div>;
 }
 

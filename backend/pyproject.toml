@@ -1,6 +1,6 @@
 [project]
 name = "yukti-backend"
-version = "0.3.0"
+version = "0.4.0"
 description = "Yukti server — sovereign on-premise AI workbench (SIH26117)"
 requires-python = ">=3.12"
 dependencies = [

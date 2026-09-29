@@ -10,6 +10,9 @@ import App from './App';
 import { AuthProvider } from './lib/auth';
 import { Toaster } from './components/Toast';
 import { ApiError } from './lib/api';
+import { installDiagnostics } from './lib/diagnostics';
+
+installDiagnostics();
 
 const queryClient = new QueryClient({
   defaultOptions: {

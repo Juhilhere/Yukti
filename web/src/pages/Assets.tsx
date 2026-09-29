@@ -30,8 +30,9 @@ function nearest(items: AssetItem[] | undefined): { item: AssetItem; days: numbe
 }
 function expiryTone(days: number): Tone { return days < 0 ? 'danger' : days <= 30 ? 'amber' : 'ok'; }
 function ExpiryBadge({ days, label }: { days: number | null; label?: string }) {
+  const t = useT();
   if (days === null) return <span className="text-faint">—</span>;
-  const text = days < 0 ? `expired ${Math.abs(days)}d` : days === 0 ? 'expires today' : `${days}d`;
+  const text = days < 0 ? t('assets.expiredDays', { n: Math.abs(days) }) : days === 0 ? t('assets.expiresToday') : t('assets.days', { n: days });
   return <Badge tone={expiryTone(days)} mono>{label ? `${label} · ` : ''}{text}</Badge>;
 }
 
@@ -54,36 +55,36 @@ export default function Assets() {
   const due30 = rows.filter((a) => { const n = nearest(a.items); return n && n.days >= 0 && n.days <= 30; }).length;
 
   const columns: Column<Asset>[] = [
-    { key: 'tag', header: 'Tag', mono: true, render: (a) => <span className="font-medium text-cyan">{a.tag}</span> },
-    { key: 'name', header: 'Name', render: (a) => <span className="inline-flex flex-wrap items-center gap-1.5 font-medium">{a.name || '—'}<ProvenanceBadges isExample={a.is_example} /></span> },
-    { key: 'unit', header: 'Unit', render: (a) => a.unit || '—' },
-    { key: 'class', header: 'Class', render: (a) => a.class || '—' },
-    { key: 'vendor', header: 'Vendor', render: (a) => a.vendor || '—' },
-    { key: 'serial', header: 'Serial', mono: true, render: (a) => <span className="text-muted">{a.serial || '—'}</span> },
-    { key: 'location', header: 'Location', render: (a) => a.location || '—' },
-    { key: 'owner_department', header: 'Owner', render: (a) => a.owner_department || '—' },
-    { key: 'criticality', header: 'Criticality', render: (a) => <StatusChip status={a.criticality} /> },
+    { key: 'tag', header: t('assets.col.tag'), mono: true, render: (a) => <span className="font-medium text-cyan">{a.tag}</span> },
+    { key: 'name', header: t('assets.col.name'), render: (a) => <span className="inline-flex flex-wrap items-center gap-1.5 font-medium">{a.name || '—'}<ProvenanceBadges isExample={a.is_example} /></span> },
+    { key: 'unit', header: t('assets.col.unit'), render: (a) => a.unit || '—' },
+    { key: 'class', header: t('assets.col.class'), render: (a) => a.class || '—' },
+    { key: 'vendor', header: t('assets.col.vendor'), render: (a) => a.vendor || '—' },
+    { key: 'serial', header: t('assets.col.serial'), mono: true, render: (a) => <span className="text-muted">{a.serial || '—'}</span> },
+    { key: 'location', header: t('assets.col.location'), render: (a) => a.location || '—' },
+    { key: 'owner_department', header: t('assets.col.owner'), render: (a) => a.owner_department || '—' },
+    { key: 'criticality', header: t('assets.col.criticality'), render: (a) => <StatusChip status={a.criticality} /> },
     {
-      key: 'expiry', header: 'Nearest expiry', sortValue: (a) => nearest(a.items)?.days ?? 99999,
+      key: 'expiry', header: t('assets.col.expiry'), sortValue: (a) => nearest(a.items)?.days ?? 99999,
       render: (a) => { const n = nearest(a.items); return n ? <ExpiryBadge days={n.days} label={n.item.type} /> : <span className="text-faint">—</span>; },
     },
   ];
 
   return (
     <div className="flex h-full flex-col">
-      <PageHeader icon={<Boxes size={18} />} title={t('page.assets')} subtitle="Equipment ledger — certificates, calibrations and statutory items with expiry tracking"
+      <PageHeader icon={<Boxes size={18} />} title={t('page.assets')} subtitle={t('assets.sub')}
         actions={<>
           {rows.length > 0 && <div className="flex items-center gap-1.5 text-[12px]">
-            <Badge tone="danger" mono>{expired} expired</Badge><Badge tone="amber" mono>{due30} ≤30d</Badge><Badge mono>{rows.length} assets</Badge>
+            <Badge tone="danger" mono>{t('assets.nExpired', { n: expired })}</Badge><Badge tone="amber" mono>{t('assets.nDue30', { n: due30 })}</Badge><Badge mono>{t('assets.nAssets', { n: rows.length })}</Badge>
           </div>}
           <div className="relative w-[260px]">
             <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-faint" />
-            <input className="input !pl-8" placeholder="Search tag, name, vendor, serial…" value={q} onChange={(e) => setQ(e.target.value)} />
+            <input className="input !pl-8" placeholder={t('assets.searchPh')} value={q} onChange={(e) => setQ(e.target.value)} />
           </div>
         </>} />
       <div className="min-h-0 flex-1 overflow-hidden p-4">
         <div className="h-full overflow-hidden rounded-md border border-border bg-surface">
-          <QueryState q={assets} empty={rows.length === 0} emptyTitle={dq ? 'No assets match your search' : 'No assets in your scope'}>
+          <QueryState q={assets} empty={rows.length === 0} emptyTitle={dq ? t('assets.noMatch') : t('assets.none')}>
             <DataTable rows={rows} columns={columns} rowKey={(a) => a.tag} onRowClick={(a) => setSel(a.tag)} selectedKey={sel} maxHeight="100%" />
           </QueryState>
         </div>
@@ -94,6 +95,7 @@ export default function Assets() {
 }
 
 function AssetDrawer({ tag, onClose }: { tag: string; onClose: () => void }) {
+  const t = useT();
   const detail = useQuery({ queryKey: ['asset', tag], queryFn: () => api.get<AssetDetail>(`/api/assets/${encodeURIComponent(tag)}`) });
   const dossier = useMutation({
     mutationFn: async () => {
@@ -102,8 +104,8 @@ function AssetDrawer({ tag, onClose }: { tag: string; onClose: () => void }) {
       await downloadFile(url, r.file_name || `dossier-${tag}.pdf`);
       return r;
     },
-    onSuccess: (r) => toast.success('Dossier generated', r.file_name),
-    onError: (e) => toast.error('Dossier failed', (e as Error).message),
+    onSuccess: (r) => toast.success(t('assets.dossierDone'), r.file_name),
+    onError: (e) => toast.error(t('assets.dossierFailed'), (e as Error).message),
   });
   const a = detail.data;
   const items = a?.items ?? [];
@@ -116,9 +118,9 @@ function AssetDrawer({ tag, onClose }: { tag: string; onClose: () => void }) {
     <Drawer open onClose={onClose} width={680}
       title={<div className="flex items-center gap-2"><span className="font-mono text-cyan">{tag}</span><span className="truncate text-muted font-normal">{a?.name}</span><ProvenanceBadges isExample={a?.is_example} /></div>}
       footer={<>
-        <button className="btn" onClick={onClose}>Close</button>
+        <button className="btn" onClick={onClose}>{t('btn.close')}</button>
         <button className="btn btn-primary" disabled={dossier.isPending || !a} onClick={() => dossier.mutate()}>
-          {dossier.isPending ? <Spinner /> : <FileDown size={14} />} Generate dossier (PDF)
+          {dossier.isPending ? <Spinner /> : <FileDown size={14} />} {t('assets.dossier')}
         </button>
       </>}>
       {detail.isLoading && <Loading />}
@@ -126,17 +128,17 @@ function AssetDrawer({ tag, onClose }: { tag: string; onClose: () => void }) {
       {a && (
         <div className="space-y-4">
           <div className="grid grid-cols-3 gap-x-4 gap-y-2 text-[12px]">
-            {([['Unit', a.unit], ['Class', a.class], ['Vendor', a.vendor], ['Serial', a.serial], ['Location', a.location], ['Owner', a.owner_department]] as const).map(([k, v]) => (
-              <div key={k}><div className="text-muted text-[11px]">{k}</div><div className={k === 'Serial' ? 'font-mono' : ''}>{v || '—'}</div></div>
+            {([['unit', a.unit], ['class', a.class], ['vendor', a.vendor], ['serial', a.serial], ['location', a.location], ['owner', a.owner_department]] as const).map(([k, v]) => (
+              <div key={k}><div className="text-muted text-[11px]">{t(`assets.col.${k}`)}</div><div className={k === 'serial' ? 'font-mono' : ''}>{v || '—'}</div></div>
             ))}
-            <div><div className="text-muted text-[11px]">Criticality</div><StatusChip status={a.criticality} /></div>
+            <div><div className="text-muted text-[11px]">{t('assets.col.criticality')}</div><StatusChip status={a.criticality} /></div>
           </div>
 
-          <Card title={`Certificates & statutory items (${items.length})`} bodyClass="p-0">
-            {items.length === 0 ? <EmptyState title="No tracked items" /> : (
+          <Card title={t('assets.items', { n: items.length })} bodyClass="p-0">
+            {items.length === 0 ? <EmptyState title={t('assets.noItems')} /> : (
               <table className="w-full text-[12px]">
                 <thead><tr className="text-left text-[11px] uppercase tracking-wide text-muted">
-                  <th className="px-3 py-1.5">Type</th><th className="px-3 py-1.5">Ref no</th><th className="px-3 py-1.5">Expires</th><th className="px-3 py-1.5">Left</th><th className="px-3 py-1.5">Status</th>
+                  <th className="px-3 py-1.5">{t('assets.th.type')}</th><th className="px-3 py-1.5">{t('assets.th.ref')}</th><th className="px-3 py-1.5">{t('assets.th.expires')}</th><th className="px-3 py-1.5">{t('assets.th.left')}</th><th className="px-3 py-1.5">{t('assets.th.status')}</th>
                 </tr></thead>
                 <tbody>
                   {[...items].sort((x, y) => (daysLeft(x) ?? 1e9) - (daysLeft(y) ?? 1e9)).map((i, idx) => (
@@ -153,11 +155,11 @@ function AssetDrawer({ tag, onClose }: { tag: string; onClose: () => void }) {
             )}
           </Card>
 
-          <Card title={`Work orders (${wos.length})`} icon={<Wrench size={13} className="text-muted" />} bodyClass="p-0">
-            {wos.length === 0 ? <EmptyState title="No work orders" /> : (
+          <Card title={t('assets.wos', { n: wos.length })} icon={<Wrench size={13} className="text-muted" />} bodyClass="p-0">
+            {wos.length === 0 ? <EmptyState title={t('assets.noWos')} /> : (
               <div className="overflow-x-auto">
                 <table className="w-full text-[12px]">
-                  <thead><tr className="text-left text-[11px] uppercase tracking-wide text-muted">{woKeys.map((k) => <th key={k} className="px-3 py-1.5">{k.replace(/_/g, ' ')}</th>)}</tr></thead>
+                  <thead><tr className="text-left text-[11px] uppercase tracking-wide text-muted">{woKeys.map((k) => <th key={k} className="px-3 py-1.5">{t(`assets.wo.${k}`, k.replace(/_/g, ' '))}</th>)}</tr></thead>
                   <tbody>
                     {wos.map((w, i) => (
                       <tr key={i} className="border-t border-border/60">
@@ -174,13 +176,13 @@ function AssetDrawer({ tag, onClose }: { tag: string; onClose: () => void }) {
             )}
           </Card>
 
-          <Card title={`Documents (${docs.length})`} icon={<FileText size={13} className="text-muted" />} bodyClass="p-0">
-            {docs.length === 0 ? <EmptyState title="No linked documents" /> : (
+          <Card title={t('assets.docs', { n: docs.length })} icon={<FileText size={13} className="text-muted" />} bodyClass="p-0">
+            {docs.length === 0 ? <EmptyState title={t('assets.noDocs')} /> : (
               <div className="divide-y divide-border/60">
                 {docs.map((d, i) => (
                   <Link key={d.id ?? i} to={d.id ? `/knowledge/${d.id}` : '/knowledge'} className="flex items-center gap-2 px-3 py-2 hover:bg-surface-2">
                     <FileText size={13} className="text-cyan" />
-                    <span className="min-w-0 flex-1 truncate">{d.title || '(untitled)'}</span>
+                    <span className="min-w-0 flex-1 truncate">{d.title || t('knowledge.untitled')}</span>
                     {d.doc_number && <span className="font-mono text-[11px] text-muted">{d.doc_number}</span>}
                     {d.revision && <Badge mono>{d.revision}</Badge>}
                     {d.status && <StatusChip status={d.status} />}

@@ -409,3 +409,54 @@ def test_duplicates_and_bad_input_rejected(login):
     assert a.put("/api/admin/ai-settings", json={**s, "prediction": {**s["prediction"], "temperature": "hot"}}).status_code == 422
     assert a.put("/api/engines/remote", json={"base_url": "not a url"}).status_code == 422
     assert a.post("/api/models/load", json={"engine": "bionic", "model_id": "C:/nope.gguf"}).status_code in (200, 422)
+
+
+# ------------------------------------------------------------------ server messages in the user's language (X-Lang)
+def test_pattern_error_translated_with_variable_kept(login):
+    admin = login("admin")
+    body = {"username": "lang.test", "display_name": "Lang Test", "department": "Nowhere Dept"}
+    hi = admin.post("/api/admin/users", json=body, headers={"X-Lang": "hi"}).json()["detail"]["message"]
+    kn = admin.post("/api/admin/users", json=body, headers={"X-Lang": "kn"}).json()["detail"]["message"]
+    en = admin.post("/api/admin/users", json=body).json()["detail"]["message"]
+    assert hi == "यह विभाग मौजूद नहीं है: Nowhere Dept"
+    assert kn == "ಈ ವಿಭಾಗ ಇಲ್ಲ: Nowhere Dept"
+    assert en == "Unknown department: Nowhere Dept"
+
+
+def test_health_stage_follows_language(app_client):
+    from app.i18n import tr
+    assert tr("Ready (no AI model loaded)", "kn") == "ಸಿದ್ಧ (ಯಾವುದೇ AI ಮಾದರಿ ಲೋಡ್ ಆಗಿಲ್ಲ)"
+    en = app_client.get("/api/health").json()
+    kn = app_client.get("/api/health", headers={"X-Lang": "kn"}).json()
+    # the exact stage depends on the engine state left by earlier tests (idle, loading, error)
+    assert kn["stage"] == tr(en["stage"], "kn") != en["stage"]
+
+
+def test_params_schema_labels_in_hindi(login):
+    from app.i18n_params import PARAMS
+    from app.llm_params import PREDICTION
+    admin = login("admin")
+    hi = admin.get("/api/params/schema", headers={"X-Lang": "hi"}).json()
+    en = admin.get("/api/params/schema").json()
+    t_hi = next(p for p in hi["prediction"] if p["key"] == "temperature")
+    t_en = next(p for p in en["prediction"] if p["key"] == "temperature")
+    assert t_hi["label"] == PARAMS["temperature"]["hi"][0] and t_hi["label"] != "Temperature"
+    assert t_hi["group"] != "Sampling" and t_hi["description"] != t_en["description"]
+    assert t_en["label"] == "Temperature" and t_en["group"] == "Sampling"
+    assert next(p for p in PREDICTION if p["key"] == "temperature")["label"] == "Temperature"  # module list untouched
+
+
+def test_chat_error_and_notifications_follow_language(login):
+    import json as _j
+    u = login("ravi.e")
+    chat = u.post("/api/chats", json={}).json()
+    r = u.post(f"/api/chats/{chat['id']}/messages", json={"content": "A2 motor rating", "use_knowledge": True},
+               headers={"X-Lang": "hi"})
+    errs = [_j.loads(line[5:]) for prev, line in zip(r.text.splitlines(), r.text.splitlines()[1:])
+            if prev == "event: error" and line.startswith("data:")]
+    from app.i18n import tr
+    # stored in English, shown translated when the chat is reopened
+    en = u.get(f"/api/chats/{chat['id']}").json()["messages"][-1]["error"]["message"]
+    kn = u.get(f"/api/chats/{chat['id']}", headers={"X-Lang": "kn"}).json()["messages"][-1]["error"]["message"]
+    assert errs and errs[0]["message"] == tr(en, "hi") != en  # no model / engine unreachable, in Hindi
+    assert kn == tr(en, "kn") != en

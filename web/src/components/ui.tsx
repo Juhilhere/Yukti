@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { AlertTriangle, Info, Inbox, Loader2 } from 'lucide-react';
 import { cx } from '../lib/format';
 import { errMsg } from '../lib/api';
 import { LANGS, setLang, useLang, useT } from '../lib/i18n';
+import { uiStore } from '../lib/queries';
 
 /* ---------- Badge / StatusChip ---------- */
 export type Tone = 'neutral' | 'amber' | 'cyan' | 'danger' | 'ok' | 'muted' | 'violet';
@@ -59,8 +60,9 @@ export function ProvenanceBadges({ isExample, isPublic }: { isExample?: boolean 
 /** Language selector (English / हिंदी / ಕನ್ನಡ) — stored in localStorage. */
 export function LangSwitcher({ className }: { className?: string }) {
   const lang = useLang();
+  const t = useT();
   return (
-    <div className={cx('inline-flex overflow-hidden rounded-md border border-border', className)} role="group" aria-label="Language">
+    <div className={cx('inline-flex overflow-hidden rounded-md border border-border', className)} role="group" aria-label={t('menu.language')}>
       {LANGS.map((l) => (
         <button key={l.id} type="button" onClick={() => setLang(l.id)}
           className={cx('px-2.5 py-1 text-[12px] transition-colors', lang === l.id ? 'bg-amber/15 text-amber' : 'text-muted hover:bg-surface-3 hover:text-text')}>
@@ -117,8 +119,9 @@ export function PageHeader({ title, subtitle, actions, icon }: { title: ReactNod
 export function Spinner({ size = 14, className }: { size?: number; className?: string }) {
   return <Loader2 size={size} className={cx('animate-spin text-cyan', className)} />;
 }
-export function Loading({ label = 'Loading…' }: { label?: string }) {
-  return <div className="flex items-center justify-center gap-2 py-10 text-muted"><Spinner />{label}</div>;
+export function Loading({ label }: { label?: string }) {
+  const t = useT();
+  return <div className="flex items-center justify-center gap-2 py-10 text-muted"><Spinner />{label ?? t('common.loading')}</div>;
 }
 export function EmptyState({ icon, title, hint, action }: { icon?: ReactNode; title: string; hint?: ReactNode; action?: ReactNode }) {
   return (
@@ -131,24 +134,43 @@ export function EmptyState({ icon, title, hint, action }: { icon?: ReactNode; ti
   );
 }
 export function ErrorBox({ error, onRetry, className }: { error: unknown; onRetry?: () => void; className?: string }) {
+  const t = useT();
   if (!error) return null;
   return (
     <div className={cx('flex items-start gap-2 rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-[12.5px] text-red-200', className)}>
       <AlertTriangle size={14} className="mt-0.5 shrink-0 text-danger" />
       <div className="flex-1 min-w-0 break-words">{errMsg(error)}</div>
-      {onRetry && <button className="btn btn-sm btn-ghost" onClick={onRetry}>Retry</button>}
+      <button className="btn btn-sm btn-ghost" title={t('report.title', 'Report a problem')} onClick={() => uiStore.openReport(errMsg(error))}>{t('report.short', 'Report')}</button>
+      {onRetry && <button className="btn btn-sm btn-ghost" onClick={onRetry}>{t('btn.retry', 'Retry')}</button>}
     </div>
   );
 }
 /** Standard wrapper for react-query results. */
-export function QueryState({ q, children, empty, emptyTitle = 'Nothing here yet', emptyHint }: {
+export function QueryState({ q, children, empty, emptyTitle, emptyHint }: {
   q: { isLoading: boolean; error: unknown; refetch: () => unknown; data?: unknown };
   children: ReactNode; empty?: boolean; emptyTitle?: string; emptyHint?: ReactNode;
 }) {
+  const t = useT();
   if (q.isLoading) return <Loading />;
   if (q.error) return <div className="p-3"><ErrorBox error={q.error} onRetry={() => q.refetch()} /></div>;
-  if (empty) return <EmptyState title={emptyTitle} hint={emptyHint} />;
+  if (empty) return <EmptyState title={emptyTitle ?? t('common.nothingYet')} hint={emptyHint} />;
   return <>{children}</>;
+}
+
+/** Render a translated string that contains simple markup: '<b>bold</b>', '<link>text</link>' or a self-closing '<icon/>'.
+ *  Each tag name maps to a renderer; unknown tags are shown as plain text. */
+export function rich(text: string, tags: Record<string, (chunk: string) => ReactNode>): ReactNode {
+  const out: ReactNode[] = [];
+  const rx = /<(\w+)\/>|<(\w+)>([\s\S]*?)<\/\2>/g;
+  let last = 0; let i = 0; let m: RegExpExecArray | null;
+  while ((m = rx.exec(text))) {
+    if (m.index > last) out.push(text.slice(last, m.index));
+    const fn = tags[m[1] ?? m[2]];
+    out.push(<Fragment key={i++}>{fn ? fn(m[3] ?? '') : (m[3] ?? '')}</Fragment>);
+    last = rx.lastIndex;
+  }
+  if (last < text.length) out.push(text.slice(last));
+  return <>{out}</>;
 }
 
 /* ---------- Tooltip / InfoTip ---------- */

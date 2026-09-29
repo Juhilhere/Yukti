@@ -20,19 +20,20 @@ function urgencyPct(u: unknown): number {
 }
 
 function RouteChip({ route }: { route: RouteDecision }) {
+  const t = useT();
   const pct = urgencyPct(route.urgency);
   const barC = pct >= 75 ? 'bg-danger' : pct >= 45 ? 'bg-amber' : 'bg-cyan';
   return (
     <Popover align="left" className="w-[360px] p-2"
       trigger={(_o, toggle) => (
-        <button onClick={toggle} title="Laya routing decision"
+        <button onClick={toggle} title={t('chat.route.tip')}
           className="inline-flex items-center gap-1.5 rounded border border-cyan/30 bg-cyan/[0.07] px-1.5 py-px text-[11px] text-cyan hover:border-cyan/60">
           <Route size={11} />
           <span className="font-mono">{route.intent}</span>
           <span className="text-faint">·</span>
           <span>{route.department}</span>
           <span className="text-faint">·</span>
-          <span className="inline-flex h-1.5 w-10 overflow-hidden rounded-full bg-surface-3" title={`urgency ${String(route.urgency)}`}>
+          <span className="inline-flex h-1.5 w-10 overflow-hidden rounded-full bg-surface-3" title={t('chat.route.urgency', { u: String(route.urgency) })}>
             <span className={cx('h-full', barC)} style={{ width: `${pct}%` }} />
           </span>
           <span className="text-faint">·</span>
@@ -43,8 +44,8 @@ function RouteChip({ route }: { route: RouteDecision }) {
       {() => (
         <div>
           <div className="mb-1.5 flex items-center gap-2 px-1 text-[11.5px] text-muted">
-            <Route size={12} className="text-cyan" /> Laya router · <span className="font-mono">{route.model_version}</span>
-            {route.needs_review && <Badge tone="amber">needs review</Badge>}
+            <Route size={12} className="text-cyan" /> {t('chat.route.router')} · <span className="font-mono">{route.model_version}</span>
+            {route.needs_review && <Badge tone="amber">{t('chat.route.needsReview')}</Badge>}
           </div>
           <JsonView value={route} className="max-h-[300px]" />
         </div>
@@ -54,17 +55,19 @@ function RouteChip({ route }: { route: RouteDecision }) {
 }
 
 function GuardChip({ guard }: { guard: GuardDecision }) {
+  const t = useT();
   const d = guard.decision;
   const Icon = d === 'allow' ? ShieldCheck : d === 'deny' ? ShieldX : ShieldAlert;
   const tone = d === 'allow' ? 'ok' : d === 'deny' ? 'danger' : 'amber';
   return (
-    <Badge tone={tone} title={`${guard.reason}${guard.rule_ids?.length ? `\nrules: ${guard.rule_ids.join(', ')}` : ''}`}>
-      <Icon size={11} /><span className="font-mono">{guard.category}</span>· {d}
+    <Badge tone={tone} title={`${guard.reason}${guard.rule_ids?.length ? `\n${t('chat.guard.rules', { ids: guard.rule_ids.join(', ') })}` : ''}`}>
+      <Icon size={11} /><span className="font-mono">{guard.category}</span>· {t(`chat.guard.${d}`, d)}
     </Badge>
   );
 }
 
 function Thinking({ text, streaming }: { text: string; streaming: boolean }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const isOpen = open || streaming;
   return (
@@ -72,8 +75,8 @@ function Thinking({ text, streaming }: { text: string; streaming: boolean }) {
       <button className="flex w-full items-center gap-1.5 px-2.5 py-1.5 text-left text-[12px] text-muted hover:text-text" onClick={() => setOpen((o) => !o)}>
         {isOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
         <Brain size={12} className="text-cyan" />
-        {streaming ? <span className="flex items-center gap-1.5">Thinking <Spinner size={11} /></span> : <span>Thought process</span>}
-        <span className="ml-auto font-mono text-[10.5px] text-faint">{Math.ceil(text.length / 4)} tok</span>
+        {streaming ? <span className="flex items-center gap-1.5">{t('chat.thinking')} <Spinner size={11} /></span> : <span>{t('chat.thoughtProcess')}</span>}
+        <span className="ml-auto font-mono text-[10.5px] text-faint">{t('chat.tok', { n: Math.ceil(text.length / 4) })}</span>
       </button>
       {isOpen && (
         <div className="max-h-[260px] overflow-y-auto whitespace-pre-wrap border-t border-border px-3 py-2 text-[12px] italic leading-relaxed text-muted">{text}</div>
@@ -103,10 +106,10 @@ function FeedbackButtons({ m }: { m: UIMessage }) {
     try {
       await api.post(`/api/messages/${encodeURIComponent(m.id)}/feedback`, comment.trim() ? { rating: pending, comment: comment.trim() } : { rating: pending });
       setRating(pending);
-      toast.success('Thanks for your feedback');
+      toast.success(t('chat.feedback.thanks'));
       setPending(null); setComment('');
     } catch (e) {
-      toast.error('Could not send feedback', errMsg(e));
+      toast.error(t('chat.feedback.failed'), errMsg(e));
     } finally { setBusy(false); }
   };
   return (
@@ -122,10 +125,10 @@ function FeedbackButtons({ m }: { m: UIMessage }) {
           <button className="btn btn-primary" disabled={busy} onClick={() => void submit()}>{busy ? <Spinner className="!text-[#1a1204]" /> : null}{t('btn.submit')}</button>
         </>}>
         <div className="space-y-2">
-          <div className="text-[12.5px] text-muted">{pending === 1 ? 'What was useful? (optional)' : 'What was wrong or missing? (optional)'}</div>
+          <div className="text-[12.5px] text-muted">{pending === 1 ? t('chat.feedback.goodQ') : t('chat.feedback.badQ')}</div>
           <textarea autoFocus className="input min-h-[90px]" value={comment} onChange={(e) => setComment(e.target.value)}
-            placeholder={pending === 1 ? 'e.g. correct revision cited' : 'e.g. wrong value, outdated revision, missing step'} />
-          <div className="text-[11px] text-faint">Your rating, question and answer are shared with Yukti administrators to improve answers.</div>
+            placeholder={pending === 1 ? t('chat.feedback.goodPh') : t('chat.feedback.badPh')} />
+          <div className="text-[11px] text-faint">{t('chat.feedback.note')}</div>
         </div>
       </Modal>
     </>
@@ -133,6 +136,7 @@ function FeedbackButtons({ m }: { m: UIMessage }) {
 }
 
 function StatsFooter({ m, canRegen, onRegen }: { m: UIMessage; canRegen: boolean; onRegen?: () => void }) {
+  const t = useT();
   const [copied, setCopied] = useState(false);
   const s = m.stats;
   const copy = async () => {
@@ -143,18 +147,18 @@ function StatsFooter({ m, canRegen, onRegen }: { m: UIMessage; canRegen: boolean
       {s && (
         <>
           <span className="inline-flex items-center gap-1 text-cyan/80"><Gauge size={11} />{num(s.tok_per_s, 1)} tok/s</span>
-          <span>{s.tokens_in ?? '—'} in · {s.tokens_out ?? '—'} out</span>
+          <span>{t('chat.stats.inOut', { in: s.tokens_in ?? '—', out: s.tokens_out ?? '—' })}</span>
           <span>TTFT {num(s.ttft_ms, 0)}ms</span>
           <span>{num((s.total_ms ?? 0) / 1000, 2)}s</span>
-          <span>stop: {s.stop_reason}</span>
+          <span>{t('chat.stats.stop', { r: s.stop_reason })}</span>
           <span className="text-muted">{s.model_name}</span>
           <span className="uppercase">{s.engine}</span>
         </>
       )}
       <span className="ml-auto flex items-center gap-0.5 font-sans">
         <FeedbackButtons m={m} />
-        <button className="btn btn-ghost btn-icon text-muted" title="Copy" onClick={copy}>{copied ? <Check size={13} className="text-ok" /> : <Copy size={13} />}</button>
-        {canRegen && <button className="btn btn-ghost btn-icon text-muted" title="Regenerate" onClick={onRegen}><RefreshCw size={13} /></button>}
+        <button className="btn btn-ghost btn-icon text-muted" title={t('btn.copy')} onClick={copy}>{copied ? <Check size={13} className="text-ok" /> : <Copy size={13} />}</button>
+        {canRegen && <button className="btn btn-ghost btn-icon text-muted" title={t('chat.regenerate')} onClick={onRegen}><RefreshCw size={13} /></button>}
       </span>
     </div>
   );
@@ -163,6 +167,7 @@ function StatsFooter({ m, canRegen, onRegen }: { m: UIMessage; canRegen: boolean
 function AssistantMessageImpl({ m, isLast, busy, showStats, question, onRegenerate }: {
   m: UIMessage; isLast: boolean; busy: boolean; showStats: boolean; question?: string; onRegenerate?: () => void;
 }) {
+  const t = useT();
   const cite = (sid: string) => flashSource(m.id, sid);
   const components: Components = {
     a: ({ href, children }) => {
@@ -188,10 +193,10 @@ function AssistantMessageImpl({ m, isLast, busy, showStats, question, onRegenera
           <span className="text-[12px] font-semibold">Yukti</span>
           {m.route && <RouteChip route={m.route} />}
           {m.guard && <GuardChip guard={m.guard} />}
-          {!hasHeader && m.streaming && <span className="text-[11px] text-faint">routing…</span>}
+          {!hasHeader && m.streaming && <span className="text-[11px] text-faint">{t('chat.routing')}</span>}
         </div>
         {m.reasoning ? <Thinking text={m.reasoning} streaming={!!m.streaming && !m.content} /> : null}
-        {waiting && <div className="flex items-center gap-2 py-1 text-[12px] text-muted"><Spinner size={12} />Retrieving & generating…</div>}
+        {waiting && <div className="flex items-center gap-2 py-1 text-[12px] text-muted"><Spinner size={12} />{t('chat.generating')}</div>}
         {m.content && (
           <div className={cx('md', m.streaming && 'caret')}>
             <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>{linkCitations(m.content)}</ReactMarkdown>

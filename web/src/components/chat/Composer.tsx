@@ -34,7 +34,7 @@ export function Composer({ busy, onSend, onStop, useKnowledge, onToggleKnowledge
         {!modelReady && (canLoadModel ? (
           <div className="mb-1.5 flex items-center gap-2 text-[11.5px] text-muted">
             <span className="h-1.5 w-1.5 rounded-full bg-amber" /> {t('chat.noModel.admin')}
-            <button className="text-cyan hover:underline" onClick={onOpenLoader}>select a model to load</button>
+            <button className="text-cyan hover:underline" onClick={onOpenLoader}>{t('composer.selectModel')}</button>
             <Kbd>Ctrl+L</Kbd>
           </div>
         ) : (
@@ -52,20 +52,20 @@ export function Composer({ busy, onSend, onStop, useKnowledge, onToggleKnowledge
               if (wantsSend) { e.preventDefault(); submit(); }
             }} />
           <div className="flex items-center gap-2 px-2 pb-2">
-            <button onClick={onToggleKnowledge} title="Toggle retrieval over the knowledge base (RAG)"
+            <button onClick={onToggleKnowledge} title={t('composer.knowledgeTip')}
               className={cx('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium',
                 useKnowledge ? 'border-cyan/40 bg-cyan/10 text-cyan' : 'border-border text-muted hover:text-text')}>
               {useKnowledge ? <BookOpen size={11} /> : <BookX size={11} />}
               {useKnowledge ? t('chat.knowledgeOn') : t('chat.knowledgeOff')}
             </button>
-            <span className="ml-auto font-mono text-[10.5px] text-faint">~{estimateTokens(text)} tok</span>
+            <span className="ml-auto font-mono text-[10.5px] text-faint">{t('composer.tokens', { n: estimateTokens(text) })}</span>
             <span className="hidden text-[10.5px] text-faint sm:inline">
-              {sendWithEnter ? <><Kbd>Enter</Kbd> send · <Kbd>Shift+Enter</Kbd> newline</> : <><Kbd>Ctrl+Enter</Kbd> send</>}
+              {sendWithEnter ? <><Kbd>Enter</Kbd> {t('composer.send')} · <Kbd>Shift+Enter</Kbd> {t('composer.newline')}</> : <><Kbd>Ctrl+Enter</Kbd> {t('composer.send')}</>}
             </span>
             {busy ? (
-              <button className="btn btn-danger btn-sm" onClick={onStop} title="Stop generating"><Square size={11} fill="currentColor" />Stop</button>
+              <button className="btn btn-danger btn-sm" onClick={onStop} title={t('composer.stopTip')}><Square size={11} fill="currentColor" />{t('composer.stop')}</button>
             ) : (
-              <button className="btn btn-primary btn-icon !rounded-md !px-1.5" disabled={!text.trim()} onClick={submit} title="Send"><ArrowUp size={15} /></button>
+              <button className="btn btn-primary btn-icon !rounded-md !px-1.5" disabled={!text.trim()} onClick={submit} title={t('composer.sendTip')}><ArrowUp size={15} /></button>
             )}
           </div>
         </div>

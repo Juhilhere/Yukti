@@ -1,7 +1,7 @@
 {
   "name": "yukti-desktop",
   "productName": "Yukti",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Yukti \u2014 Sovereign Industrial AI Workbench (desktop client)",
   "author": "Team UniMinds <juhilprogramming@gmail.com>",
   "license": "SEE LICENSE IN ../LICENSE",
@@ -43,16 +43,18 @@
       "signAndEditExecutable": true
     },
     "nsis": {
-      "oneClick": false,
+      "oneClick": true,
       "perMachine": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
+      "runAfterFinish": true,
+      "createDesktopShortcut": "always",
       "createStartMenuShortcut": true,
       "shortcutName": "Yukti",
-      "license": "../LICENSE",
+      "deleteAppDataOnUninstall": false,
+      "include": "build/installer.nsh",
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico",
-      "artifactName": "Yukti-Setup-${version}.exe"
+      "uninstallDisplayName": "Yukti",
+      "artifactName": "Yukti-Setup.exe"
     }
   }
 }

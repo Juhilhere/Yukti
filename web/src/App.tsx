@@ -26,12 +26,14 @@ import Developer from './pages/Developer';
 import { Forbidden, NotFound } from './pages/Errors';
 import { Logo } from './components/Logo';
 import { Spinner } from './components/ui';
+import { useT } from './lib/i18n';
 
 function Splash() {
+  const t = useT();
   return (
     <div className="flex h-full flex-col items-center justify-center gap-3 text-muted">
       <Logo size={44} />
-      <div className="flex items-center gap-2"><Spinner /> Starting Yukti…</div>
+      <div className="flex items-center gap-2"><Spinner /> {t('shell.starting')}</div>
     </div>
   );
 }

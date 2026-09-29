@@ -17,7 +17,7 @@ import { Composer } from '../components/chat/Composer';
 import { AssistantMessage, UserMessage } from '../components/chat/AssistantMessage';
 import { SUGGESTIONS, type UIMessage } from '../components/chat/types';
 import { useAuth } from '../lib/auth';
-import { useT } from '../lib/i18n';
+import { tr, useT } from '../lib/i18n';
 
 type Pred = Record<string, unknown>;
 
@@ -88,7 +88,7 @@ export default function Chat() {
     const t = setTimeout(() => {
       dirtyRef.current = false;
       api.patch(`/api/chats/${chatId}`, { system_prompt: systemPrompt, prediction })
-        .catch((e) => toast.error('Could not save chat settings', errMsg(e)));
+        .catch((e) => toast.error(tr('chat.toast.saveSettingsFailed'), errMsg(e)));
     }, 700);
     return () => clearTimeout(t);
   }, [systemPrompt, prediction, chatId, isLlmAdmin]);
@@ -149,14 +149,14 @@ export default function Chat() {
     } catch (e) {
       if ((e as Error)?.name === 'AbortError') {
         aborted = true;
-        upd((m) => ({ ...m, stats: m.stats ?? null, error: m.content ? m.error : { code: 'stopped', message: 'Generation stopped.' } }));
+        upd((m) => ({ ...m, stats: m.stats ?? null, error: m.content ? m.error : { code: 'stopped', message: tr('chat.err.stopped') } }));
       } else {
         upd((m) => ({ ...m, error: { code: 'stream_failed', message: errMsg(e) } }));
       }
     } finally {
       // the connection closed without a result (server restarted, network dropped): never present it as a finished answer
       upd((m) => ({ ...m, streaming: false, id: doneId ?? m.id,
-        error: ended || aborted || m.error ? m.error : { code: 'interrupted', message: 'The answer was interrupted before it finished (connection lost). Press Regenerate to try again.' } }));
+        error: ended || aborted || m.error ? m.error : { code: 'interrupted', message: tr('chat.err.interrupted') } }));
       if (abortRef.current === ctrl) abortRef.current = null;
       if (streamChatRef.current === cid) streamChatRef.current = null;
       setBusy(false);
@@ -183,7 +183,7 @@ export default function Chat() {
         nav(`/chat/${cid}`);
         qc.invalidateQueries({ queryKey: qk.chats });
       } catch (e) {
-        toast.error('Could not create chat', errMsg(e));
+        toast.error(tr('chat.toast.createFailed'), errMsg(e));
         return;
       }
     }
@@ -223,7 +223,7 @@ export default function Chat() {
   const modelReady = loaded.data?.status === 'ready';
   const lastAssistantIdx = messages.map((m) => m.role).lastIndexOf('assistant');
   const width = settings.chatFullWidth ? 'max-w-none' : 'max-w-[860px]';
-  const title = chatId ? (detail.data?.title || (detail.isLoading ? '' : 'Untitled chat')) : t('btn.newChat');
+  const title = chatId ? (detail.data?.title || (detail.isLoading ? '' : t('chat.untitled'))) : t('btn.newChat');
   const showEmpty = messages.length === 0 && !(chatId && detail.isLoading) && !(chatId && detail.error);
 
   return (
@@ -242,18 +242,18 @@ export default function Chat() {
             </Badge>
           )}
           {isLlmAdmin && !settings.configSidebarOpen && (
-            <button className="btn btn-ghost btn-icon text-muted" title="Show configuration" onClick={() => setSettings({ configSidebarOpen: true })}>
+            <button className="btn btn-ghost btn-icon text-muted" title={t('chat.showConfig')} onClick={() => setSettings({ configSidebarOpen: true })}>
               <PanelRightOpen size={15} />
             </button>
           )}
         </header>
 
         <div ref={scrollRef} onScroll={onScroll} className="min-h-0 flex-1 overflow-y-auto">
-          {chatId && detail.isLoading && messages.length === 0 && <Loading label="Loading conversation…" />}
+          {chatId && detail.isLoading && messages.length === 0 && <Loading label={t('chat.loadingConversation')} />}
           {chatId && detail.error && messages.length === 0 && (
             <div className={cx('mx-auto p-6', width)}>
               <ErrorBox error={detail.error} onRetry={() => detail.refetch()} />
-              <button className="btn btn-sm mt-3" onClick={() => nav('/chat')}>Start a new chat</button>
+              <button className="btn btn-sm mt-3" onClick={() => nav('/chat')}>{t('chat.startNew')}</button>
             </div>
           )}
           {showEmpty && <EmptyChat onPick={(p) => void send(p)} />}
@@ -293,17 +293,17 @@ function EmptyChat({ onPick }: { onPick: (prompt: string) => void }) {
       <p className="mt-1 max-w-lg text-center text-muted">
         {t('chat.empty.body')}
       </p>
-      <div className="mt-2 inline-flex items-center gap-1.5 text-[11.5px] text-ok"><ShieldCheck size={12} />On-prem · offline · policy-enforced retrieval</div>
+      <div className="mt-2 inline-flex items-center gap-1.5 text-[11.5px] text-ok"><ShieldCheck size={12} />{t('chat.empty.badge')}</div>
       <div className="mt-6 grid w-full max-w-[760px] grid-cols-1 gap-2.5 sm:grid-cols-2">
         {SUGGESTIONS.map((s) => (
-          <button key={s.prompt} onClick={() => onPick(s.prompt)}
+          <button key={s.prompt} onClick={() => onPick(t(s.prompt))}
             className="group rounded-lg border border-border bg-surface p-3 text-left transition-colors hover:border-cyan/50 hover:bg-surface-2">
             <div className="flex items-center gap-2">
-              <span className="label !text-[10px] text-amber/90">{s.tag}</span>
+              <span className="label !text-[10px] text-amber/90">{t(s.tag)}</span>
               <ArrowRight size={12} className="ml-auto text-faint transition-transform group-hover:translate-x-0.5 group-hover:text-cyan" />
             </div>
-            <div className="mt-1 font-medium">{s.title}</div>
-            <div className="mt-0.5 text-[12px] text-muted">{s.prompt}</div>
+            <div className="mt-1 font-medium">{t(s.title)}</div>
+            <div className="mt-0.5 text-[12px] text-muted">{t(s.prompt)}</div>
           </button>
         ))}
       </div>
