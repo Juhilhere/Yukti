@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Cpu, PanelRightClose, Save, Trash2, Upload } from 'lucide-react';
+import { Cpu, FlaskConical, PanelRightClose, Save, Trash2, Upload } from 'lucide-react';
 import { api, errMsg } from '../../lib/api';
 import { qk, uiStore, useLoaded, usePresets, useSchema } from '../../lib/queries';
 import type { Preset } from '../../lib/types';
@@ -34,6 +35,13 @@ export function ConfigSidebar({ systemPrompt, setSystemPrompt, prediction, setPr
         { id: 'model', label: 'Model' },
       ]} />
       <div className="min-h-0 flex-1 overflow-y-auto p-3">
+        <div className="mb-3 flex items-start gap-2 rounded-md border border-amber/30 bg-amber/5 px-2.5 py-2 text-[11.5px]">
+          <FlaskConical size={13} className="mt-0.5 shrink-0 text-amber" />
+          <div className="text-muted">
+            <span className="font-medium text-amber">Admin testing:</span> settings here apply <b className="text-text">to this chat only</b>.
+            Organisation defaults for all employees are in <Link to="/admin/ai" className="text-cyan hover:underline">Admin → AI settings</Link>.
+          </div>
+        </div>
         {tab === 'context' && (
           <ContextTab systemPrompt={systemPrompt} setSystemPrompt={setSystemPrompt} prediction={prediction}
             setPrediction={setPrediction} useKnowledge={useKnowledge} setUseKnowledge={setUseKnowledge} />

@@ -38,6 +38,14 @@ def request_stop(chat_id: str) -> None:
     _STOP.add(chat_id)
 
 
+def _record(ctx: Ctx, route: dict[str, Any], stats: dict[str, Any] | None, error: str | None = None, denied: int = 0) -> None:
+    st = stats or {}
+    ex("""INSERT INTO answer_stats(at, user_id, department, intent, engine, model, tokens_in, tokens_out, tok_per_s, ttft_ms, total_ms, error, denied)
+          VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+       (now_iso(), ctx.user["id"], ctx.user["department"], route.get("intent"), st.get("engine"), st.get("model_name"),
+        st.get("tokens_in"), st.get("tokens_out"), st.get("tok_per_s"), st.get("ttft_ms"), st.get("total_ms"), error, denied))
+
+
 def history_messages(chat_id: str, limit: int = 10) -> list[dict[str, Any]]:
     rows = q("SELECT role, content FROM messages WHERE chat_id=? ORDER BY created_at DESC, rowid DESC LIMIT ?", (chat_id, limit))
     return [{"role": r["role"], "content": r["content"]} for r in reversed(rows) if r["role"] in ("user", "assistant") and r["content"]]
@@ -186,6 +194,7 @@ async def run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | No
         elif ev["type"] == "error":
             yield _sse("error", {"code": ev["code"], "message": ev["message"]})
             audit.write(ctx.actor, "chat.error", f"chat:{chat_id}", {"code": ev["code"]})
+            _record(ctx, route, None, ev["code"])
             return
         elif ev["type"] == "done":
             stats = ev["stats"]
@@ -195,6 +204,7 @@ async def run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | No
     valid = {s["id"] for s in sources} | {f"F{i}" for i in range(1, len(facts) + 1)}
     stats["citations"] = {"cited": cited, "unknown": [c for c in cited if c not in valid]}
     meta["stats"] = stats
+    _record(ctx, route, stats, None, int((meta.get("denied") or {}).get("count", 0)))
     mid = new_id()
     if regenerate:
         last = q1("SELECT id FROM messages WHERE chat_id=? AND role='assistant' ORDER BY created_at DESC, rowid DESC LIMIT 1", (chat_id,))

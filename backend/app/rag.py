@@ -245,12 +245,13 @@ def create_document(meta: dict[str, Any], file_name: str, data: bytes | Path, ac
             if str(old["revision"]) != str(meta.get("revision")) and str(old["revision"]) < str(meta.get("revision")):
                 ex("UPDATE documents SET status='SUPERSEDED' WHERE id=?", (old["id"],))
     ex("""INSERT INTO documents(id, title, doc_number, revision, status, doc_type, department, classification, effective_date,
-          supersedes, asset_tags_json, file_path, file_name, mime, sha256, size_bytes, uploaded_by, created_at)
-          VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+          supersedes, asset_tags_json, file_path, file_name, mime, sha256, size_bytes, uploaded_by, created_at, is_example, is_public, source_url)
+          VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
        (did, meta.get("title") or Path(file_name).stem, meta.get("doc_number"), str(meta.get("revision") or ""),
         meta.get("status", "CURRENT"), meta.get("doc_type", "other"), meta.get("department", "Operations"),
         int(meta.get("classification", 1)), meta.get("effective_date"), meta.get("supersedes"),
-        j(meta.get("asset_tags", [])), str(path), file_name, mime, sha, size, actor, now_iso()))
+        j(meta.get("asset_tags", [])), str(path), file_name, mime, sha, size, actor, now_iso(),
+        int(bool(meta.get("is_example"))), int(bool(meta.get("is_public"))), meta.get("source_url")))
     return did
 
 

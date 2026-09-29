@@ -3,10 +3,13 @@
 export class ApiError extends Error {
   status: number;
   code: string;
-  constructor(status: number, code: string, message: string) {
+  /** Raw `detail` object from the server (may carry extra fields, e.g. `missing[]`). */
+  detail: Record<string, unknown> | null;
+  constructor(status: number, code: string, message: string, detail: Record<string, unknown> | null = null) {
     super(message);
     this.status = status;
     this.code = code;
+    this.detail = detail;
   }
 }
 
@@ -17,6 +20,9 @@ export function getCsrf() { return csrfToken; }
 type Listener = (e: ApiError) => void;
 const unauthListeners = new Set<Listener>();
 const forbiddenListeners = new Set<Listener>();
+const pwChangeListeners = new Set<Listener>();
+/** Called when any request returns 403 password_change_required. */
+export function onPasswordChangeRequired(fn: Listener) { pwChangeListeners.add(fn); return () => { pwChangeListeners.delete(fn); }; }
 /** Called when any request (other than auth probes) returns 401. */
 export function onUnauthorized(fn: Listener) { unauthListeners.add(fn); return () => { unauthListeners.delete(fn); }; }
 /** Called when any request returns 403 policy_denied. */
@@ -35,12 +41,14 @@ export function buildHeaders(method: string, body?: unknown, extra?: HeadersInit
 export async function parseError(res: Response): Promise<ApiError> {
   let code = `http_${res.status}`;
   let message = res.statusText || `Request failed (${res.status})`;
+  let detail: Record<string, unknown> | null = null;
   try {
     const j = await res.json();
     const d = j?.detail;
     if (d && typeof d === 'object' && !Array.isArray(d)) {
       code = d.code || code;
       message = d.message || message;
+      detail = d;
     } else if (typeof d === 'string') {
       message = d;
     } else if (Array.isArray(d)) {
@@ -48,7 +56,7 @@ export async function parseError(res: Response): Promise<ApiError> {
       code = 'validation_error';
     }
   } catch { /* non-json */ }
-  return new ApiError(res.status, code, message);
+  return new ApiError(res.status, code, message, detail);
 }
 
 export function notifyError(err: ApiError, path: string) {
@@ -56,6 +64,7 @@ export function notifyError(err: ApiError, path: string) {
     unauthListeners.forEach((f) => f(err));
   }
   if (err.status === 403 && err.code === 'policy_denied') forbiddenListeners.forEach((f) => f(err));
+  if (err.status === 403 && err.code === 'password_change_required') pwChangeListeners.forEach((f) => f(err));
 }
 
 type Opts = { signal?: AbortSignal; headers?: HeadersInit; silent?: boolean };

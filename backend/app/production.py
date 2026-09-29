@@ -1,198 +1,194 @@
-"""Production intelligence: simplified planning LP (HiGHS) for a 15 MMTPA, NCI 11.67-class refinery.
+"""Production intelligence — no invented numbers.
 
-Illustrative, synthetic yields/capacities/prices — a planning aid, not an optimizer of record.
+- Overview charts use MRPL's PUBLISHED production / financial data (with source URLs) from data/mrpl/*.json.
+- The planning LP (HiGHS) runs on a plant model that the planner/admin enters in Yukti. Only publicly published unit
+  capacities are pre-filled; yields, prices and contract limits start EMPTY and the optimizer refuses to run until they exist.
 """
 from __future__ import annotations
 
-import json
-import math
+import re
 from typing import Any
 
-import numpy as np
-
-from .config import DATA
-
-USD_INR = 84.0
-BBL_PER_T = {"Diesel": 7.45, "Petrol": 8.45, "ATF": 7.9, "LPG": 11.6, "Naphtha": 8.9, "Fuel Oil": 6.7}
-
-# month-level plan (kt / month). CDU 1250 kt/m ≈ 15 MMTPA.
-CAP = {"CDU": 1250.0, "HCU": 280.0, "PFCC": 190.0, "COKER": 160.0, "CCR": 120.0}
-YIELD = {
-    "CDU": {"LPG": 0.02, "Naphtha": 0.16, "ATF": 0.10, "Diesel": 0.24, "VGO": 0.30, "Residue": 0.18},
-    "HCU": {"Diesel": 0.52, "ATF": 0.20, "Naphtha": 0.14, "LPG": 0.06},            # VGO feed
-    "PFCC": {"Propylene": 0.18, "Petrol": 0.42, "Diesel": 0.14, "LPG": 0.10, "Petcoke": 0.06},  # VGO feed
-    "COKER": {"Petcoke": 0.30, "Diesel": 0.28, "Naphtha": 0.14, "LPG": 0.05},      # Residue feed
-    "CCR": {"Petrol": 0.72, "Paraxylene": 0.12, "Benzene": 0.06, "LPG": 0.04},       # Naphtha feed
-}
-BASE_MARGIN = {  # USD / tonne net-back over crude (illustrative)
-    "Diesel": 128.0, "Petrol": 104.0, "ATF": 131.0, "LPG": 40.0, "Naphtha": 12.0, "Propylene": 175.0,
-    "Paraxylene": 190.0, "Benzene": 150.0, "Petcoke": -70.0, "Fuel Oil": -35.0, "Sulphur": 20.0,
-}
-MAX_SALES = {"Diesel": 560.0, "Petrol": 240.0, "ATF": 175.0, "LPG": 90.0, "Naphtha": 260.0, "Propylene": 40.0,
-             "Paraxylene": 22.0, "Benzene": 10.0, "Petcoke": 999.0, "Fuel Oil": 999.0}
-MIN_SALES = {"Diesel": 380.0, "Petrol": 150.0, "ATF": 90.0, "LPG": 40.0}
+from . import mrpl
+from .db import get_setting, set_setting
 
 
-def _history() -> list[dict[str, Any]]:
-    p = DATA / "structured" / "production.json"
-    if p.exists():
-        try:
-            d = json.loads(p.read_text(encoding="utf-8"))
-            out = []
-            for m in d.get("months", []):
-                for prod, v in (m.get("demand_kt") or {}).items():
-                    out.append({"month": m["month"], "product": prod, "demand_kt": v})
-            return out
-        except Exception:
-            pass
-    return []
-
-
+# ------------------------------------------------------------------ public overview
 def overview() -> dict[str, Any]:
-    hist = _history()
-    series: list[dict[str, Any]] = []
-    months: list[str] = []
-    diesel: list[float] = []
-    for r in hist:
-        m = r.get("month") or r.get("date")
-        prod = r.get("product")
-        val = r.get("demand_kt")
-        if prod is None and isinstance(r.get("products"), dict):
-            for k, v in r["products"].items():
-                series.append({"month": m, "product": k, "demand_kt": v})
-            continue
-        if m and prod and val is not None:
-            series.append({"month": m, "product": prod, "demand_kt": val})
-    for s in series:
-        if s["product"] == "Diesel":
-            months.append(s["month"])
-            diesel.append(float(s["demand_kt"]))
-    if not diesel:  # synthetic fallback
-        rng = np.random.default_rng(2026)
-        months = [f"{2023 + (9 + i) // 12}-{(9 + i) % 12 + 1:02d}" for i in range(36)]
-        diesel = [470 + 1.2 * i + 35 * math.sin(2 * math.pi * (i % 12) / 12) + rng.normal(0, 8) for i in range(36)]
-        series = [{"month": m, "product": "Diesel", "demand_kt": round(v, 1)} for m, v in zip(months, diesel)]
-    # forecast: seasonal naive + drift with growing interval (statsforecast-lite)
-    y = np.array(diesel)
-    season = 12 if len(y) >= 24 else 1
-    drift = (y[-1] - y[0]) / max(len(y) - 1, 1)
-    resid = y[season:] - y[:-season] if season > 1 else np.diff(y)
-    sd = float(np.std(resid)) or 10.0
-    last_y, last_m = int(months[-1][:4]), int(months[-1][5:7])
-    fc = []
-    for h in range(1, 7):
-        mm = (last_m - 1 + h) % 12 + 1
-        yy = last_y + (last_m - 1 + h) // 12
-        base = y[-season + (h - 1) % season] if season > 1 else y[-1]
-        f = float(base + drift * h * (season if season > 1 else 1) / max(season, 1))
-        band = 1.28 * sd * math.sqrt(h)
-        fc.append({"month": f"{yy}-{mm:02d}", "product": "Diesel", "forecast_kt": round(f, 1),
-                   "lo": round(f - band, 1), "hi": round(f + band, 1)})
-    total = sum(v for k, v in MAX_SALES.items() if v < 900)
+    d = mrpl.load()
+    prod = (d.get("products") or {}).get("production_sales", [])
+    fin = (d.get("finance_esg") or {}).get("financials", [])
+    thr = (d.get("refinery") or {}).get("throughput", [])
+    nci = [f for t in ("refinery", "corporate", "finance_esg") for f in (d.get(t) or {}).get("facts", [])
+           if re.search(r"complexity", str(f.get("label", "")), re.I)]
+    cap = next((f for f in (d.get("corporate") or {}).get("facts", []) if f.get("key") == "refining_capacity"), None)
+    model = get_model()
     return {
-        "capacity_mmtpa": 15.0, "nci": 11.67,
-        "products": [{"name": k, "share_pct": round(100 * v / total, 1), "margin_usd_t": BASE_MARGIN[k]}
-                     for k, v in MAX_SALES.items() if v < 900],
-        "history": [s for s in series if s["product"] == "Diesel"] + fc,
-        "note": "Synthetic, illustrative planning data — not MRPL data.",
+        "capacity_mmtpa": float(cap["value"]) if cap else None, "capacity_source": cap.get("source_url") if cap else None,
+        "nci": 11.67 if any("11.67" in str(f.get("value")) for f in nci) else None,
+        "nci_sources": [{"value": f.get("value"), "label": f.get("label"), "period": f.get("period"), "source_url": f.get("source_url")} for f in nci],
+        "public": {"production_by_fy": prod, "financials": fin, "throughput": thr},
+        "model_complete": model["complete"], "note": "All figures are MRPL's published data with source links.",
     }
 
 
-def solve(hcu_down_days: float = 0, diesel_crack_delta: float = 0, petchem_margin_delta: float = 0,
-          crude_price_delta: float = 0) -> dict[str, Any]:
+# ------------------------------------------------------------------ plant model (entered by planner)
+def _kt_month(capacity: Any, unit: str) -> float | None:
+    try:
+        v = float(str(capacity).replace(",", "").split()[0])
+    except Exception:
+        return None
+    u = (unit or "").upper()
+    if "MMTPA" in u:
+        return round(v * 1000 / 12, 2)
+    if "KTPA" in u or "TMTPA" in u:
+        return round(v / 12, 2)
+    return None  # other units (KBPSD, MW, KLPD…) are not converted — planner enters them
+
+
+def default_model() -> dict[str, Any]:
+    d = mrpl.load()
+    units = []
+    for u in (d.get("refinery") or {}).get("units", []):
+        cap = _kt_month(u.get("capacity"), u.get("unit") or "")
+        if cap is None:
+            continue
+        units.append({"code": u.get("code") or u.get("name"), "name": u.get("name"), "capacity": u.get("capacity"), "unit": u.get("unit"),
+                      "capacity_kt_month": cap, "source_url": u.get("source_url"), "feed": "", "yields": {}, "enabled": False})
+    names = []
+    for r in (d.get("products") or {}).get("production_sales", []):
+        n = r.get("product")
+        if n and n not in names:
+            names.append(n)
+    products = [{"name": n, "price_usd_t": None, "min_kt": None, "max_kt": None} for n in names]
+    return {"units": units, "products": products, "crude_cost_usd_t": None, "notes": ""}
+
+
+def get_model() -> dict[str, Any]:
+    m = get_setting("production_model") or default_model()
+    m["missing"] = validate(m)
+    m["complete"] = not m["missing"]
+    return m
+
+
+def save_model(m: dict[str, Any], by: str) -> dict[str, Any]:
+    clean = {"units": m.get("units", []), "products": m.get("products", []), "crude_cost_usd_t": m.get("crude_cost_usd_t"),
+             "notes": m.get("notes", "")}
+    set_setting("production_model", clean, by)
+    return get_model()
+
+
+def validate(m: dict[str, Any]) -> list[str]:
+    missing: list[str] = []
+    active = [u for u in m.get("units", []) if u.get("enabled")]
+    if not active:
+        missing.append("Enable at least one process unit and enter its feed and product yields.")
+    if m.get("crude_cost_usd_t") in (None, ""):
+        missing.append("Crude cost (US$/t).")
+    prod_names = {p["name"] for p in m.get("products", [])}
+    for u in active:
+        if not u.get("capacity_kt_month"):
+            missing.append(f"{u['code']}: capacity (kt/month).")
+        if not u.get("feed"):
+            missing.append(f"{u['code']}: feed (\"crude\" or an intermediate product).")
+        ys = {k: v for k, v in (u.get("yields") or {}).items() if v not in (None, "")}
+        if not ys:
+            missing.append(f"{u['code']}: product yields.")
+        elif sum(float(v) for v in ys.values()) > 1.0001:
+            missing.append(f"{u['code']}: yields sum to more than 1.")
+        for p in ys:
+            if p not in prod_names:
+                missing.append(f"{u['code']}: yield product '{p}' is not in the product list.")
+    produced = {p for u in active for p, v in (u.get("yields") or {}).items() if v not in (None, "")}
+    for p in m.get("products", []):
+        if p["name"] in produced and p.get("price_usd_t") in (None, ""):
+            missing.append(f"{p['name']}: net-back price (US$/t).")
+    return missing
+
+
+# ------------------------------------------------------------------ optimizer
+def solve(body: dict[str, Any]) -> dict[str, Any]:
     import highspy
 
-    def run(hcu_avail: float, margins: dict[str, float]) -> dict[str, Any]:
+    m = get_model()
+    if not m["complete"]:
+        return {"error": "model_incomplete", "missing": m["missing"]}
+    down: dict[str, float] = {k: float(v) for k, v in (body.get("unit_down_days") or {}).items()}
+    if body.get("hcu_down_days"):
+        for u in m["units"]:
+            if "HCU" in str(u["code"]).upper() or "HYDROCRACK" in str(u.get("name", "")).upper():
+                down[u["code"]] = float(body["hcu_down_days"])
+    price_delta: dict[str, float] = {k: float(v) for k, v in (body.get("price_delta_usd_t") or {}).items()}
+    if body.get("petchem_margin_delta"):
+        for p in m["products"]:
+            if re.search(r"polyprop|paraxyl|benzene|xylene", p["name"], re.I):
+                price_delta[p["name"]] = price_delta.get(p["name"], 0) + float(body["petchem_margin_delta"])
+    crude_delta = float(body.get("crude_cost_delta_usd_t") or 0)
+
+    def run(apply: bool) -> dict[str, Any]:
         h = highspy.Highs()
         h.setOptionValue("output_flag", False)
         inf = highspy.kHighsInf
-        # variables: throughputs CDU, HCU, PFCC, COKER, CCR ; sales per product ; VGO/Residue/Naphtha to fuel oil/naphtha sale
-        prods = list(MAX_SALES)
-        var = ["CDU", "HCU", "PFCC", "COKER", "CCR"] + [f"S_{p}" for p in prods]
+        units = [u for u in m["units"] if u.get("enabled")]
+        prods = [p["name"] for p in m["products"]]
+        var = [f"U:{u['code']}" for u in units] + [f"S:{p}" for p in prods]
         idx = {v: i for i, v in enumerate(var)}
         n = len(var)
-        cost = np.zeros(n)
-        crude_cost = 0.0 + crude_price_delta * 7.33  # USD/t per $/bbl
-        cost[idx["CDU"]] = crude_cost
-        for p in prods:
-            cost[idx[f"S_{p}"]] = margins[p]
-        lb = np.zeros(n)
-        ub = np.full(n, inf)
-        ub[idx["CDU"]] = CAP["CDU"]
-        ub[idx["HCU"]] = CAP["HCU"] * hcu_avail
-        ub[idx["PFCC"]] = CAP["PFCC"]
-        ub[idx["COKER"]] = CAP["COKER"]
-        ub[idx["CCR"]] = CAP["CCR"]
-        for p in prods:
-            ub[idx[f"S_{p}"]] = MAX_SALES[p]
-            lb[idx[f"S_{p}"]] = 0.0
+        import numpy as np
+        lb, ub, cost = np.zeros(n), np.full(n, inf), np.zeros(n)
+        crude_cost = float(m["crude_cost_usd_t"]) + (crude_delta if apply else 0)
+        for u in units:
+            i = idx[f"U:{u['code']}"]
+            avail = max(0.0, 1 - (down.get(u["code"], 0) / 30.0 if apply else 0))
+            ub[i] = float(u["capacity_kt_month"]) * avail
+            if u["feed"] == "crude":
+                cost[i] = -crude_cost
+        for p in m["products"]:
+            i = idx[f"S:{p['name']}"]
+            price = p.get("price_usd_t")
+            cost[i] = (float(price) + (price_delta.get(p["name"], 0) if apply else 0)) if price not in (None, "") else 0.0
+            if p.get("max_kt") not in (None, ""):
+                ub[i] = float(p["max_kt"])
+            if p.get("min_kt") not in (None, ""):
+                lb[i] = float(p["min_kt"])
         h.addVars(n, lb, ub)
         h.changeColsCost(n, np.arange(n, dtype=np.int32), cost)
         h.changeObjectiveSense(highspy.ObjSense.kMaximize)
         rows: list[str] = []
-
-        def add_row(name: str, coefs: dict[str, float], lo: float, hi: float) -> None:
-            ii = np.array([idx[k] for k in coefs], dtype=np.int32)
-            vv = np.array(list(coefs.values()), dtype=float)
-            h.addRow(lo, hi, len(ii), ii, vv)
-            rows.append(name)
-
-        # intermediate balances: VGO -> HCU + PFCC (excess to Fuel Oil); Residue -> Coker (excess Fuel Oil); Naphtha pool -> CCR + sales
-        add_row("VGO balance", {"HCU": 1, "PFCC": 1, "CDU": -YIELD["CDU"]["VGO"]}, -inf, 0)
-        add_row("Residue balance", {"COKER": 1, "CDU": -YIELD["CDU"]["Residue"]}, -inf, 0)
-        # product balances: sales ≤ production (fuel oil absorbs leftover VGO/residue)
-        for p in prods:
-            coefs: dict[str, float] = {f"S_{p}": 1}
-            for u in ["CDU", "HCU", "PFCC", "COKER", "CCR"]:
-                y = YIELD[u].get(p, 0.0)
+        for p in prods:  # sales + feed consumption ≤ production
+            coefs: dict[int, float] = {idx[f"S:{p}"]: 1.0}
+            for u in units:
+                y = float((u.get("yields") or {}).get(p) or 0)
                 if y:
-                    coefs[u] = coefs.get(u, 0) - y
-            if p == "Naphtha":
-                coefs["CCR"] = coefs.get("CCR", 0) + 1.0
-            if p == "Fuel Oil":
-                coefs.update({"CDU": -(YIELD["CDU"]["VGO"] + YIELD["CDU"]["Residue"]), "HCU": 1.0, "PFCC": 1.0, "COKER": 1.0})
-            add_row(f"{p} balance", coefs, -inf, 0)
-        for p, mn in MIN_SALES.items():
-            add_row(f"{p} contract min", {f"S_{p}": 1}, mn, inf)
-        h.run()
+                    coefs[idx[f"U:{u['code']}"]] = coefs.get(idx[f"U:{u['code']}"], 0) - y
+                if u["feed"] == p:
+                    coefs[idx[f"U:{u['code']}"]] = coefs.get(idx[f"U:{u['code']}"], 0) + 1.0
+            ii = np.array(list(coefs), dtype=np.int32)
+            h.addRow(-inf, 0, len(ii), ii, np.array(list(coefs.values())))
+            rows.append(f"{p} balance")
+        st = h.run()
+        status = h.modelStatusToString(h.getModelStatus())
+        if status != "Optimal":
+            return {"status": status}
         sol = h.getSolution()
-        x = sol.col_value
-        duals = sol.row_dual
-        info = h.getInfo()
-        sales = {p: round(float(x[idx[f"S_{p}"]]), 1) for p in prods}
-        units = {u: round(float(x[idx[u]]), 1) for u in ["CDU", "HCU", "PFCC", "COKER", "CCR"]}
-        margin_usd = float(info.objective_function_value) * 1000  # kt → t
-        binding = [f"{u} at capacity" for u in units if ub[idx[u]] < inf and abs(units[u] - ub[idx[u]]) < 1e-3]
-        binding += [f"{p} market limit" for p in prods if MAX_SALES[p] < 900 and abs(sales[p] - MAX_SALES[p]) < 1e-3]
-        shadow = sorted(
-            [{"constraint": r, "value_usd_per_t": round(float(d), 1)} for r, d in zip(rows, duals) if abs(d) > 1e-6],
-            key=lambda s: -abs(s["value_usd_per_t"]))[:6]
-        # capacity shadow prices = reduced costs of throughput vars at bound
-        rc = sol.col_dual
-        for u in ["HCU", "PFCC", "COKER", "CCR", "CDU"]:
-            if abs(rc[idx[u]]) > 1e-6:
-                shadow.append({"constraint": f"+1 kt {u} capacity", "value_usd_per_t": round(float(rc[idx[u]]), 1)})
-        return {"sales": sales, "units": units, "margin_cr": round(margin_usd * USD_INR / 1e7, 2),
+        x, rc, duals = sol.col_value, sol.col_dual, sol.row_dual
+        sales = {p: round(float(x[idx[f"S:{p}"]]), 2) for p in prods}
+        thr = {u["code"]: round(float(x[idx[f"U:{u['code']}"]]), 2) for u in units}
+        binding = [f"{c} at capacity" for c in thr if ub[idx[f"U:{c}"]] < inf and abs(thr[c] - ub[idx[f"U:{c}"]]) < 1e-6]
+        shadow = [{"constraint": f"+1 kt/month {c} capacity", "value": round(float(rc[idx[f"U:{c}"]]) * 1000, 1)}
+                  for c in thr if abs(rc[idx[f"U:{c}"]]) > 1e-9]
+        shadow += [{"constraint": r, "value": round(float(dv) * 1000, 1)} for r, dv in zip(rows, duals) if abs(dv) > 1e-9]
+        return {"status": status, "sales": sales, "units": thr, "margin_usd": round(h.getInfo().objective_function_value * 1000, 0),
                 "binding": binding, "shadow": shadow}
 
-    base_m = dict(BASE_MARGIN)
-    scen_m = dict(BASE_MARGIN)
-    scen_m["Diesel"] += diesel_crack_delta * BBL_PER_T["Diesel"]
-    for p in ("Propylene", "Paraxylene", "Benzene"):
-        scen_m[p] += petchem_margin_delta
-    avail = max(0.0, 1 - hcu_down_days / 30.0)
-    base = run(1.0, base_m)
-    scen = run(avail, scen_m)
-    delta = {p: (round(100 * (scen["sales"][p] - base["sales"][p]) / base["sales"][p], 1) if base["sales"][p] > 1e-6 else 0.0)
+    base, scen = run(False), run(True)
+    if base.get("status") != "Optimal" or scen.get("status") != "Optimal":
+        return {"error": "infeasible", "missing": [f"Optimizer status: baseline {base.get('status')}, scenario {scen.get('status')} — check limits."]}
+    delta = {p: (round(100 * (scen["sales"][p] - base["sales"][p]) / base["sales"][p], 1) if base["sales"][p] > 1e-9 else 0.0)
              for p in base["sales"]}
-    assumptions = [
-        "Monthly LP, simplified fixed-yield units (CDU, HCU, PFCC, Coker, CCR); linear blending ignored for brevity.",
-        f"HCU availability {avail * 100:.0f}% ({hcu_down_days:g} days down); diesel crack Δ {diesel_crack_delta:+g} $/bbl; "
-        f"petchem margin Δ {petchem_margin_delta:+g} $/t; crude Δ {crude_price_delta:+g} $/bbl.",
-        "Contract minimums: Diesel 380, Petrol 150, ATF 90, LPG 40 kt/month; market caps per product.",
-        "Synthetic, illustrative yields and margins — not MRPL data. Advisory only: planners decide; no DCS/SCADA writes.",
-    ]
     return {"baseline": base["sales"], "scenario": scen["sales"], "units_baseline": base["units"], "units_scenario": scen["units"],
-            "delta_pct": delta, "margin_cr": {"baseline": base["margin_cr"], "scenario": scen["margin_cr"]},
-            "binding": scen["binding"], "shadow_prices": [{"constraint": s["constraint"], "value": s["value_usd_per_t"]} for s in scen["shadow"]],
-            "assumptions": assumptions}
+            "delta_pct": delta, "margin_usd": {"baseline": base["margin_usd"], "scenario": scen["margin_usd"]},
+            "binding": scen["binding"], "shadow_prices": scen["shadow"],
+            "assumptions": ["Linear model of the plant as entered by the planner in Yukti (capacities, yields, prices, limits).",
+                            f"Scenario: unit downtime {down or 'none'}, price changes {price_delta or 'none'}, crude cost change {crude_delta:+g} US$/t.",
+                            "Advisory only — planners decide; Yukti never writes to DCS/SCADA."]}

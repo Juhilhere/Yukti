@@ -1,13 +1,17 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { api, ApiError, onForbidden, onUnauthorized, setCsrf } from './api';
+import { api, ApiError, onForbidden, onPasswordChangeRequired, onUnauthorized, setCsrf } from './api';
 import type { Me } from './types';
 import { toast } from '../components/Toast';
 
 type AuthCtx = {
   me: Me | null;
   status: 'loading' | 'authed' | 'anon';
-  login: (username: string, password: string) => Promise<Me>;
+  login: (username: string, password: string, totp?: string) => Promise<Me>;
+  /** True when the user must change their (temporary) password before doing anything else. */
+  mustChangePassword: boolean;
+  /** LLM configuration rights (admin only): model loader, sampling, presets, system prompt. */
+  isLlmAdmin: boolean;
   logout: (all?: boolean) => Promise<void>;
   refresh: () => Promise<Me | null>;
   can: (perm?: string | string[]) => boolean;
@@ -25,12 +29,14 @@ function redirectToLogin() {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [me, setMe] = useState<Me | null>(null);
   const [status, setStatus] = useState<AuthCtx['status']>('loading');
+  const [pwForced, setPwForced] = useState(false);
   const qc = useQueryClient();
 
   const apply = useCallback((m: Me | null) => {
     setMe(m);
     setCsrf(m?.csrf_token ?? '');
     setStatus(m ? 'authed' : 'anon');
+    setPwForced(!!m?.user?.must_change_password);
   }, []);
 
   const refresh = useCallback(async () => {
@@ -56,11 +62,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       redirectToLogin();
     });
     const off2 = onForbidden((e) => toast.error('Access denied by policy', e.message));
-    return () => { off1(); off2(); };
+    const off3 = onPasswordChangeRequired(() => setPwForced(true));
+    return () => { off1(); off2(); off3(); };
   }, [apply, qc, status, me]);
 
-  const login = useCallback(async (username: string, password: string) => {
-    const m = await api.post<Me>('/api/auth/login', { username, password }, { silent: true });
+  const login = useCallback(async (username: string, password: string, totp?: string) => {
+    const body: Record<string, string> = { username, password };
+    if (totp) body.totp = totp;
+    const m = await api.post<Me>('/api/auth/login', body, { silent: true });
     apply(m);
     qc.clear();
     return m;
@@ -90,7 +99,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return list.some((p) => perms.includes(p) || perms.some((x) => x.endsWith('.*') && p.startsWith(x.slice(0, -1))));
   }, [me]);
 
-  const value = useMemo(() => ({ me, status, login, logout, refresh, can }), [me, status, login, logout, refresh, can]);
+  const perms = me?.permissions ?? [];
+  const isLlmAdmin = perms.includes('admin') || perms.includes('*') || perms.includes('models.manage') || perms.includes('ai.settings');
+  const mustChangePassword = !!me && (pwForced || !!me.user?.must_change_password);
+  const value = useMemo(() => ({ me, status, login, logout, refresh, can, isLlmAdmin, mustChangePassword }),
+    [me, status, login, logout, refresh, can, isLlmAdmin, mustChangePassword]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

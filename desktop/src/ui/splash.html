@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file:; style-src 'self'; script-src 'self'">
+<title>Starting Yukti</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="brand">
+    <img src="../../build/icon.png" alt="">
+    <div><h1>Starting Yukti</h1><small>All-in-one mode · server on 127.0.0.1:8000</small></div>
+  </div>
+  <div class="bar"><div id="bar"></div></div>
+  <div class="msg" id="status">Preparing…</div>
+  <details id="det">
+    <summary>Server logs</summary>
+    <pre id="log"></pre>
+  </details>
+  <div class="foot">
+    <span id="elapsed"></span>
+    <span class="row">
+      <button id="settings">Settings…</button>
+      <button id="retry" class="hidden">Retry</button>
+      <button id="quit">Quit</button>
+    </span>
+  </div>
+<script src="splash.js"></script>
+</body>
+</html>

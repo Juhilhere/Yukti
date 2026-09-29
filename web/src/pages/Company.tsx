@@ -8,6 +8,7 @@ import {
   Info, Landmark, Leaf, Layers, Network, Newspaper, Package, Search, ShieldCheck, Store, TrendingUp, Users, Zap,
 } from 'lucide-react';
 import { api } from '../lib/api';
+import { AMBER, AXIS, CYAN, GRID, OTHER, SERIES, SURFACE, axisProps, tooltipStyle } from '../lib/chartTheme';
 import { useDepartments } from '../lib/queries';
 import { cx, fmtDate } from '../lib/format';
 import { Badge, Card, ErrorBox, Tabs, Tip } from '../components/ui';
@@ -99,13 +100,6 @@ function groupBy<T>(xs: T[], key: (x: T) => string): [string, T[]][] {
 }
 
 /* chart styling — matches Production page tokens; categorical order validated for the dark surface */
-const CYAN = '#22D3EE';
-const AMBER = '#F5A524';
-const GRID = '#26324A';
-const AXIS = '#8A98B3';
-const SERIES = ['#0891B2', '#D97706', '#8B5CF6', '#EC4899', '#3B82F6', '#65A30D'];
-const tooltipStyle = { background: '#182338', border: '1px solid #26324A', borderRadius: 6, fontSize: 12, color: '#E6EDF7' };
-const axisProps = { stroke: AXIS, tick: { fontSize: 11, fill: AXIS }, tickLine: false } as const;
 
 /* ============================== atoms ============================== */
 function SrcLink({ url, title, className }: { url?: string | null; title?: string | null; className?: string }) {
@@ -394,7 +388,7 @@ function RefineryTab({ d }: { d: CompanyPayload }) {
                 <XAxis dataKey="fy" {...axisProps} />
                 <YAxis {...axisProps} axisLine={false} width={44} unit="%" domain={['auto', 'auto']} />
                 <Tooltip contentStyle={tooltipStyle} formatter={(v: unknown) => [`${fmtN(v, 1)}%`, 'Utilisation']} />
-                <Line dataKey="util" name="Utilisation %" stroke={AMBER} strokeWidth={2} dot={{ r: 4, fill: AMBER, stroke: '#111A2B', strokeWidth: 2 }} connectNulls />
+                <Line dataKey="util" name="Utilisation %" stroke={AMBER} strokeWidth={2} dot={{ r: 4, fill: AMBER, stroke: SURFACE, strokeWidth: 2 }} connectNulls />
               </LineChart>
             </ChartBox>
           )}
@@ -510,7 +504,7 @@ function ProductsTab({ d }: { d: CompanyPayload }) {
               <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.04)' }} formatter={(v: unknown, n: unknown) => [`${fmtN(v, 0)} kt`, String(n)]} />
               <Legend wrapperStyle={{ fontSize: 11, color: AXIS }} iconType="square" iconSize={9} />
               {chart.keys.map((k, i) => (
-                <Bar key={k} dataKey={k} stackId="a" fill={k === 'Other' ? '#5B6882' : SERIES[i % SERIES.length]} stroke="#111A2B" strokeWidth={1}
+                <Bar key={k} dataKey={k} stackId="a" fill={k === 'Other' ? OTHER : SERIES[i % SERIES.length]} stroke={SURFACE} strokeWidth={1}
                   radius={i === chart.keys.length - 1 ? [4, 4, 0, 0] : undefined} maxBarSize={44} />
               ))}
             </BarChart>
@@ -615,7 +609,7 @@ function FinancialsTab({ d }: { d: CompanyPayload }) {
                 <XAxis dataKey="fy" {...axisProps} />
                 <YAxis {...axisProps} axisLine={false} width={40} unit="$" />
                 <Tooltip contentStyle={tooltipStyle} formatter={(v: unknown) => [`US$ ${fmtN(v, 2)}/bbl`, 'GRM']} />
-                <Line dataKey="grm" stroke={AMBER} strokeWidth={2} dot={{ r: 4, fill: AMBER, stroke: '#111A2B', strokeWidth: 2 }} connectNulls />
+                <Line dataKey="grm" stroke={AMBER} strokeWidth={2} dot={{ r: 4, fill: AMBER, stroke: SURFACE, strokeWidth: 2 }} connectNulls />
               </LineChart>
             </ChartBox>
           )}

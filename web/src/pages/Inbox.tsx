@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
-import { ArrowUpRight, Check, Clock, FileText, Inbox as InboxIcon, KeyRound, ShieldCheck, X, Eye } from 'lucide-react';
-import { api } from '../lib/api';
+import { ArrowUpRight, Check, Clock, FileText, History, Inbox as InboxIcon, KeyRound, ShieldCheck, StickyNote, X, Eye } from 'lucide-react';
+import { Modal } from '../components/Modal';
+import { useT } from '../lib/i18n';
+import { api, errMsg } from '../lib/api';
 import type { AccessRequest, Finding, Grant } from '../lib/types';
 import { useAuth } from '../lib/auth';
-import { Badge, Card, EmptyState, ErrorBox, PageHeader, QueryState, Spinner, StatusChip, Tabs, toneFor } from '../components/ui';
+import { Badge, Card, EmptyState, ErrorBox, PageHeader, ProvenanceBadges, QueryState, Spinner, StatusChip, Tabs, toneFor } from '../components/ui';
 import { toast } from '../components/Toast';
 import { countdown, cx, fmtDate, fmtTime, timeAgo } from '../lib/format';
 
 type Tab = 'findings' | 'requests' | 'grants';
-type FindingAction = 'acknowledge' | 'approve' | 'reject' | 'escalate';
+type FindingAction = 'acknowledge' | 'approve' | 'reject' | 'escalate' | 'note';
 
 export default function Inbox() {
   const [tab, setTab] = useState<Tab>('findings');
@@ -18,13 +20,14 @@ export default function Inbox() {
   const ars = useQuery({ queryKey: ['access-requests'], queryFn: () => api.get<{ mine: AccessRequest[]; to_approve: AccessRequest[] }>('/api/access-requests') });
   const grants = useQuery({ queryKey: ['grants'], queryFn: () => api.get<Grant[]>('/api/grants') });
 
-  const openFindings = (findings.data ?? []).filter((f) => !['approved', 'rejected', 'closed'].includes((f.state || '').toLowerCase())).length;
+  const t = useT();
+  const openFindings = (findings.data ?? []).filter((f) => (f.allowed_actions ?? []).some((a) => a !== 'note')).length;
   const pendingAr = (ars.data?.to_approve ?? []).filter((a) => (a.state || '').toLowerCase() === 'pending').length;
   const activeGrants = (grants.data ?? []).filter((g) => new Date(g.expires_at).getTime() > Date.now()).length;
 
   return (
     <div className="flex h-full flex-col">
-      <PageHeader icon={<InboxIcon size={18} />} title="Inbox" subtitle="Approvals, findings and time-bound access — human-in-the-loop decisions, all audited" />
+      <PageHeader icon={<InboxIcon size={18} />} title={t('page.inbox')} subtitle={t('page.inbox.sub')} />
       <Tabs className="px-4" value={tab} onChange={setTab} tabs={[
         { id: 'findings', label: 'Approvals & Findings', count: openFindings },
         { id: 'requests', label: 'Access requests', count: pendingAr },
@@ -50,23 +53,38 @@ function FindingsTab({ q }: { q: UseQueryResult<Finding[]> }) {
   );
 }
 
+const ACTION_META: Record<string, { key: string; icon: React.ReactNode; cls: string; done: string }> = {
+  acknowledge: { key: 'btn.acknowledge', icon: <Eye size={12} />, cls: 'btn-sm', done: 'Finding acknowledged' },
+  approve: { key: 'btn.approve', icon: <Check size={12} />, cls: 'btn-sm btn-cyan', done: 'Finding approved' },
+  reject: { key: 'btn.reject', icon: <X size={12} />, cls: 'btn-sm btn-danger', done: 'Finding rejected' },
+  escalate: { key: 'btn.escalate', icon: <ArrowUpRight size={12} className="text-amber" />, cls: 'btn-sm', done: 'Finding escalated' },
+};
+
 function FindingCard({ f }: { f: Finding }) {
   const qc = useQueryClient();
+  const t = useT();
+  const [noteOpen, setNoteOpen] = useState(false);
   const [note, setNote] = useState('');
-  const [showNote, setShowNote] = useState(false);
+  const [showHist, setShowHist] = useState(false);
   const act = useMutation({
-    mutationFn: (action: FindingAction) => api.post<Finding>(`/api/findings/${encodeURIComponent(f.id)}/action`, { action, note: note || undefined }),
-    onSuccess: (r, action) => {
-      toast.success(`Finding ${action === 'acknowledge' ? 'acknowledged' : action === 'escalate' ? 'escalated' : action + 'd'}`, r?.title || f.title);
-      setNote(''); setShowNote(false);
+    mutationFn: ({ action, note: n }: { action: FindingAction; note?: string }) =>
+      api.post<Finding>(`/api/findings/${encodeURIComponent(f.id)}/action`, n ? { action, note: n } : { action }),
+    onSuccess: (r, v) => {
+      const title = v.action === 'note' ? 'Note added' : ACTION_META[v.action]?.done ?? 'Done';
+      toast.success(title, r?.state ? `${r.title || f.title} — now ${r.state}` : (r?.title || f.title));
+      setNote(''); setNoteOpen(false);
       qc.invalidateQueries({ queryKey: ['findings'] });
     },
-    onError: (e) => toast.error('Action failed', (e as Error).message),
+    onError: (e) => toast.error('Action failed', errMsg(e)),
   });
+  const allowed = f.allowed_actions ?? [];
+  const buttons = allowed.filter((a) => a in ACTION_META);
+  const canNote = allowed.includes('note');
   const state = (f.state || '').toLowerCase();
   const closed = ['approved', 'rejected', 'closed'].includes(state);
   const overdue = f.due_date && new Date(f.due_date).getTime() < Date.now() && !closed;
   const sevTone = toneFor(f.severity);
+  const hist = f.history ?? [];
   return (
     <div className={cx('rounded-md border bg-surface p-3', sevTone === 'danger' ? 'border-danger/40' : 'border-border')}>
       <div className="flex items-start gap-2">
@@ -77,7 +95,9 @@ function FindingCard({ f }: { f: Finding }) {
             <StatusChip status={f.severity} />
             <StatusChip status={f.state} />
             {f.discipline && <Badge tone="muted">{f.discipline}</Badge>}
-            <span className="ml-auto font-mono text-[10.5px] text-faint">{f.id}</span>
+            <ProvenanceBadges isExample={f.is_example} />
+            {f.discipline_approver && <Badge tone="violet" title="You are the discipline approver for this finding">approver</Badge>}
+            <span className="ml-auto font-mono text-[10.5px] text-faint">{f.id.slice(0, 8)}</span>
           </div>
           <div className="mt-1.5 font-medium">{f.title}</div>
           {f.evidence && <div className="mt-1 line-clamp-3 text-[12px] text-muted">{f.evidence}</div>}
@@ -89,23 +109,44 @@ function FindingCard({ f }: { f: Finding }) {
                 <FileText size={11} /> Evidence{f.page ? ` p.${f.page}` : ''}
               </Link>
             )}
+            {hist.length > 0 && <button className="flex items-center gap-1 hover:text-text" onClick={() => setShowHist((x) => !x)}><History size={11} />History ({hist.length})</button>}
             <span className="text-faint">{timeAgo(f.created_at)}</span>
           </div>
-          {!closed && (
-            <div className="mt-2.5 space-y-2">
-              {showNote && <textarea className="input min-h-[48px] text-[12px]" placeholder="Note (optional, recorded in audit log)" value={note} onChange={(e) => setNote(e.target.value)} />}
-              <div className="flex flex-wrap items-center gap-1.5">
-                <button className="btn btn-sm" disabled={act.isPending} onClick={() => act.mutate('acknowledge')}><Eye size={12} /> Acknowledge</button>
-                <button className="btn btn-sm btn-cyan" disabled={act.isPending} onClick={() => act.mutate('approve')}><Check size={12} /> Approve</button>
-                <button className="btn btn-sm btn-danger" disabled={act.isPending} onClick={() => act.mutate('reject')}><X size={12} /> Reject</button>
-                <button className="btn btn-sm" disabled={act.isPending} onClick={() => act.mutate('escalate')}><ArrowUpRight size={12} className="text-amber" /> Escalate</button>
-                <button className="btn btn-sm btn-ghost text-muted" onClick={() => setShowNote((s) => !s)}>{showNote ? 'Hide note' : 'Add note'}</button>
-                {act.isPending && <Spinner />}
-              </div>
+          {showHist && hist.length > 0 && (
+            <ol className="mt-2 space-y-1 border-l border-border pl-3 text-[11.5px]">
+              {hist.map((h, i) => (
+                <li key={i}>
+                  <span className="font-mono text-faint">{fmtTime(h.at)}</span> <span className="font-medium">{h.event}</span> <span className="text-muted">· {h.by}</span>
+                  {h.note ? <span className="text-muted"> — {h.note}</span> : null}
+                </li>
+              ))}
+            </ol>
+          )}
+          {(buttons.length > 0 || canNote) && (
+            <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+              {buttons.map((a) => {
+                const m = ACTION_META[a];
+                return <button key={a} className={cx('btn', m.cls)} disabled={act.isPending} onClick={() => act.mutate({ action: a as FindingAction })}>{m.icon} {t(m.key)}</button>;
+              })}
+              {canNote && <button className="btn btn-sm btn-ghost text-muted" disabled={act.isPending} onClick={() => { setNote(''); setNoteOpen(true); }}><StickyNote size={12} /> {t('btn.addNote')}</button>}
+              {act.isPending && <Spinner />}
             </div>
           )}
+          {buttons.length === 0 && !canNote && <div className="mt-2 text-[11px] text-faint">No actions available to you for this finding.</div>}
         </div>
       </div>
+      <Modal open={noteOpen} onClose={() => setNoteOpen(false)} width={440} title={t('btn.addNote')} icon={<StickyNote size={14} className="text-amber" />}
+        footer={<>
+          <button className="btn btn-ghost" onClick={() => setNoteOpen(false)}>{t('btn.cancel')}</button>
+          <button className="btn btn-primary" disabled={!note.trim() || act.isPending} onClick={() => act.mutate({ action: 'note', note: note.trim() })}>
+            {act.isPending ? <Spinner className="!text-[#1a1204]" /> : <StickyNote size={12} />}{t('btn.save')}
+          </button>
+        </>}>
+        <div className="space-y-2">
+          <div className="text-[12px] text-muted">Adds a note to <span className="font-mono text-text">{f.tag}</span> without changing its state. Recorded in the audit log.</div>
+          <textarea autoFocus className="input min-h-[90px]" value={note} onChange={(e) => setNote(e.target.value)} />
+        </div>
+      </Modal>
     </div>
   );
 }

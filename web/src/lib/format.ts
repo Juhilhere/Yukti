@@ -56,3 +56,9 @@ export function estimateTokens(text: string): number {
 export function cx(...c: (string | false | null | undefined)[]): string {
   return c.filter(Boolean).join(' ');
 }
+
+/** Human label for a role code (e.g. dept_manager → Head of Department (HOD)). */
+const ROLE_LABELS: Record<string, string> = { dept_manager: 'Head of Department (HOD)' };
+export function roleLabel(role: string): string {
+  return ROLE_LABELS[role] ?? role;
+}

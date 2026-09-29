@@ -5,7 +5,11 @@ import os
 import shutil
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]          # E:\SIH-2026-PS2\yukti
+import sys
+
+# ROOT = Yukti installation folder. Frozen bundle: folder of yukti-server.exe; dev: repository root.
+ROOT = Path(os.environ.get("YUKTI_HOME") or (Path(sys.executable).parent if getattr(sys, "frozen", False)
+                                               else Path(__file__).resolve().parents[2]))
 BACKEND = ROOT / "backend"
 DATA = ROOT / "data"
 STORE = DATA / "store"
@@ -15,6 +19,7 @@ CORPUS = DATA / "corpus"
 WEB_DIST = ROOT / "web" / "dist"
 DB_PATH = STORE / "yukti.db"
 LOG_DIR = STORE / "logs"
+POLICY_FILE = ROOT / "backend" / "policies" / "core.yaml"
 MODELS_DIRS = [
     ROOT / "models",
     Path.home() / ".lmstudio" / "models",
@@ -22,18 +27,46 @@ MODELS_DIRS = [
 for p in (STORE, BLOBS, REPORTS, LOG_DIR, ROOT / "models"):
     p.mkdir(parents=True, exist_ok=True)
 
-VERSION = "0.1.0-demo"
+VERSION = "0.3.0"
 TIER = os.environ.get("YUKTI_TIER", "demo")
 DEMO_MODE = TIER in ("demo", "dev")
 
-API_HOST = "127.0.0.1"
+API_HOST = os.environ.get("YUKTI_HOST", "127.0.0.1")  # 0.0.0.0 to serve employee desktop clients on the plant LAN
 API_PORT = int(os.environ.get("YUKTI_PORT", "8000"))
 
+def _first(*cands: str | Path | None) -> str:
+    for c in cands:
+        if c and Path(c).exists():
+            return str(c)
+    return ""
+
+
+# Bundled llama.cpp builds first (shipped with Yukti), then dev locations. No external runtime (Bionic/Ollama/vLLM) required.
 LLAMA_BINARIES = {
-    "cuda": os.environ.get("YUKTI_LLAMA_CUDA", "E:/tools/llama-cuda/llama-server.exe"),
-    "vulkan": shutil.which("llama-server") or "llama-server",
+    "cuda": _first(os.environ.get("YUKTI_LLAMA_CUDA"), ROOT / "llama" / "cuda" / "llama-server.exe", "E:/tools/llama-cuda/llama-server.exe"),
+    "vulkan": _first(os.environ.get("YUKTI_LLAMA_VULKAN"), ROOT / "llama" / "vulkan" / "llama-server.exe", shutil.which("llama-server")),
 }
-LLAMA_SERVER = LLAMA_BINARIES["cuda"] if Path(LLAMA_BINARIES["cuda"]).exists() else LLAMA_BINARIES["vulkan"]
+
+
+def has_nvidia_gpu() -> bool:
+    try:
+        import pynvml
+        pynvml.nvmlInit()
+        return pynvml.nvmlDeviceGetCount() > 0
+    except Exception:
+        return False
+
+
+def pick_backend(requested: str | None = None) -> str:
+    """auto → CUDA when an NVIDIA GPU and the CUDA build exist, else Vulkan (AMD/Intel GPUs, or CPU with 0 GPU layers)."""
+    if requested in ("cuda", "vulkan") and LLAMA_BINARIES.get(requested):
+        return requested
+    if LLAMA_BINARIES["cuda"] and has_nvidia_gpu():
+        return "cuda"
+    return "vulkan" if LLAMA_BINARIES["vulkan"] else "cuda"
+
+
+LLAMA_SERVER = LLAMA_BINARIES[pick_backend()] or "llama-server"
 LLAMA_PORT = 8080
 BIONIC_URL = os.environ.get("YUKTI_BIONIC_URL", "http://127.0.0.1:1234/v1")
 VLLM_URL = os.environ.get("YUKTI_VLLM_URL", "http://127.0.0.1:8001/v1")

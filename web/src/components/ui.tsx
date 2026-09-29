@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AlertTriangle, Info, Inbox, Loader2 } from 'lucide-react';
 import { cx } from '../lib/format';
 import { errMsg } from '../lib/api';
+import { LANGS, setLang, useLang, useT } from '../lib/i18n';
 
 /* ---------- Badge / StatusChip ---------- */
 export type Tone = 'neutral' | 'amber' | 'cyan' | 'danger' | 'ok' | 'muted' | 'violet';
@@ -40,8 +41,34 @@ export function toneFor(s?: string | null): Tone {
   return STATUS_TONES[s] ?? STATUS_TONES[s.toLowerCase()] ?? STATUS_TONES[s.toUpperCase()] ?? 'neutral';
 }
 export function StatusChip({ status, className, title }: { status?: string | null; className?: string; title?: string }) {
-  const t = toneFor(status);
-  return <Badge tone={t} mono dashed={status === 'MISSING'} className={className} title={title}>{status || '—'}</Badge>;
+  const tone = toneFor(status);
+  const t = useT();
+  const label = status ? t(`status.${status}`, status) : '—';
+  return <Badge tone={tone} mono dashed={status === 'MISSING'} className={className} title={title ?? (label !== status ? status ?? undefined : undefined)}>{label}</Badge>;
+}
+
+/** EXAMPLE / PUBLIC SOURCE provenance badges for documents, sources, assets, findings. */
+export function ProvenanceBadges({ isExample, isPublic }: { isExample?: boolean | null; isPublic?: boolean | null }) {
+  const t = useT();
+  return <>
+    {isExample ? <Badge tone="amber" className="font-semibold tracking-wide" title={t('badge.example.tip')}>{t('badge.example')}</Badge> : null}
+    {isPublic ? <Badge tone="ok" className="font-semibold tracking-wide" title={t('badge.public.tip')}>{t('badge.public')}</Badge> : null}
+  </>;
+}
+
+/** Language selector (English / हिंदी / ಕನ್ನಡ) — stored in localStorage. */
+export function LangSwitcher({ className }: { className?: string }) {
+  const lang = useLang();
+  return (
+    <div className={cx('inline-flex overflow-hidden rounded-md border border-border', className)} role="group" aria-label="Language">
+      {LANGS.map((l) => (
+        <button key={l.id} type="button" onClick={() => setLang(l.id)}
+          className={cx('px-2.5 py-1 text-[12px] transition-colors', lang === l.id ? 'bg-amber/15 text-amber' : 'text-muted hover:bg-surface-3 hover:text-text')}>
+          {l.label}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 export function Dot({ tone = 'ok', pulse }: { tone?: 'ok' | 'amber' | 'danger' | 'muted' | 'cyan'; pulse?: boolean }) {

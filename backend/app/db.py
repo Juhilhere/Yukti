@@ -84,7 +84,9 @@ CREATE TABLE IF NOT EXISTS users(
   id TEXT PRIMARY KEY, username TEXT UNIQUE NOT NULL, display_name TEXT, post TEXT, department TEXT,
   clearance INTEGER DEFAULT 1, roles_json TEXT DEFAULT '[]', asset_scopes_json TEXT DEFAULT '[]',
   reporting_to TEXT, status TEXT DEFAULT 'active', attr_version INTEGER DEFAULT 1,
-  password_hash TEXT, demo_password TEXT, failed_count INTEGER DEFAULT 0, locked_until TEXT, created_at TEXT);
+  password_hash TEXT, demo_password TEXT, failed_count INTEGER DEFAULT 0, locked_until TEXT, created_at TEXT,
+  must_change_password INTEGER DEFAULT 0, mfa_enabled INTEGER DEFAULT 0, mfa_secret TEXT, mfa_pending_secret TEXT, mfa_last_step INTEGER,
+  recovery_json TEXT, last_login_at TEXT);
 CREATE TABLE IF NOT EXISTS sessions(
   id TEXT PRIMARY KEY, token_hash TEXT UNIQUE, user_id TEXT REFERENCES users(id), csrf_token TEXT,
   attr_version INTEGER, ip TEXT, user_agent TEXT, created_at TEXT, last_seen_at TEXT,
@@ -95,7 +97,8 @@ CREATE TABLE IF NOT EXISTS documents(
   id TEXT PRIMARY KEY, title TEXT, doc_number TEXT, revision TEXT, status TEXT DEFAULT 'CURRENT',
   doc_type TEXT, department TEXT, classification INTEGER DEFAULT 1, sensitivity_json TEXT DEFAULT '[]',
   effective_date TEXT, supersedes TEXT, asset_tags_json TEXT DEFAULT '[]', file_path TEXT, file_name TEXT,
-  mime TEXT, sha256 TEXT, size_bytes INTEGER, pages INTEGER DEFAULT 0, uploaded_by TEXT, created_at TEXT);
+  mime TEXT, sha256 TEXT, size_bytes INTEGER, pages INTEGER DEFAULT 0, uploaded_by TEXT, created_at TEXT,
+  is_example INTEGER DEFAULT 0, is_public INTEGER DEFAULT 0, source_url TEXT);
 CREATE TABLE IF NOT EXISTS pages(
   id TEXT PRIMARY KEY, document_id TEXT REFERENCES documents(id) ON DELETE CASCADE, page_no INTEGER,
   mode TEXT, text TEXT, ocr_conf REAL);
@@ -109,7 +112,7 @@ CREATE TABLE IF NOT EXISTS jobs(
 
 CREATE TABLE IF NOT EXISTS assets(
   tag TEXT PRIMARY KEY, name TEXT, unit TEXT, class TEXT, vendor TEXT, model TEXT, serial TEXT, location TEXT,
-  owner_department TEXT, criticality TEXT, specs_json TEXT DEFAULT '{}');
+  owner_department TEXT, criticality TEXT, specs_json TEXT DEFAULT '{}', is_example INTEGER DEFAULT 1);
 CREATE TABLE IF NOT EXISTS tag_alias(alias TEXT PRIMARY KEY, tag TEXT);
 CREATE TABLE IF NOT EXISTS ledger_items(
   id TEXT PRIMARY KEY, tag TEXT, type TEXT, ref_no TEXT, issued_on TEXT, expires_on TEXT);
@@ -141,11 +144,15 @@ CREATE TABLE IF NOT EXISTS grants(
 
 CREATE TABLE IF NOT EXISTS findings(
   id TEXT PRIMARY KEY, title TEXT, tag TEXT, discipline TEXT, severity TEXT, state TEXT, due_date TEXT,
-  evidence TEXT, source_document_id TEXT, page INTEGER, approver_id TEXT, history_json TEXT DEFAULT '[]', created_at TEXT);
+  evidence TEXT, source_document_id TEXT, page INTEGER, approver_id TEXT, history_json TEXT DEFAULT '[]', created_at TEXT, is_example INTEGER DEFAULT 0);
 CREATE TABLE IF NOT EXISTS notifications(
   id TEXT PRIMARY KEY, user_id TEXT, kind TEXT, title TEXT, body TEXT, link TEXT, read_at TEXT, created_at TEXT);
 CREATE TABLE IF NOT EXISTS reports(
   id TEXT PRIMARY KEY, kind TEXT, file_name TEXT, file_path TEXT, sha256 TEXT, created_by TEXT, created_at TEXT);
+CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value_json TEXT, updated_by TEXT, updated_at TEXT);
+CREATE TABLE IF NOT EXISTS feedback(id TEXT PRIMARY KEY, message_id TEXT, user_id TEXT, rating INTEGER, comment TEXT, created_at TEXT);
+CREATE TABLE IF NOT EXISTS answer_stats(id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT, user_id TEXT, department TEXT, intent TEXT, engine TEXT, model TEXT,
+  tokens_in INTEGER, tokens_out INTEGER, tok_per_s REAL, ttft_ms REAL, total_ms REAL, error TEXT, denied INTEGER DEFAULT 0);
 CREATE TABLE IF NOT EXISTS engines(id TEXT PRIMARY KEY, base_url TEXT, api_key TEXT);
 CREATE TABLE IF NOT EXISTS laya_log(id INTEGER PRIMARY KEY AUTOINCREMENT, text TEXT, decision_json TEXT, latency_ms REAL, at TEXT);
 
@@ -159,3 +166,12 @@ CREATE TRIGGER IF NOT EXISTS audit_no_delete BEFORE DELETE ON audit_log BEGIN SE
 
 def init_db() -> None:
     db().executescript(SCHEMA)
+
+
+def get_setting(key: str, default: Any = None) -> Any:
+    r = q1("SELECT value_json FROM settings WHERE key=?", (key,))
+    return uj(r["value_json"], default) if r else default
+
+
+def set_setting(key: str, value: Any, by: str = "system") -> None:
+    ex("INSERT OR REPLACE INTO settings(key, value_json, updated_by, updated_at) VALUES(?,?,?,?)", (key, j(value), by, now_iso()))

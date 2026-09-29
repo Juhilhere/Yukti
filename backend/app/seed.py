@@ -1,45 +1,61 @@
-"""Idempotent demo seeding: personas, org, assets, ledger, work orders, contacts, facts, presets, corpus ingestion."""
+"""Seeding (idempotent).
+
+What is seeded — and what is NOT:
+- Employees: fictional demo accounts (employee data may be generated), mapped onto MRPL's real, publicly listed departments.
+- MRPL public intelligence: loaded by app.mrpl (real, cited).
+- EXAMPLE documents: ~15 sample plant documents written by Team UniMinds, every page watermarked
+  "EXAMPLE – prepared by Team UniMinds – NOT MRPL DATA"; flagged is_example in the DB and in the UI.
+- Only the assets / work orders / facts that those example documents themselves describe are loaded (also flagged EXAMPLE).
+- Nothing else: no invented asset register, contacts, production data, presets or performance numbers.
+"""
 from __future__ import annotations
 
 import json
-from datetime import date, datetime, timedelta, timezone
-from pathlib import Path
+from datetime import date, timedelta
 
 from . import audit, rag
 from .auth import hash_password
 from .config import CLEARANCE_BY_LABEL, CORPUS, DATA
 from .db import ex, j, new_id, now_iso, q, q1
-from .llm_params import DEFAULT_PREDICTION
 
 STRUCT = DATA / "structured"
 
-PERSONAS = [
-    # username, display, post, dept, clearance, roles, scopes, password
-    ("ravi.e", "Ravi Easwaran", "Senior Electrician (Shift)", "Electrical", 1, ["engineer"], ["CDU-1", "VDU-1"], "Ravi@2026"),
-    ("anil.u", "Anil Shetty", "Boiler Engineer", "Utilities", 1, ["engineer"], ["UTIL"], "Anil@2026"),
-    ("suresh.em", "Suresh Rao", "Manager — Electrical", "Electrical", 2, ["dept_manager", "approver:electrical", "engineer"], ["*"], "Suresh@2026"),
-    ("kavita.fm", "Kavita Nair", "Manager — Finance", "Finance", 3, ["dept_manager", "approver:finance"], [], "Kavita@2026"),
-    ("meera.me", "Meera Pai", "Mechanical Engineer (Static)", "Mechanical", 1, ["engineer", "approver:mechanical"], ["CDU-1", "HCU", "UTIL"], "Meera@2026"),
-    ("priya.hse", "Priya D'Souza", "HSE Officer", "HSE", 2, ["hse"], ["*"], "Priya@2026"),
-    ("vikram.op", "Vikram Kulkarni", "Process Engineer — Amine/SRU", "Operations", 2, ["engineer", "process"], ["SRU", "CDU-1"], "Vikram@2026"),
-    ("arjun.pl", "Arjun Hegde", "Production Planner", "Planning", 1, ["planner"], [], "Arjun@2026"),
-    ("deepa.au", "Deepa Menon", "Internal Auditor", "Audit", 3, ["auditor"], [], "Deepa@2026"),
-    ("ramesh.pm", "Ramesh Bhat", "Plant Manager", "Management", 3, ["plant_manager", "dept_manager"], ["*"], "Ramesh@2026"),
-    ("contractor.x", "Vendor Technician", "Contractor (Mechanical)", "Mechanical", 0, ["contractor"], ["CDU-1"], "Vendor@2026"),
-    ("admin", "Yukti Admin", "Platform Administrator", "IT", 3, ["admin"], ["*"], "Admin@2026"),
-]
-DEPT_MANAGERS = {"Electrical": "suresh.em", "Finance": "kavita.fm", "Management": "ramesh.pm", "Mechanical": "meera.me",
-                 "Operations": "ramesh.pm", "Utilities": "ramesh.pm", "HSE": "ramesh.pm", "Instrumentation": "suresh.em"}
+# Internal example-corpus department names  →  MRPL's real department names (from mrpl.co.in / annual report)
+DEPT_MAP = {
+    "Electrical": "Electrical Maintenance", "Mechanical": "Mechanical Maintenance", "Instrumentation": "Instrumentation Maintenance",
+    "Operations": "Operations (Production)", "Utilities": "Captive Power Plants & Utilities", "HSE": "Health, Safety & Environment",
+    "Finance": "Finance & Accounts", "Management": "MD Office", "Planning": "Production Planning & Quality Control (PP & QC)",
+    "Audit": "Internal Audit", "IT": "Information Systems (IT/SAP)",
+}
 
-PRESETS = [
-    ("Yukti — Plant Q&A (precise)", "Grounded, low-temperature answers with citations.", "",
-     {"temperature": 0.2, "top_k": 40, "top_p": 0.9, "min_p": 0.05, "repeat_penalty": 1.1, "max_tokens": 900}),
-    ("Creative drafting", "Drafting notes, emails and summaries.", "Write clear, professional plant documentation.",
-     {"temperature": 0.9, "top_k": 80, "top_p": 0.95, "min_p": 0.02, "repeat_penalty": 1.05, "max_tokens": 1500}),
-    ("Deterministic (greedy)", "Reproducible outputs for audits and benchmarks.", "",
-     {"temperature": 0.0, "top_k": 1, "top_p": 1.0, "min_p": 0.0, "seed": 42, "max_tokens": 800}),
-    ("JSON extraction", "Structured extraction with low temperature.", "Return only valid JSON.",
-     {"temperature": 0.0, "top_k": 20, "top_p": 0.9, "max_tokens": 600}),
+PERSONAS = [
+    # username, display, post, real department, clearance, roles, asset scopes (plant units), password
+    ("ravi.e", "Ravi Easwaran", "Senior Electrician (Shift)", "Electrical Maintenance", 1, ["engineer"], ["CDU-1", "VDU-1"], "Ravi@2026"),
+    ("anil.u", "Anil Shetty", "Boiler Engineer", "Captive Power Plants & Utilities", 1, ["engineer"], ["UTIL"], "Anil@2026"),
+    ("suresh.em", "Suresh Rao", "HOD — Electrical Maintenance", "Electrical Maintenance", 2, ["dept_manager", "approver:electrical", "engineer"], ["*"], "Suresh@2026"),
+    ("kavita.fm", "Kavita Nair", "HOD — Finance & Accounts", "Finance & Accounts", 3, ["dept_manager", "approver:finance"], [], "Kavita@2026"),
+    ("meera.me", "Meera Pai", "Engineer — Static Equipment", "Mechanical Maintenance", 1, ["engineer", "approver:mechanical"], ["CDU-1", "HCU", "UTIL"], "Meera@2026"),
+    ("priya.hse", "Priya D'Souza", "HSE Officer", "Health, Safety & Environment", 2, ["hse"], ["*"], "Priya@2026"),
+    ("vikram.op", "Vikram Kulkarni", "Process Engineer — Amine / SRU", "Process Engineering", 2, ["engineer", "process"], ["SRU", "CDU-1"], "Vikram@2026"),
+    ("arjun.pl", "Arjun Hegde", "Production Planner", "Production Planning & Quality Control (PP & QC)", 1, ["planner"], [], "Arjun@2026"),
+    ("deepa.au", "Deepa Menon", "Internal Auditor", "Internal Audit", 3, ["auditor"], [], "Deepa@2026"),
+    ("ramesh.pm", "Ramesh Bhat", "Chief General Manager — Refinery", "Operations (Production)", 3, ["plant_manager", "dept_manager"], ["*"], "Ramesh@2026"),
+    ("rajesh.mm", "Rajesh Shenoy", "HOD — Mechanical Maintenance", "Mechanical Maintenance", 2, ["dept_manager", "approver:mechanical", "engineer"], ["*"], "Rajesh@2026"),
+    ("sunita.hse", "Sunita Bhandary", "HOD — Health, Safety & Environment", "Health, Safety & Environment", 2, ["dept_manager", "hse"], ["*"], "Sunita@2026"),
+    ("contractor.x", "Vendor Technician", "Contract technician (Mechanical)", "Mechanical Maintenance", 0, ["contractor"], ["CDU-1"], "Vendor@2026"),
+    ("admin", "Yukti Administrator", "Platform Administrator", "Information Systems (IT/SAP)", 3, ["admin"], ["*"], "Admin@2026"),
+]
+ON_CALL = {"ravi.e", "suresh.em", "meera.me"}
+MANAGERS = {"Electrical Maintenance": "suresh.em", "Instrumentation Maintenance": "suresh.em", "Finance & Accounts": "kavita.fm",
+            "Internal Audit": "kavita.fm", "Captive Power Plants & Utilities": "ramesh.pm", "Mechanical Maintenance": "rajesh.mm",
+            "Operations (Production)": "ramesh.pm", "Health, Safety & Environment": "sunita.hse", "Process Engineering": "ramesh.pm"}
+
+# Example documents kept (plant documents authored by Team UniMinds for demonstration)
+EXAMPLE_FILES = [
+    "A2_datasheet_rev1.pdf", "SOP-EL-014_rev2.docx", "SOP-EL-014_rev3.docx", "PID-CDU-03_revB.pdf", "PID-CDU-03_revC.pdf",
+    "SLD-MCC-2_revB.pdf", "SLD-MCC-2_revC.pdf", "A2_troubleshooting_guide.pdf", "inspection_E-310_scan.pdf",
+    "inspection_PSV-118_scan.png", "FIN-AUD-2026-Q2_boiler_fuel_cost.pdf", "MSDS_MDEA_amine.pdf", "Process_manual_amine_unit.pdf",
+    "shift_log_2026-09-29.txt", "work_orders_A2.xlsx",
 ]
 
 
@@ -50,38 +66,38 @@ def seeded() -> bool:
 def run(ingest: bool = True) -> None:
     if seeded():
         return
-    # users
     for u, name, post, dept, cl, roles, scopes, pw in PERSONAS:
         ex("""INSERT INTO users(id, username, display_name, post, department, clearance, roles_json, asset_scopes_json,
               password_hash, demo_password, created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
            (new_id(), u, name, post, dept, cl, j(roles), j(scopes), hash_password(pw), pw, now_iso()))
-    for dept, mgr in DEPT_MANAGERS.items():
+    for dept, mgr in MANAGERS.items():
         uid = q1("SELECT id FROM users WHERE username=?", (mgr,))["id"]
         ex("INSERT OR IGNORE INTO departments(id, code, name, manager_user_id) VALUES(?,?,?,?)", (new_id(), dept, dept, uid))
-    # assets, aliases, ledger
+    # on-call contacts are the employees themselves (no invented directory)
+    for u in PERSONAS:
+        ex("INSERT INTO contacts(id, name, dept, role, ext, on_call) VALUES(?,?,?,?,?,?)",
+           (new_id(), u[1], u[3], u[2], "", int(u[0] in ON_CALL)))
+    kept_tags = _example_tags()
     assets = json.loads((STRUCT / "assets.json").read_text(encoding="utf-8"))
     for a in assets:
-        ex("""INSERT OR REPLACE INTO assets(tag, name, unit, class, vendor, model, serial, location, owner_department, criticality, specs_json)
-              VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
+        if a["tag"] not in kept_tags:
+            continue
+        ex("""INSERT OR REPLACE INTO assets(tag, name, unit, class, vendor, model, serial, location, owner_department, criticality, specs_json, is_example)
+              VALUES(?,?,?,?,?,?,?,?,?,?,?,1)""",
            (a["tag"], a["name"], a["unit"], a["class"], a.get("vendor"), a.get("model"), a.get("serial"), a.get("location"),
-            a.get("owner_department"), a.get("criticality"), j(a.get("specs", {}))))
-        aliases = {a["tag"], *a.get("specs", {}).get("aliases", [])}
-        for al in aliases:
+            DEPT_MAP.get(a.get("owner_department"), a.get("owner_department")), a.get("criticality"), j(a.get("specs", {}))))
+        for al in {a["tag"], *a.get("specs", {}).get("aliases", [])}:
             ex("INSERT OR IGNORE INTO tag_alias(alias, tag) VALUES(?,?)", (al, a["tag"]))
         for it in a.get("items", []):
             ex("INSERT INTO ledger_items(id, tag, type, ref_no, issued_on, expires_on) VALUES(?,?,?,?,?,?)",
                (new_id(), a["tag"], it["type"], it.get("ref_no"), it.get("issued_on"), it.get("expires_on")))
     for extra in ["MCC-2-F07", "XV-2041", "XV-2042", "XV-2043", "FIC-101", "C-2F07-01"]:
         ex("INSERT OR IGNORE INTO tag_alias(alias, tag) VALUES(?,?)", (extra, extra))
-    # work orders & contacts
     for w in json.loads((STRUCT / "work_orders.json").read_text(encoding="utf-8")):
-        ex("INSERT OR REPLACE INTO work_orders VALUES(?,?,?,?,?,?,?,?,?,?)",
-           (w["wo_no"], w["tag"], w["type"], w["opened_at"], w.get("closed_at"), w.get("failure_code"), w.get("cause"),
-            w.get("action"), w.get("technician"), w["status"]))
-    for c in json.loads((STRUCT / "users_contacts.json").read_text(encoding="utf-8")):
-        ex("INSERT INTO contacts(id, name, dept, role, ext, on_call) VALUES(?,?,?,?,?,?)",
-           (new_id(), c["name"], c["dept"], c.get("role"), c.get("ext"), int(bool(c.get("on_call")))))
-    # dossier facts
+        if w["tag"] in ("A2", "A2B", "M-A2"):  # only the work orders in the example WO export
+            ex("INSERT OR REPLACE INTO work_orders VALUES(?,?,?,?,?,?,?,?,?,?)",
+               (w["wo_no"], w["tag"], w["type"], w["opened_at"], w.get("closed_at"), w.get("failure_code"), w.get("cause"),
+                w.get("action"), w.get("technician"), w["status"]))
     fx = json.loads((STRUCT / "facts.json").read_text(encoding="utf-8"))
     tag = fx.get("asset", "A2")
     for f in fx["facts"]:
@@ -93,44 +109,52 @@ def run(ingest: bool = True) -> None:
            (new_id(), tag, f["slot"], f["attribute"], None if f.get("value") is None else str(f["value"]), f.get("unit") or "",
             dn if not dn.startswith("ASSET-MASTER") else "Asset master (M-A2)", f.get("revision"), f.get("effective_date"),
             f.get("page"), kind))
-    # presets
-    for name, desc, sp, pred in PRESETS:
-        ex("INSERT INTO presets(id, user_id, name, description, system_prompt, prediction_json, load_json, builtin, created_at) VALUES(?,?,?,?,?,?,?,?,?)",
-           (new_id(), None, name, desc, sp, j({**DEFAULT_PREDICTION, **pred}), j({}), 1, now_iso()))
-    audit.write("system", "seed.completed", "demo", {"users": len(PERSONAS), "assets": len(assets)})
+    audit.write("system", "seed.completed", "demo", {"employees": len(PERSONAS), "example_documents": len(EXAMPLE_FILES)})
     if ingest:
-        ingest_corpus()
+        ingest_examples()
     seed_workflows()
 
 
-def ingest_corpus() -> None:
-    man = json.loads((CORPUS / "manifest.json").read_text(encoding="utf-8"))
-    admin = "system"
-    for d in man["documents"]:
+def _manifest() -> list[dict]:
+    return json.loads((CORPUS / "manifest.json").read_text(encoding="utf-8"))["documents"]
+
+
+def _example_tags() -> set[str]:
+    tags: set[str] = set()
+    for d in _manifest():
+        if d["file"] in EXAMPLE_FILES:
+            tags.update(d.get("asset_tags", []))
+    return tags
+
+
+def ingest_examples() -> None:
+    for d in _manifest():
+        if d["file"] not in EXAMPLE_FILES:
+            continue
         p = CORPUS / d["file"]
-        if not p.exists() or p.suffix == ".json":
+        if not p.exists():
             continue
         meta = {
-            "title": d.get("title") or p.stem, "doc_number": d.get("doc_number"), "revision": d.get("revision") or "",
-            "status": d.get("status", "CURRENT"), "doc_type": d.get("doc_type", "other"), "department": d.get("department", "Operations"),
+            "title": "[EXAMPLE] " + (d.get("title") or p.stem), "doc_number": d.get("doc_number"), "revision": d.get("revision") or "",
+            "status": d.get("status", "CURRENT"), "doc_type": d.get("doc_type", "other"),
+            "department": DEPT_MAP.get(d.get("department", "Operations"), d.get("department")),
             "classification": CLEARANCE_BY_LABEL.get(d.get("classification", "INTERNAL"), 1),
             "effective_date": d.get("effective_date"), "supersedes": d.get("supersedes") if isinstance(d.get("supersedes"), str) else None,
-            "asset_tags": d.get("asset_tags", []),
+            "asset_tags": d.get("asset_tags", []), "is_example": 1,
         }
-        did = rag.create_document(meta, d["file"], p, admin)
-        rag.ingest(did, None, admin)
+        did = rag.create_document(meta, d["file"], p, "system")
+        rag.ingest(did, None, "system")
 
 
 def seed_workflows() -> None:
-    """E-310 thickness finding + expiry notifications."""
     doc = q1("SELECT id FROM documents WHERE doc_number='UT-E310-2026-07'")
     meera = q1("SELECT id FROM users WHERE username='meera.me'")
     if doc and meera and not q1("SELECT 1 FROM findings"):
         ex("""INSERT INTO findings(id, title, tag, discipline, severity, state, due_date, evidence, source_document_id, page, approver_id,
-              history_json, created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-           (new_id(), "E-310 shell wall thickness 6.1 mm below minimum 6.5 mm", "E-310", "Mechanical", "high", "PENDING",
-            (date.today() + timedelta(days=7)).isoformat(), "UT reading at CML-4: 6.1 mm (min allowable 6.5 mm) — scanned report p.1",
-            doc["id"], 1, meera["id"], j([{"at": now_iso(), "event": "DETECTED", "by": "OCR pipeline"}]), now_iso()))
+              history_json, created_at, is_example) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,1)""",
+           (new_id(), "[EXAMPLE] E-310 shell wall thickness 6.1 mm below minimum 6.5 mm", "E-310", "Mechanical", "high", "PENDING",
+            (date.today() + timedelta(days=7)).isoformat(), "UT reading at CML-4: 6.1 mm (min allowable 6.5 mm) — example scanned report p.1",
+            doc["id"], 1, meera["id"], j([{"at": now_iso(), "event": "DETECTED", "by": "OCR pipeline (example document)"}]), now_iso()))
     refresh_alert_notifications()
 
 
@@ -142,9 +166,12 @@ def refresh_alert_notifications() -> None:
     users = q("SELECT id, department, roles_json FROM users")
     for r in rows:
         days = (date.fromisoformat(r["expires_on"]) - today).days
-        title = (f"{r['tag']} {r['type']} EXPIRED {-days} day(s) ago" if days < 0 else f"{r['tag']} {r['type']} expires in {days} day(s)")
+        title = (f"[EXAMPLE] {r['tag']} {r['type']} EXPIRED {-days} day(s) ago" if days < 0
+                 else f"[EXAMPLE] {r['tag']} {r['type']} expires in {days} day(s)")
         for u in users:
-            if u["department"] in (r["owner_department"], "HSE", "Instrumentation") or "plant_manager" in u["roles_json"] or "admin" in u["roles_json"]:
+            if u["department"] in (r["owner_department"], "Health, Safety & Environment", "Instrumentation Maintenance") \
+                    or "plant_manager" in u["roles_json"] or "admin" in u["roles_json"]:
                 if not q1("SELECT 1 FROM notifications WHERE user_id=? AND title=?", (u["id"], title)):
                     ex("INSERT INTO notifications(id, user_id, kind, title, body, link, created_at) VALUES(?,?,?,?,?,?,?)",
-                       (new_id(), u["id"], "expiry", title, f"{r['name']} · ref {r['ref_no']} · due {r['expires_on']}", f"/assets?q={r['tag']}", now_iso()))
+                       (new_id(), u["id"], "expiry", title, f"{r['name']} · ref {r['ref_no']} · due {r['expires_on']}",
+                        f"/assets?q={r['tag']}", now_iso()))

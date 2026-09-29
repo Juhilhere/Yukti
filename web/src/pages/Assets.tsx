@@ -4,7 +4,8 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { Boxes, FileDown, FileText, Search, Wrench } from 'lucide-react';
 import { api, downloadFile, qs } from '../lib/api';
 import type { Asset, AssetDetail, AssetItem, Report } from '../lib/types';
-import { Badge, Card, EmptyState, ErrorBox, Loading, PageHeader, QueryState, Spinner, StatusChip, type Tone } from '../components/ui';
+import { Badge, Card, EmptyState, ErrorBox, Loading, PageHeader, ProvenanceBadges, QueryState, Spinner, StatusChip, type Tone } from '../components/ui';
+import { useT } from '../lib/i18n';
 import { DataTable, type Column } from '../components/DataTable';
 import { Drawer } from '../components/Modal';
 import { toast } from '../components/Toast';
@@ -44,6 +45,7 @@ export default function Assets() {
   const [q, setQ] = useState('');
   const dq = useDebounced(q);
   const [sel, setSel] = useState<string | null>(null);
+  const t = useT();
   const assets = useQuery({ queryKey: ['assets', dq], queryFn: () => api.get<Asset[]>(`/api/assets${qs({ q: dq })}`) });
   const rows = Array.isArray(assets.data) ? assets.data : [];
   const expired = rows.filter((a) => { const n = nearest(a.items); return n && n.days < 0; }).length;
@@ -51,7 +53,7 @@ export default function Assets() {
 
   const columns: Column<Asset>[] = [
     { key: 'tag', header: 'Tag', mono: true, render: (a) => <span className="font-medium text-cyan">{a.tag}</span> },
-    { key: 'name', header: 'Name', render: (a) => <span className="font-medium">{a.name || '—'}</span> },
+    { key: 'name', header: 'Name', render: (a) => <span className="inline-flex flex-wrap items-center gap-1.5 font-medium">{a.name || '—'}<ProvenanceBadges isExample={a.is_example} /></span> },
     { key: 'unit', header: 'Unit', render: (a) => a.unit || '—' },
     { key: 'class', header: 'Class', render: (a) => a.class || '—' },
     { key: 'vendor', header: 'Vendor', render: (a) => a.vendor || '—' },
@@ -67,7 +69,7 @@ export default function Assets() {
 
   return (
     <div className="flex h-full flex-col">
-      <PageHeader icon={<Boxes size={18} />} title="Assets" subtitle="Equipment ledger — certificates, calibrations and statutory items with expiry tracking"
+      <PageHeader icon={<Boxes size={18} />} title={t('page.assets')} subtitle="Equipment ledger — certificates, calibrations and statutory items with expiry tracking"
         actions={<>
           {rows.length > 0 && <div className="flex items-center gap-1.5 text-[12px]">
             <Badge tone="danger" mono>{expired} expired</Badge><Badge tone="amber" mono>{due30} ≤30d</Badge><Badge mono>{rows.length} assets</Badge>
@@ -109,7 +111,7 @@ function AssetDrawer({ tag, onClose }: { tag: string; onClose: () => void }) {
 
   return (
     <Drawer open onClose={onClose} width={680}
-      title={<div className="flex items-center gap-2"><span className="font-mono text-cyan">{tag}</span><span className="truncate text-muted font-normal">{a?.name}</span></div>}
+      title={<div className="flex items-center gap-2"><span className="font-mono text-cyan">{tag}</span><span className="truncate text-muted font-normal">{a?.name}</span><ProvenanceBadges isExample={a?.is_example} /></div>}
       footer={<>
         <button className="btn" onClick={onClose}>Close</button>
         <button className="btn btn-primary" disabled={dossier.isPending || !a} onClick={() => dossier.mutate()}>

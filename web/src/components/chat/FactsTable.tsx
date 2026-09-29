@@ -4,16 +4,18 @@ import type { Fact } from '../../lib/types';
 import { Drawer } from '../Modal';
 import { Badge, StatusChip } from '../ui';
 import { cx, fmtDate } from '../../lib/format';
+import { useT } from '../../lib/i18n';
 
 export function FactsTable({ facts, onCite }: { facts: Fact[]; onCite?: (sid: string) => void }) {
   const [cmp, setCmp] = useState<Fact | null>(null);
+  const t = useT();
   if (!facts?.length) return null;
   const counts = facts.reduce<Record<string, number>>((a, f) => { a[f.status] = (a[f.status] ?? 0) + 1; return a; }, {});
   return (
     <div className="mt-3 overflow-hidden rounded-md border border-border bg-surface">
       <div className="flex items-center gap-2 border-b border-border px-3 py-1.5">
         <Table2 size={13} className="text-cyan" />
-        <span className="label">Facts</span>
+        <span className="label">{t('chat.facts')}</span>
         <div className="ml-auto flex gap-1.5">
           {counts.KNOWN ? <Badge tone="cyan" mono>{counts.KNOWN} known</Badge> : null}
           {counts.CONFLICTING ? <Badge tone="amber" mono>{counts.CONFLICTING} conflicting</Badge> : null}

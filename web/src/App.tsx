@@ -9,13 +9,20 @@ import DocumentView from './pages/DocumentView';
 import Inbox from './pages/Inbox';
 import Assets from './pages/Assets';
 import Production from './pages/Production';
-import Developer from './pages/Developer';
-import Models from './pages/Models';
-import Discover from './pages/Discover';
 import Audit from './pages/Audit';
-import Admin from './pages/Admin';
 import Settings from './pages/Settings';
 import Company from './pages/Company';
+import Account, { ForcedPasswordChange } from './pages/Account';
+import Help from './pages/Help';
+import AdminLayout, { AdminIndex, ADMIN_PERMS } from './pages/admin/AdminLayout';
+import AdminUsers from './pages/admin/Users';
+import AiSettings from './pages/admin/AiSettings';
+import UsageHealth from './pages/admin/Usage';
+import FeedbackAdmin from './pages/admin/Feedback';
+import BackupExport from './pages/admin/Backup';
+import PoliciesLaya from './pages/admin/Policies';
+import ModelsAdmin from './pages/admin/ModelsAdmin';
+import Developer from './pages/Developer';
 import { Forbidden, NotFound } from './pages/Errors';
 import { Logo } from './components/Logo';
 import { Spinner } from './components/ui';
@@ -30,10 +37,11 @@ function Splash() {
 }
 
 function RequireAuth({ children }: { children: ReactNode }) {
-  const { status } = useAuth();
+  const { status, mustChangePassword } = useAuth();
   const loc = useLocation();
   if (status === 'loading') return <Splash />;
   if (status === 'anon') return <Navigate to={`/login?next=${encodeURIComponent(loc.pathname + loc.search)}`} replace />;
+  if (mustChangePassword) return <ForcedPasswordChange />;
   return <>{children}</>;
 }
 
@@ -55,12 +63,26 @@ export default function App() {
         <Route path="/inbox" element={<Inbox />} />
         <Route path="/assets" element={<Assets />} />
         <Route path="/production" element={<Perm perm="production.view"><Production /></Perm>} />
-        <Route path="/developer" element={<Developer />} />
-        <Route path="/models" element={<Models />} />
-        <Route path="/discover" element={<Discover />} />
         <Route path="/audit" element={<Perm perm="audit.view"><Audit /></Perm>} />
-        <Route path="/admin" element={<Perm perm="admin"><Admin /></Perm>} />
+        <Route path="/admin" element={<Perm perm={ADMIN_PERMS}><AdminLayout /></Perm>}>
+          <Route index element={<AdminIndex />} />
+          <Route path="users" element={<Perm perm="users.manage"><AdminUsers /></Perm>} />
+          <Route path="ai" element={<Perm perm="ai.settings"><AiSettings /></Perm>} />
+          <Route path="usage" element={<Perm perm="usage.view"><UsageHealth /></Perm>} />
+          <Route path="feedback" element={<Perm perm="usage.view"><FeedbackAdmin /></Perm>} />
+          <Route path="backup" element={<Perm perm={['backup.manage', 'audit.view']}><BackupExport /></Perm>} />
+          <Route path="policies" element={<Perm perm="admin"><PoliciesLaya /></Perm>} />
+          <Route path="models" element={<Perm perm="models.manage"><ModelsAdmin /></Perm>} />
+          <Route path="developer" element={<Perm perm="developer"><Developer /></Perm>} />
+          <Route path="*" element={<NotFound />} />
+        </Route>
+        {/* legacy routes */}
+        <Route path="/models" element={<Navigate to="/admin/models" replace />} />
+        <Route path="/discover" element={<Navigate to="/admin/models" replace />} />
+        <Route path="/developer" element={<Navigate to="/admin/developer" replace />} />
+        <Route path="/account" element={<Account />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/help" element={<Help />} />
         <Route path="/403" element={<Forbidden />} />
         <Route path="*" element={<NotFound />} />
       </Route>

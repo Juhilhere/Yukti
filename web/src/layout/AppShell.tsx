@@ -2,16 +2,18 @@ import { useEffect, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  Activity, Bell, BookOpen, Building2, Box, Code2, Compass, Cpu, Factory, Inbox, KeyRound, LogOut, MemoryStick, MessageSquare,
+  Activity, Bell, BookOpen, Building2, Cpu, Factory, Globe2, HelpCircle, Inbox, KeyRound, LogOut, MemoryStick, MessageSquare,
   MonitorSmartphone, Settings, ShieldCheck, ShieldHalf, ScrollText, User2, Wrench, Gauge, Zap, AlertTriangle, CheckCheck,
 } from 'lucide-react';
+import { useT } from '../lib/i18n';
+import { ADMIN_PERMS } from '../pages/admin/AdminLayout';
 import { useAuth } from '../lib/auth';
 import { api } from '../lib/api';
 import { uiStore, useLoaded, useSystem, useUI } from '../lib/queries';
 import type { AccessRequest, Alert, Finding, Notification } from '../lib/types';
 import { cx, fmtMB, timeAgo } from '../lib/format';
 import { Logo } from '../components/Logo';
-import { Badge, Dot, MenuItem, Popover, Spinner, Tip } from '../components/ui';
+import { Badge, Dot, LangSwitcher, MenuItem, Popover, Spinner, Tip } from '../components/ui';
 import { ModelLoader, ENGINE_LABEL } from './ModelLoader';
 import { IdleWatcher } from './IdleWatcher';
 
@@ -37,30 +39,55 @@ function RailLink({ item }: { item: NavItem }) {
 function useInboxCount(enabled: boolean) {
   const findings = useQuery({ queryKey: ['findings'], queryFn: () => api.get<Finding[]>('/api/findings'), refetchInterval: 30_000, enabled, retry: false });
   const ar = useQuery({ queryKey: ['access-requests'], queryFn: () => api.get<{ mine: AccessRequest[]; to_approve: AccessRequest[] }>('/api/access-requests'), refetchInterval: 15_000, enabled, retry: false });
-  const openFindings = (findings.data ?? []).filter((f) => ['open', 'new', 'pending', 'pending_approval'].includes(String(f.state).toLowerCase())).length;
+  // findings where the current user can still act (backend computes allowed_actions per user & state)
+  const openFindings = (findings.data ?? []).filter((f) => (f.allowed_actions ?? []).some((a) => a !== 'note')).length;
   const pendingAR = (ar.data?.to_approve ?? []).filter((a) => String(a.state).toLowerCase() === 'pending').length;
   return openFindings + pendingAR;
 }
 
-function Rail() {
-  const { can, me, logout } = useAuth();
+function UserMenu({ close }: { close: () => void }) {
+  const { me, logout } = useAuth();
   const nav = useNavigate();
+  const t = useT();
+  return (
+    <div className="py-1">
+      <div className="border-b border-border px-3 py-2">
+        <div className="font-medium">{me?.user.display_name}</div>
+        <div className="text-[11.5px] text-muted">{me?.user.post} · {me?.user.department}</div>
+        <div className="mt-1 font-mono text-[10.5px] text-faint">@{me?.user.username} · L{me?.user.clearance} {me?.user.clearance_label}</div>
+      </div>
+      <MenuItem icon={<User2 size={13} />} onClick={() => { close(); nav('/account'); }}>{t('menu.account')}</MenuItem>
+      <MenuItem icon={<MonitorSmartphone size={13} />} onClick={() => { close(); nav('/account#sessions'); }}>{t('menu.sessions')}</MenuItem>
+      <MenuItem icon={<Settings size={13} />} onClick={() => { close(); nav('/settings'); }}>{t('menu.settings')}</MenuItem>
+      <MenuItem icon={<HelpCircle size={13} />} onClick={() => { close(); nav('/help'); }}>{t('menu.help')}</MenuItem>
+      <div className="border-t border-border px-3 py-2">
+        <div className="mb-1.5 flex items-center gap-1.5 text-[11px] text-muted"><Globe2 size={11} />{t('menu.language')}</div>
+        <LangSwitcher />
+      </div>
+      <div className="my-1 border-t border-border" />
+      <MenuItem icon={<LogOut size={13} />} onClick={() => { close(); void logout(false); }}>{t('menu.logout')}</MenuItem>
+      <MenuItem danger icon={<KeyRound size={13} />} onClick={() => { close(); void logout(true); }}>{t('menu.logoutAll')}</MenuItem>
+    </div>
+  );
+}
+
+function Rail() {
+  const { can, me } = useAuth();
+  const t = useT();
   const inbox = useInboxCount(!!me);
   const top: NavItem[] = [
-    { to: '/chat', label: 'Chat', icon: <MessageSquare size={18} />, perm: 'chat' },
-    { to: '/company', label: 'MRPL Intelligence', icon: <Building2 size={18} /> },
-    { to: '/knowledge', label: 'Knowledge', icon: <BookOpen size={18} /> },
-    { to: '/inbox', label: 'Inbox — approvals & access', icon: <Inbox size={18} />, badge: inbox },
-    { to: '/assets', label: 'Assets & compliance', icon: <Wrench size={18} /> },
-    { to: '/production', label: 'Production intelligence', icon: <Factory size={18} />, perm: 'production.view' },
-    { to: '/developer', label: 'Developer — server & logs', icon: <Code2 size={18} /> },
-    { to: '/models', label: 'My Models', icon: <Box size={18} /> },
-    { to: '/discover', label: 'Discover', icon: <Compass size={18} /> },
+    { to: '/chat', label: t('nav.chat'), icon: <MessageSquare size={18} />, perm: 'chat' },
+    { to: '/company', label: t('nav.company'), icon: <Building2 size={18} /> },
+    { to: '/knowledge', label: t('nav.knowledge'), icon: <BookOpen size={18} /> },
+    { to: '/inbox', label: t('nav.inbox'), icon: <Inbox size={18} />, badge: inbox },
+    { to: '/assets', label: t('nav.assets'), icon: <Wrench size={18} /> },
+    { to: '/production', label: t('nav.production'), icon: <Factory size={18} />, perm: 'production.view' },
   ];
   const bottom: NavItem[] = [
-    { to: '/audit', label: 'Audit log', icon: <ScrollText size={18} />, perm: 'audit.view' },
-    { to: '/admin', label: 'Admin & policies', icon: <ShieldHalf size={18} />, perm: 'admin' },
-    { to: '/settings', label: 'Settings', icon: <Settings size={18} /> },
+    { to: '/audit', label: t('nav.audit'), icon: <ScrollText size={18} />, perm: 'audit.view' },
+    { to: '/admin', label: t('nav.admin'), icon: <ShieldHalf size={18} />, perm: ADMIN_PERMS },
+    { to: '/settings', label: t('nav.settings'), icon: <Settings size={18} /> },
+    { to: '/help', label: t('nav.help'), icon: <HelpCircle size={18} /> },
   ];
   const initials = (me?.user.display_name || me?.user.username || '?').split(/\s+/).map((s) => s[0]).slice(0, 2).join('').toUpperCase();
   return (
@@ -69,28 +96,31 @@ function Rail() {
       {top.filter((i) => can(i.perm)).map((i) => <RailLink key={i.to} item={i} />)}
       <div className="flex-1" />
       {bottom.filter((i) => can(i.perm)).map((i) => <RailLink key={i.to} item={i} />)}
-      <Popover direction="up" className="!bottom-0 !left-full !mb-0 ml-2 w-60"
+      <Popover direction="up" className="!bottom-0 !left-full !mb-0 ml-2 w-64"
         trigger={(_o, toggle) => (
           <button onClick={toggle} className="mt-1 flex h-9 w-9 items-center justify-center rounded-full border border-border-strong bg-cyan/15 text-[12px] font-semibold text-cyan hover:border-cyan">
             {initials}
           </button>
         )}>
-        {(close) => (
-          <div className="py-1">
-            <div className="border-b border-border px-3 py-2">
-              <div className="font-medium">{me?.user.display_name}</div>
-              <div className="text-[11.5px] text-muted">{me?.user.post} · {me?.user.department}</div>
-              <div className="mt-1 font-mono text-[10.5px] text-faint">@{me?.user.username} · L{me?.user.clearance} {me?.user.clearance_label}</div>
-            </div>
-            <MenuItem icon={<User2 size={13} />} onClick={() => { close(); nav('/settings#profile'); }}>Profile</MenuItem>
-            <MenuItem icon={<MonitorSmartphone size={13} />} onClick={() => { close(); nav('/settings#sessions'); }}>Sessions</MenuItem>
-            <div className="my-1 border-t border-border" />
-            <MenuItem icon={<LogOut size={13} />} onClick={() => { close(); void logout(false); }}>Log out</MenuItem>
-            <MenuItem danger icon={<KeyRound size={13} />} onClick={() => { close(); void logout(true); }}>Log out all devices</MenuItem>
-          </div>
-        )}
+        {(close) => <UserMenu close={close} />}
       </Popover>
     </nav>
+  );
+}
+
+/** Read-only model chip for employees (LLM configuration is admin-only). */
+function ModelChip() {
+  const loaded = useLoaded();
+  const st = loaded.data;
+  const ready = st?.status === 'ready';
+  return (
+    <div title="The AI model is managed by your Yukti administrator"
+      className="flex h-8 min-w-[240px] max-w-[460px] items-center gap-2 rounded-md border border-border bg-surface-2 px-3">
+      {st?.status === 'loading' ? <Spinner size={13} /> : <Dot tone={ready ? 'ok' : st?.status === 'error' ? 'danger' : 'muted'} />}
+      <span className={cx('flex-1 truncate text-left', ready ? 'font-medium' : 'text-muted')}>
+        {ready ? st?.model_name ?? st?.model_id : st?.status === 'loading' ? 'AI model loading…' : 'AI model not loaded'}
+      </span>
+    </div>
   );
 }
 
@@ -182,7 +212,7 @@ function Notifications() {
 }
 
 function TopBar() {
-  const { me } = useAuth();
+  const { me, isLlmAdmin } = useAuth();
   const sys = useSystem();
   const offline = sys.data ? sys.data.offline_guard : true;
   return (
@@ -191,7 +221,7 @@ function TopBar() {
         <span className="font-semibold tracking-tight">Yukti</span>
         <span className="hidden truncate text-[11.5px] text-faint xl:inline">Sovereign Industrial AI Workbench</span>
       </div>
-      <ModelPill />
+      {isLlmAdmin ? <ModelPill /> : <ModelChip />}
       <div className="flex items-center justify-end gap-2">
         <Tip side="bottom" text={offline ? 'Offline guard active: outbound network blocked, all inference on-prem.' : 'Offline guard is OFF'}>
           <span className={cx('hidden items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium md:inline-flex',
@@ -201,13 +231,18 @@ function TopBar() {
         </Tip>
         <Notifications />
         {me && (
-          <div className="flex items-center gap-2 rounded-md border border-border bg-surface-2 py-0.5 pl-2 pr-1">
-            <div className="text-right leading-tight">
-              <div className="max-w-[160px] truncate text-[12px] font-medium">{me.user.display_name}</div>
-              <div className="max-w-[160px] truncate text-[10.5px] text-muted">{me.user.post}</div>
-            </div>
-            <Badge tone={me.user.clearance >= 3 ? 'amber' : 'cyan'} mono title={`Clearance ${me.user.clearance}`}>L{me.user.clearance} {me.user.clearance_label}</Badge>
-          </div>
+          <Popover align="right" className="w-64"
+            trigger={(open, toggle) => (
+              <button onClick={toggle} className={cx('flex items-center gap-2 rounded-md border bg-surface-2 py-0.5 pl-2 pr-1 hover:border-border-strong', open ? 'border-border-strong' : 'border-border')}>
+                <div className="text-right leading-tight">
+                  <div className="max-w-[160px] truncate text-[12px] font-medium">{me.user.display_name}</div>
+                  <div className="max-w-[160px] truncate text-[10.5px] text-muted">{me.user.post}</div>
+                </div>
+                <Badge tone={me.user.clearance >= 3 ? 'amber' : 'cyan'} mono title={`Clearance ${me.user.clearance}`}>L{me.user.clearance} {me.user.clearance_label}</Badge>
+              </button>
+            )}>
+            {(close) => <UserMenu close={close} />}
+          </Popover>
         )}
       </div>
     </header>
@@ -251,21 +286,23 @@ function StatusBar() {
 
 function Shortcuts() {
   const nav = useNavigate();
+  const { isLlmAdmin } = useAuth();
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey) return;
       const k = e.key.toLowerCase();
-      if (k === 'l') { e.preventDefault(); uiStore.openLoader(); }
+      if (k === 'l' && isLlmAdmin) { e.preventDefault(); uiStore.openLoader(); }
       else if (k === 'n') { e.preventDefault(); nav('/chat'); }
     };
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
-  }, [nav]);
+  }, [nav, isLlmAdmin]);
   return null;
 }
 
 export function AppShell() {
   const loc = useLocation();
+  const { isLlmAdmin } = useAuth();
   const key = loc.pathname.split('/')[1];
   return (
     <div className="flex h-full w-full overflow-hidden">
@@ -277,7 +314,7 @@ export function AppShell() {
         </main>
         <StatusBar />
       </div>
-      <ModelLoader />
+      {isLlmAdmin && <ModelLoader />}
       <IdleWatcher />
       <Shortcuts />
     </div>

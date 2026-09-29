@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { Activity, Pause, Play, Search, Server, Sparkles, Terminal, Trash2 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { Pause, Play, Search, Server, Terminal, Trash2 } from 'lucide-react';
 import { api } from '../lib/api';
-import type { LayaStats, RouteDecision, ServerStatus } from '../lib/types';
+import type { ServerStatus } from '../lib/types';
 import { cx, fmtDuration, num } from '../lib/format';
-import { Badge, Card, Dot, ErrorBox, JsonView, Loading, Meter, PageHeader, Spinner, Toggle } from '../components/ui';
+import { Badge, Card, Dot, ErrorBox, Loading, Spinner, Toggle } from '../components/ui';
 import { CopyButton } from '../components/pages2/CopyButton';
 
 const ENDPOINTS = [
@@ -130,81 +130,11 @@ function LogsConsole() {
   );
 }
 
-function LayaPanel() {
-  const [text, setText] = useState('A2 tripped at 02:15 — give me the isolation and restart dossier');
-  const stats = useQuery({ queryKey: ['laya', 'stats'], queryFn: () => api.get<LayaStats>('/api/laya/stats'), refetchInterval: 10000, retry: false });
-  const m = useMutation({ mutationFn: (t: string) => api.post<RouteDecision>('/api/laya/classify', { text: t }), onSuccess: () => stats.refetch() });
-  const s = stats.data;
-  const intents = Object.entries(s?.by_intent ?? {}).sort((a, b) => b[1] - a[1]);
-  const maxI = Math.max(1, ...intents.map(([, v]) => v));
-  return (
-    <Card title="Laya router" icon={<Sparkles size={14} className="text-amber" />}
-      actions={s?.model_version && <Badge mono tone="muted">{s.model_version}</Badge>}>
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="space-y-2">
-          <div className="label">Classify text</div>
-          <textarea className="input min-h-[84px]" value={text} onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && text.trim()) m.mutate(text); }} />
-          <div className="flex items-center gap-2">
-            <button className="btn btn-cyan btn-sm" disabled={!text.trim() || m.isPending} onClick={() => m.mutate(text)}>
-              {m.isPending ? <Spinner size={12} /> : <Activity size={12} />}Classify
-            </button>
-            <span className="text-[11px] text-faint">Ctrl+Enter</span>
-            {m.data && <span className="ml-auto font-mono text-[11.5px] text-muted">{num(m.data.latency_ms, 1)} ms</span>}
-          </div>
-          {m.error && <ErrorBox error={m.error} />}
-          {m.data && <JsonView value={m.data} className="max-h-[240px]" />}
-        </div>
-        <div className="space-y-3">
-          {stats.isLoading ? <Loading /> : stats.error ? <ErrorBox error={stats.error} onRetry={() => stats.refetch()} /> : (
-            <>
-              <div className="grid grid-cols-3 gap-2">
-                <div className="col-span-3 rounded-md border border-amber/40 bg-amber/5 p-3">
-                  <div className="label !text-amber">LLM calls saved</div>
-                  <div className="mt-1 font-mono text-[28px] font-semibold leading-none text-amber">{num(s?.llm_calls_saved, 0)}</div>
-                  <div className="mt-1 text-[11.5px] text-muted">
-                    of {num(s?.total, 0)} requests routed deterministically
-                    {s && s.total > 0 && <> · <span className="font-mono">{num((s.llm_calls_saved / s.total) * 100, 0)}%</span></>}
-                  </div>
-                </div>
-                <div className="rounded-md border border-border p-2">
-                  <div className="label">Total</div><div className="font-mono text-[16px]">{num(s?.total, 0)}</div>
-                </div>
-                <div className="col-span-2 rounded-md border border-border p-2">
-                  <div className="label">Avg latency</div><div className="font-mono text-[16px] text-cyan">{num(s?.avg_latency_ms, 2)} <span className="text-[11px] text-muted">ms</span></div>
-                </div>
-              </div>
-              <div>
-                <div className="label mb-1.5">By intent</div>
-                {intents.length === 0 ? <div className="text-[12px] text-faint">No traffic yet.</div> : (
-                  <div className="space-y-1.5">
-                    {intents.map(([k, v]) => (
-                      <div key={k} className="grid grid-cols-[130px_1fr_40px] items-center gap-2">
-                        <span className="truncate font-mono text-[11.5px] text-muted">{k}</span>
-                        <Meter pct={(v / maxI) * 100} />
-                        <span className="text-right font-mono text-[11.5px]">{v}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-    </Card>
-  );
-}
-
 export default function Developer() {
   return (
-    <div className="h-full overflow-y-auto">
-      <PageHeader title="Developer" subtitle="Local OpenAI-compatible server, logs and the Laya intent router" icon={<Terminal size={18} />} />
-      <div className="grid gap-4 p-5 xl:grid-cols-2">
-        <ServerCard />
-        <LogsConsole />
-        <div className="xl:col-span-2"><LayaPanel /></div>
-      </div>
+    <div className="grid gap-4 p-5 xl:grid-cols-2">
+      <ServerCard />
+      <LogsConsole />
     </div>
   );
 }

@@ -5,3 +5,6 @@ web/dist/
 backend/.venv/
 __pycache__/
 *.pyc
+desktop/dist/
+backend/build/
+*.spec

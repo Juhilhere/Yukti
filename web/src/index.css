@@ -1,15 +1,15 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-bg: #0B1220;
-  --color-surface: #111A2B;
-  --color-surface-2: #182338;
-  --color-surface-3: #1F2B43;
-  --color-border: #26324A;
-  --color-border-strong: #33415E;
-  --color-text: #E6EDF7;
-  --color-muted: #8A98B3;
-  --color-faint: #5B6882;
+  --color-bg: #0E0E10;
+  --color-surface: #161618;
+  --color-surface-2: #1E1E21;
+  --color-surface-3: #26262A;
+  --color-border: #2A2A2E;
+  --color-border-strong: #3A3A40;
+  --color-text: #ECECEE;
+  --color-muted: #9A9AA3;
+  --color-faint: #6B6B73;
   --color-amber: #F5A524;
   --color-cyan: #22D3EE;
   --color-danger: #EF4444;
@@ -29,9 +29,9 @@ body {
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
 }
-* { scrollbar-width: thin; scrollbar-color: #26324A transparent; }
+* { scrollbar-width: thin; scrollbar-color: #2A2A2E transparent; }
 *::-webkit-scrollbar { width: 8px; height: 8px; }
-*::-webkit-scrollbar-thumb { background: #26324A; border-radius: 4px; }
+*::-webkit-scrollbar-thumb { background: #2A2A2E; border-radius: 4px; }
 *::-webkit-scrollbar-track { background: transparent; }
 ::selection { background: rgba(34, 211, 238, 0.3); }
 
@@ -49,7 +49,7 @@ input, textarea, select, button { font: inherit; color: inherit; }
 }
 .input:focus { border-color: var(--color-cyan); }
 .input::placeholder { color: var(--color-faint); }
-select.input { appearance: none; padding-right: 24px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%238A98B3' stroke-width='3'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 8px center; }
+select.input { appearance: none; padding-right: 24px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%239A9AA3' stroke-width='3'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 8px center; }
 
 .btn { display: inline-flex; align-items: center; gap: 6px; border-radius: 6px; padding: 5px 10px; font-weight: 500; border: 1px solid var(--color-border); background: var(--color-surface-2); transition: background .12s, border-color .12s; white-space: nowrap; cursor: pointer; }
 .btn:hover:not(:disabled) { background: var(--color-surface-3); border-color: var(--color-border-strong); }

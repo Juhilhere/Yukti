@@ -201,8 +201,7 @@ class Laya:
             k = json.loads(x["decision_json"]).get("intent", "?")
             by[k] = by.get(k, 0) + 1
         return {"total": r["n"], "llm_calls_saved": rows["n"], "avg_latency_ms": round(r["l"] or 0, 2),
-                "by_intent": by, "model_version": f"{VERSION}+{self.runtime}",
-                "baseline_llm_router_ms": 650}
+                "by_intent": by, "model_version": f"{VERSION}+{self.runtime}"}
 
 
 # ---------------------------------------------------------------- Company Guardrail classifier (CG v0.1)

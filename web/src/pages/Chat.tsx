@@ -16,6 +16,8 @@ import { ConfigSidebar } from '../components/chat/ConfigSidebar';
 import { Composer } from '../components/chat/Composer';
 import { AssistantMessage, UserMessage } from '../components/chat/AssistantMessage';
 import { SUGGESTIONS, type UIMessage } from '../components/chat/types';
+import { useAuth } from '../lib/auth';
+import { useT } from '../lib/i18n';
 
 type Pred = Record<string, unknown>;
 
@@ -25,6 +27,8 @@ export default function Chat() {
   const qc = useQueryClient();
   const settings = useSettings();
   const loaded = useLoaded();
+  const { isLlmAdmin } = useAuth();
+  const t = useT();
 
   const [messages, setMessages] = useState<UIMessage[]>([]);
   const [systemPrompt, setSystemPromptRaw] = useState('');
@@ -80,14 +84,14 @@ export default function Chat() {
   const setSystemPrompt = useCallback((s: string) => { dirtyRef.current = true; setSystemPromptRaw(s); }, []);
   const setPrediction = useCallback((p: Pred) => { dirtyRef.current = true; setPredictionRaw(p); }, []);
   useEffect(() => {
-    if (!chatId || !dirtyRef.current || loadedFor.current !== chatId) return;
+    if (!isLlmAdmin || !chatId || !dirtyRef.current || loadedFor.current !== chatId) return;
     const t = setTimeout(() => {
       dirtyRef.current = false;
       api.patch(`/api/chats/${chatId}`, { system_prompt: systemPrompt, prediction })
         .catch((e) => toast.error('Could not save chat settings', errMsg(e)));
     }, 700);
     return () => clearTimeout(t);
-  }, [systemPrompt, prediction, chatId]);
+  }, [systemPrompt, prediction, chatId, isLlmAdmin]);
 
   /* ---- autoscroll ---- */
   useEffect(() => {
@@ -164,7 +168,7 @@ export default function Chat() {
         cid = c.id;
         loadedFor.current = cid;
         streamChatRef.current = cid;
-        if (systemPrompt || Object.keys(prediction).length) {
+        if (isLlmAdmin && (systemPrompt || Object.keys(prediction).length)) {
           api.patch(`/api/chats/${cid}`, { system_prompt: systemPrompt, prediction }).catch(() => undefined);
         }
         dirtyRef.current = false;
@@ -183,13 +187,11 @@ export default function Chat() {
       { id: `local-u-${stamp}`, role: 'user', content: text, created_at: now },
       { id: aid, role: 'assistant', content: '', created_at: now, streaming: true },
     ]);
-    void runStream(cid, `/api/chats/${cid}/messages`, {
-      content: text,
-      system_prompt: systemPrompt || undefined,
-      prediction,
-      use_knowledge: useKnowledge,
-    }, aid);
-  }, [busy, chatId, systemPrompt, prediction, useKnowledge, nav, qc, runStream]);
+    // Per-chat LLM overrides are admin-only; employees use the organisation AI settings.
+    const body: Record<string, unknown> = { content: text, use_knowledge: useKnowledge };
+    if (isLlmAdmin) { body.system_prompt = systemPrompt || undefined; body.prediction = prediction; }
+    void runStream(cid, `/api/chats/${cid}/messages`, body, aid);
+  }, [busy, chatId, systemPrompt, prediction, useKnowledge, nav, qc, runStream, isLlmAdmin]);
 
   const stop = useCallback(() => {
     const cid = streamChatRef.current ?? chatId;
@@ -205,15 +207,15 @@ export default function Chat() {
       const base = idx >= 0 && idx === ms.length - 1 ? ms.slice(0, idx) : ms;
       return [...base, { id: aid, role: 'assistant', content: '', created_at: new Date().toISOString(), streaming: true }];
     });
-    void runStream(chatId, `/api/chats/${chatId}/regenerate`, { prediction }, aid);
-  }, [chatId, busy, prediction, runStream]);
+    void runStream(chatId, `/api/chats/${chatId}/regenerate`, isLlmAdmin ? { prediction } : {}, aid);
+  }, [chatId, busy, prediction, runStream, isLlmAdmin]);
 
   useEffect(() => () => { abortRef.current?.abort(); }, []);
 
   const modelReady = loaded.data?.status === 'ready';
   const lastAssistantIdx = messages.map((m) => m.role).lastIndexOf('assistant');
   const width = settings.chatFullWidth ? 'max-w-none' : 'max-w-[860px]';
-  const title = chatId ? (detail.data?.title || (detail.isLoading ? '' : 'Untitled chat')) : 'New chat';
+  const title = chatId ? (detail.data?.title || (detail.isLoading ? '' : 'Untitled chat')) : t('btn.newChat');
   const showEmpty = messages.length === 0 && !(chatId && detail.isLoading) && !(chatId && detail.error);
 
   return (
@@ -224,14 +226,14 @@ export default function Chat() {
         <header className="flex h-10 shrink-0 items-center gap-2 border-b border-border px-4">
           <div className="min-w-0 flex-1 truncate font-medium">{title}</div>
           {useKnowledge
-            ? <Badge tone="cyan"><BookOpen size={11} />Knowledge on</Badge>
-            : <Badge tone="muted">Knowledge off</Badge>}
+            ? <Badge tone="cyan"><BookOpen size={11} />{t('chat.knowledgeOn')}</Badge>
+            : <Badge tone="muted">{t('chat.knowledgeOff')}</Badge>}
           {loaded.data?.model_name && (
             <Badge tone="muted" mono className="max-w-[220px] truncate">
               <Dot tone={modelReady ? 'ok' : loaded.data.status === 'loading' ? 'cyan' : 'muted'} />{loaded.data.model_name}
             </Badge>
           )}
-          {!settings.configSidebarOpen && (
+          {isLlmAdmin && !settings.configSidebarOpen && (
             <button className="btn btn-ghost btn-icon text-muted" title="Show configuration" onClick={() => setSettings({ configSidebarOpen: true })}>
               <PanelRightOpen size={15} />
             </button>
@@ -262,10 +264,10 @@ export default function Chat() {
 
         <Composer busy={busy} onSend={(t) => void send(t)} onStop={stop} useKnowledge={useKnowledge}
           onToggleKnowledge={() => setUseKnowledge((v) => !v)} sendWithEnter={settings.sendWithEnter}
-          modelReady={modelReady} onOpenLoader={() => uiStore.openLoader()} fullWidth={settings.chatFullWidth} />
+          modelReady={modelReady} canLoadModel={isLlmAdmin} onOpenLoader={() => uiStore.openLoader()} fullWidth={settings.chatFullWidth} />
       </section>
 
-      {settings.configSidebarOpen && (
+      {isLlmAdmin && settings.configSidebarOpen && (
         <ConfigSidebar systemPrompt={systemPrompt} setSystemPrompt={setSystemPrompt} prediction={prediction}
           setPrediction={setPrediction} useKnowledge={useKnowledge} setUseKnowledge={setUseKnowledge}
           onClose={() => setSettings({ configSidebarOpen: false })} />
@@ -275,12 +277,13 @@ export default function Chat() {
 }
 
 function EmptyChat({ onPick }: { onPick: (prompt: string) => void }) {
+  const t = useT();
   return (
     <div className="flex min-h-full flex-col items-center justify-center px-6 py-10">
       <Logo size={52} />
-      <h2 className="mt-4 text-[18px] font-semibold">What do you need from the plant?</h2>
+      <h2 className="mt-4 text-[18px] font-semibold">{t('chat.empty.title')}</h2>
       <p className="mt-1 max-w-lg text-center text-muted">
-        Answers are grounded in documents you are cleared to read — cited, fact-checked for conflicts, and audited.
+        {t('chat.empty.body')}
       </p>
       <div className="mt-2 inline-flex items-center gap-1.5 text-[11.5px] text-ok"><ShieldCheck size={12} />On-prem · offline · policy-enforced retrieval</div>
       <div className="mt-6 grid w-full max-w-[760px] grid-cols-1 gap-2.5 sm:grid-cols-2">

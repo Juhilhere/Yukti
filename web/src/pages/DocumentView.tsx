@@ -1,10 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, ExternalLink, FileText, ScanLine, Search } from 'lucide-react';
-import { api } from '../lib/api';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '../lib/auth';
+import { Modal } from '../components/Modal';
+import { toast } from '../components/Toast';
+import { ArrowLeft, ExternalLink, FileText, ScanLine, Search, Trash2 } from 'lucide-react';
+import { api, errMsg } from '../lib/api';
 import type { DocPage, DocumentDetail } from '../lib/types';
-import { Badge, EmptyState, ErrorBox, Loading, PageHeader, StatusChip } from '../components/ui';
+import { Badge, EmptyState, ErrorBox, Loading, PageHeader, ProvenanceBadges, Spinner, StatusChip } from '../components/ui';
+import { useT } from '../lib/i18n';
 import { cx, fmtBytes, fmtDate } from '../lib/format';
 
 function confTone(c?: number) {
@@ -24,6 +28,16 @@ export default function DocumentView() {
   const [filter, setFilter] = useState('');
   const doc = useQuery({ queryKey: ['document', id], queryFn: () => api.get<DocumentDetail>(`/api/documents/${encodeURIComponent(id)}`), enabled: !!id });
   const pageRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const t = useT();
+  const { me } = useAuth();
+  const nav = useNavigate();
+  const qc = useQueryClient();
+  const [confirmDel, setConfirmDel] = useState(false);
+  const del = useMutation({
+    mutationFn: () => api.del(`/api/documents/${encodeURIComponent(id)}`),
+    onSuccess: () => { toast.success('Document deleted'); qc.invalidateQueries({ queryKey: ['documents'] }); nav('/knowledge', { replace: true }); },
+    onError: (e) => toast.error('Delete failed', errMsg(e)),
+  });
 
   const pages: DocPage[] = useMemo(() => (Array.isArray(doc.data?.pages) ? (doc.data!.pages as DocPage[]) : []), [doc.data]);
   const visible = useMemo(() => {
@@ -48,6 +62,8 @@ export default function DocumentView() {
   const d = doc.data;
   if (!d) return <EmptyState title="Document not found" />;
 
+  // HODs (documents.upload) may delete only documents of their own department.
+  const canDelete = !!me?.permissions?.includes('documents.upload') && !!d.department && d.department === me?.user.department;
   const digital = pages.filter((p) => p.mode === 'digital').length;
   const scanned = pages.length - digital;
   const avgConf = (() => {
@@ -58,12 +74,20 @@ export default function DocumentView() {
   return (
     <div className="flex h-full flex-col">
       <PageHeader icon={<FileText size={18} />}
-        title={<span className="flex items-center gap-2">{d.title || '(untitled)'} <StatusChip status={d.status} /></span>}
+        title={<span className="flex flex-wrap items-center gap-2">{d.title || '(untitled)'} <StatusChip status={d.status} /><ProvenanceBadges isExample={d.is_example} isPublic={d.is_public} /></span>}
         subtitle={<span className="font-mono">{d.doc_number || '—'} · Rev {d.revision || '—'}</span>}
         actions={<>
-          <Link to="/knowledge" className="btn btn-sm"><ArrowLeft size={13} /> Back</Link>
+          <Link to="/knowledge" className="btn btn-sm"><ArrowLeft size={13} /> {t('btn.back')}</Link>
           <a className="btn btn-sm btn-cyan" href={`/api/documents/${encodeURIComponent(d.id)}/file`} target="_blank" rel="noreferrer"><ExternalLink size={13} /> Open original</a>
+          {canDelete && <button className="btn btn-sm btn-danger" onClick={() => setConfirmDel(true)}><Trash2 size={13} /> {t('btn.delete')}</button>}
         </>} />
+      <Modal open={confirmDel} onClose={() => setConfirmDel(false)} width={440} title="Delete document?" icon={<Trash2 size={14} className="text-danger" />}
+        footer={<>
+          <button className="btn btn-ghost" onClick={() => setConfirmDel(false)}>{t('btn.cancel')}</button>
+          <button className="btn btn-danger" disabled={del.isPending} onClick={() => del.mutate()}>{del.isPending ? <Spinner size={12} /> : <Trash2 size={12} />}{t('btn.delete')}</button>
+        </>}>
+        <div className="text-[12.5px]">Remove <span className="font-medium">{d.title}</span> ({d.doc_number || '—'}) from the knowledge base? It will no longer be retrieved in answers. The deletion is recorded in the audit log.</div>
+      </Modal>
       <div className="flex min-h-0 flex-1">
         <aside className="w-[260px] shrink-0 space-y-3 overflow-y-auto border-r border-border p-4">
           <div className="space-y-2 text-[12px]">

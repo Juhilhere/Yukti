@@ -27,8 +27,8 @@ rules:
   - id: R-FINANCE-COMMERCIAL
     effect: deny
     resources: [document]
-    when: "resource.department == 'Finance' and subject.department not in ['Finance', 'Management', 'Audit'] and not grant_covers(subject, resource, action)"
-    reason: "Finance records are restricted to Finance, Management and Audit."
+    when: "resource.department in ['Finance & Accounts', 'Internal Audit'] and subject.department not in ['Finance & Accounts', 'Internal Audit', 'MD Office'] and 'plant_manager' not in subject.roles and not grant_covers(subject, resource, action)"
+    reason: "Finance records are restricted to Finance & Accounts, Internal Audit and the MD Office."
 
   # ---------- documents: allows ----------
   - id: R-PUBLIC

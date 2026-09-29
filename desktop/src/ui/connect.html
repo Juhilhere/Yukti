@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file:; style-src 'self'; script-src 'self'">
+<title>Connect to Yukti</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="brand">
+    <img src="../../build/icon.png" alt="">
+    <div><h1>Connect to Yukti</h1><small>Sovereign Industrial AI Workbench · <span id="ver"></span></small></div>
+  </div>
+
+  <div class="opt" id="opt-remote" data-mode="remote">
+    <h2><input type="radio" name="mode" value="remote" id="r-remote"> Connect to Yukti server on the plant network</h2>
+    <p>Recommended for employee PCs. The GPU server runs Yukti; this app is a secure client.</p>
+    <div class="row">
+      <input type="text" id="url" spellcheck="false" placeholder="http://yukti.plant.local:8000">
+      <button id="test">Test connection</button>
+    </div>
+    <div class="msg" id="test-msg"></div>
+  </div>
+
+  <div class="opt" id="opt-local" data-mode="local">
+    <h2><input type="radio" name="mode" value="local" id="r-local"> All-in-one on this PC</h2>
+    <p>For demos / single user. Starts the Yukti server locally on 127.0.0.1:8000 and stops it when you quit.</p>
+    <div class="row">
+      <input type="text" id="root" spellcheck="false" placeholder="C:\Yukti-Server">
+      <button id="browse">Browse…</button>
+    </div>
+  </div>
+
+  <div class="msg" id="go-msg"></div>
+  <div class="foot">
+    <span>Settings are stored locally. No telemetry.</span>
+    <button class="primary" id="go">Connect</button>
+  </div>
+<script src="connect.js"></script>
+</body>
+</html>

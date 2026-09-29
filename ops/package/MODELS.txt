@@ -1,0 +1,5 @@
+Default model shipped with Yukti
+  gemma-2-2b-it-GGUF\gemma-2-2b-it-Q8_0.gguf   (Google Gemma 2 2B instruction-tuned, Q8_0 GGUF, lmstudio-community conversion)
+  SHA-256: 2D448A9AAB894B8E8E18168CF3F490CB9F65632222F29F93514AC9ECC754DEBE
+  Licence: Gemma Terms of Use (https://ai.google.dev/gemma/terms)
+Add larger models for GPU servers in the app: Admin > Models > Import from path (e.g. a USB drive). Any llama.cpp GGUF works.

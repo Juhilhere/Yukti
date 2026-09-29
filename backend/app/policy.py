@@ -15,7 +15,7 @@ from typing import Any
 import yaml
 from simpleeval import EvalWithCompoundTypes
 
-POLICY_FILE = Path(__file__).resolve().parents[1] / "policies" / "core.yaml"
+from .config import POLICY_FILE
 
 
 @dataclass

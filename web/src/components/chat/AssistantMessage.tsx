@@ -1,7 +1,11 @@
 import { memo, useState } from 'react';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { AlertTriangle, Brain, Check, ChevronDown, ChevronRight, Copy, Gauge, RefreshCw, Route, ShieldCheck, ShieldX, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, Brain, Check, ChevronDown, ChevronRight, Copy, Gauge, RefreshCw, Route, ShieldCheck, ShieldX, ShieldAlert, ThumbsDown, ThumbsUp } from 'lucide-react';
+import { api, errMsg } from '../../lib/api';
+import { useT } from '../../lib/i18n';
+import { Modal } from '../Modal';
+import { toast } from '../Toast';
 import type { GuardDecision, RouteDecision } from '../../lib/types';
 import { Badge, JsonView, Popover, Spinner } from '../ui';
 import { cx, num } from '../../lib/format';
@@ -78,6 +82,56 @@ function Thinking({ text, streaming }: { text: string; streaming: boolean }) {
   );
 }
 
+function initialRating(m: UIMessage): number {
+  const f = m.feedback;
+  if (typeof f === 'number') return f;
+  if (f && typeof f === 'object' && typeof f.rating === 'number') return f.rating;
+  return 0;
+}
+
+function FeedbackButtons({ m }: { m: UIMessage }) {
+  const t = useT();
+  const [rating, setRating] = useState<number>(() => initialRating(m));
+  const [pending, setPending] = useState<1 | -1 | null>(null);
+  const [comment, setComment] = useState('');
+  const [busy, setBusy] = useState(false);
+  const persisted = !!m.id && !m.id.startsWith('local-');
+  if (!persisted) return null;
+  const submit = async () => {
+    if (!pending) return;
+    setBusy(true);
+    try {
+      await api.post(`/api/messages/${encodeURIComponent(m.id)}/feedback`, comment.trim() ? { rating: pending, comment: comment.trim() } : { rating: pending });
+      setRating(pending);
+      toast.success('Thanks for your feedback');
+      setPending(null); setComment('');
+    } catch (e) {
+      toast.error('Could not send feedback', errMsg(e));
+    } finally { setBusy(false); }
+  };
+  return (
+    <>
+      <button className={cx('btn btn-ghost btn-icon', rating > 0 ? 'text-ok' : 'text-muted')} title={t('chat.helpful')} aria-pressed={rating > 0}
+        onClick={() => { setComment(''); setPending(1); }}><ThumbsUp size={13} fill={rating > 0 ? 'currentColor' : 'none'} /></button>
+      <button className={cx('btn btn-ghost btn-icon', rating < 0 ? 'text-amber' : 'text-muted')} title={t('chat.notHelpful')} aria-pressed={rating < 0}
+        onClick={() => { setComment(''); setPending(-1); }}><ThumbsDown size={13} fill={rating < 0 ? 'currentColor' : 'none'} /></button>
+      <Modal open={pending !== null} onClose={() => setPending(null)} width={440}
+        title={<span className="flex items-center gap-2">{pending === 1 ? <ThumbsUp size={14} className="text-ok" /> : <ThumbsDown size={14} className="text-amber" />}{pending === 1 ? t('chat.helpful') : t('chat.notHelpful')}</span>}
+        footer={<>
+          <button className="btn btn-ghost" onClick={() => setPending(null)}>{t('btn.cancel')}</button>
+          <button className="btn btn-primary" disabled={busy} onClick={() => void submit()}>{busy ? <Spinner className="!text-[#1a1204]" /> : null}{t('btn.submit')}</button>
+        </>}>
+        <div className="space-y-2">
+          <div className="text-[12.5px] text-muted">{pending === 1 ? 'What was useful? (optional)' : 'What was wrong or missing? (optional)'}</div>
+          <textarea autoFocus className="input min-h-[90px]" value={comment} onChange={(e) => setComment(e.target.value)}
+            placeholder={pending === 1 ? 'e.g. correct revision cited' : 'e.g. wrong value, outdated revision, missing step'} />
+          <div className="text-[11px] text-faint">Your rating, question and answer are shared with Yukti administrators to improve answers.</div>
+        </div>
+      </Modal>
+    </>
+  );
+}
+
 function StatsFooter({ m, canRegen, onRegen }: { m: UIMessage; canRegen: boolean; onRegen?: () => void }) {
   const [copied, setCopied] = useState(false);
   const s = m.stats;
@@ -98,6 +152,7 @@ function StatsFooter({ m, canRegen, onRegen }: { m: UIMessage; canRegen: boolean
         </>
       )}
       <span className="ml-auto flex items-center gap-0.5 font-sans">
+        <FeedbackButtons m={m} />
         <button className="btn btn-ghost btn-icon text-muted" title="Copy" onClick={copy}>{copied ? <Check size={13} className="text-ok" /> : <Copy size={13} />}</button>
         {canRegen && <button className="btn btn-ghost btn-icon text-muted" title="Regenerate" onClick={onRegen}><RefreshCw size={13} /></button>}
       </span>
@@ -151,7 +206,7 @@ function AssistantMessageImpl({ m, isLast, busy, showStats, question, onRegenera
         {m.facts && m.facts.length > 0 && <FactsTable facts={m.facts} onCite={cite} />}
         {m.sources && m.sources.length > 0 && <SourcesRow msgId={m.id} sources={m.sources} />}
         {m.denied && m.denied.count > 0 && <DeniedCard denied={m.denied} question={question} />}
-        {!m.streaming && (showStats || isLast) && (
+        {!m.streaming && (
           <StatsFooter m={showStats ? m : { ...m, stats: null }} canRegen={isLast && !busy && !!onRegenerate} onRegen={onRegenerate} />
         )}
       </div>

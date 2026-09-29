@@ -1,14 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { KeyRound, LogOut, Monitor, Settings as SettingsIcon, User as UserIcon, X } from 'lucide-react';
-import { api } from '../lib/api';
-import type { SessionInfo } from '../lib/types';
-import { countdown, fmtTime, timeAgo } from '../lib/format';
+import { Link, useLocation } from 'react-router-dom';
+import { KeyRound, Monitor, Settings as SettingsIcon, ShieldCheck, User as UserIcon } from 'lucide-react';
+import { countdown, fmtTime, roleLabel } from '../lib/format';
+import { useT } from '../lib/i18n';
 import { setSettings, useSettings } from '../lib/settings';
 import { useAuth } from '../lib/auth';
-import { Badge, Card, EmptyState, PageHeader, QueryState, Spinner, Toggle } from '../components/ui';
-import { toast } from '../components/Toast';
+import { Badge, Card, EmptyState, LangSwitcher, PageHeader, Toggle } from '../components/ui';
 
 function Row({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
@@ -27,16 +24,9 @@ function useNow(ms = 1000) {
 
 export default function Settings() {
   const st = useSettings();
-  const { me, logout } = useAuth();
-  const qc = useQueryClient();
+  const { me } = useAuth();
+  const t = useT();
   const now = useNow();
-  const sessions = useQuery({ queryKey: ['sessions'], queryFn: () => api.get<SessionInfo[]>('/api/auth/sessions') });
-  const revoke = useMutation({
-    mutationFn: (id: string) => api.del(`/api/auth/sessions/${id}`),
-    onSuccess: () => { toast.success('Session revoked'); qc.invalidateQueries({ queryKey: ['sessions'] }); },
-    onError: (e) => toast.error('Could not revoke', (e as Error).message),
-  });
-  const [confirmAll, setConfirmAll] = useState(false);
   const u = me?.user;
   const loc = useLocation();
   useEffect(() => {
@@ -47,10 +37,11 @@ export default function Settings() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <PageHeader title="Settings" icon={<SettingsIcon size={18} />} subtitle="Preferences, profile and active sessions" />
+      <PageHeader title={t('page.settings')} icon={<SettingsIcon size={18} />} subtitle="Preferences and profile"
+        actions={<Link to="/account" className="btn btn-sm"><ShieldCheck size={12} />{t('menu.account')}</Link>} />
       <div className="grid gap-4 p-5 xl:grid-cols-2">
         <Card title="Application" icon={<Monitor size={14} className="text-cyan" />} bodyClass="px-3 py-1 divide-y divide-border">
-          <Row title="Theme" hint="Yukti ships a single dark theme tuned for control rooms."><Toggle checked disabled onChange={() => undefined} label={<span className="text-muted">Dark</span>} /></Row>
+          <Row title={t('account.language')} hint="English / हिंदी / ಕನ್ನಡ"><LangSwitcher /></Row>
           <Row title="Full-width chat" hint="Let conversations use the entire center panel."><Toggle checked={st.chatFullWidth} onChange={(v) => setSettings({ chatFullWidth: v })} /></Row>
           <Row title="Show generation stats" hint="tok/s, TTFT and token counts under each answer."><Toggle checked={st.showStats} onChange={(v) => setSettings({ showStats: v })} /></Row>
           <Row title="Send with Enter" hint="When off, use Ctrl+Enter to send."><Toggle checked={st.sendWithEnter} onChange={(v) => setSettings({ sendWithEnter: v })} /></Row>
@@ -71,7 +62,7 @@ export default function Settings() {
               </div>
               <div className="grid grid-cols-2 gap-3 text-[12px]">
                 <div><div className="label mb-1">Username</div><span className="font-mono">{u.username}</span></div>
-                <div><div className="label mb-1">Roles</div><div className="flex flex-wrap gap-1">{u.roles.map((r) => <Badge key={r} tone="amber" mono>{r}</Badge>)}</div></div>
+                <div><div className="label mb-1">Roles</div><div className="flex flex-wrap gap-1">{u.roles.map((r) => <Badge key={r} tone="amber" mono>{roleLabel(r)}</Badge>)}</div></div>
                 <div className="col-span-2"><div className="label mb-1">Asset scopes</div><div className="flex flex-wrap gap-1">{u.asset_scopes.length ? u.asset_scopes.map((r) => <Badge key={r} tone="cyan" mono>{r}</Badge>) : <span className="text-muted">—</span>}</div></div>
                 <div className="col-span-2"><div className="label mb-1">Permissions</div><div className="flex flex-wrap gap-1">{(me?.permissions ?? []).map((p) => <Badge key={p} mono tone="muted">{p}</Badge>)}</div></div>
                 <div className="col-span-2">
@@ -95,34 +86,6 @@ export default function Settings() {
           )}
         </Card>
 
-        <Card id="sessions" className="xl:col-span-2 scroll-mt-4" title="Sessions" icon={<KeyRound size={14} className="text-cyan" />} bodyClass="p-0"
-          actions={confirmAll ? <>
-            <span className="text-[12px] text-amber">Sign out everywhere?</span>
-            <button className="btn btn-danger btn-sm" onClick={() => logout(true)}><LogOut size={12} />Confirm</button>
-            <button className="btn btn-ghost btn-sm" onClick={() => setConfirmAll(false)}>Cancel</button>
-          </> : <button className="btn btn-danger btn-sm" onClick={() => setConfirmAll(true)}><LogOut size={12} />Log out all devices</button>}>
-          <QueryState q={sessions} empty={(sessions.data ?? []).length === 0} emptyTitle="No active sessions">
-            <div className="divide-y divide-border">
-              {(sessions.data ?? []).map((ss) => (
-                <div key={ss.id} className="flex items-center gap-3 px-3 py-2">
-                  <Monitor size={15} className={ss.current ? 'text-ok' : 'text-muted'} />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="truncate text-[12.5px]">{ss.user_agent || 'Unknown client'}</span>
-                      {ss.current && <Badge tone="ok">this device</Badge>}
-                    </div>
-                    <div className="font-mono text-[11px] text-faint">{ss.ip || '—'} · started {fmtTime(ss.created_at)} · active {timeAgo(ss.last_seen_at)}</div>
-                  </div>
-                  {!ss.current && (
-                    <button className="btn btn-sm btn-ghost text-red-300" disabled={revoke.isPending} onClick={() => revoke.mutate(ss.id)}>
-                      {revoke.isPending && revoke.variables === ss.id ? <Spinner size={12} /> : <X size={12} />}Revoke
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          </QueryState>
-        </Card>
       </div>
     </div>
   );

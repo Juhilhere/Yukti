@@ -16,7 +16,7 @@ from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import audit, chat, engine, laya, mrpl, production, rag, seed
+from . import admin, audit, chat, engine, laya, mrpl, production, rag, seed
 from .auth import Ctx, current, err, notify, router as auth_router, user_by_id
 from .config import CLEARANCE_LABELS, CLEARANCE_BY_LABEL, DEMO_MODE, REPORTS, VERSION, WEB_DIST
 from .db import ex, init_db, j, new_id, now_iso, q, q1, uj
@@ -25,6 +25,7 @@ from .policy import pdp
 
 app = FastAPI(title="Yukti — Sovereign Industrial AI Workbench", version=VERSION, docs_url="/api/docs", openapi_url="/api/openapi.json")
 app.include_router(auth_router)
+app.include_router(admin.router)
 
 # ------------------------------------------------------------------ offline guard (egress block)
 _ALLOWED_HOSTS = {"127.0.0.1", "localhost", "::1", "0.0.0.0"}
@@ -63,6 +64,8 @@ def install_guard() -> None:
 
 @app.on_event("startup")
 def startup() -> None:
+    if admin.apply_pending_restore():
+        engine.log("Restored database and documents from staged backup.")
     init_db()
     seed.run(ingest=True)
     seed.refresh_alert_notifications()
@@ -74,7 +77,13 @@ def startup() -> None:
     laya.get()
     install_guard()
     audit.write("system", "app.started", "api", {"version": VERSION})
-    threading.Thread(target=engine.autoload_default, daemon=True).start()
+    ai = admin.ai_settings()
+    if ai.get("autoload", True):
+        if ai.get("default_model_id"):
+            threading.Thread(target=engine.load, args=(ai.get("default_engine") or "llamacpp", ai["default_model_id"],
+                                                        ai.get("default_load_config") or {}), daemon=True).start()
+        else:
+            threading.Thread(target=engine.autoload_default, daemon=True).start()
 
 
 @app.on_event("shutdown")
@@ -111,7 +120,7 @@ def system(ctx: Ctx = Depends(current)) -> dict[str, Any]:
     vm = psutil.virtual_memory()
     if "cpu_name" not in _SYS_CACHE:
         import platform
-        _SYS_CACHE["cpu_name"] = "AMD Ryzen 7 7840HS" if "AMD64" in platform.machine() else platform.processor()
+        _SYS_CACHE["cpu_name"] = platform.processor() or platform.machine()
         try:
             import subprocess
             out = subprocess.run(["powershell", "-NoProfile", "-c", "(Get-CimInstance Win32_Processor).Name"], capture_output=True, text=True, timeout=8)
@@ -129,6 +138,7 @@ def system(ctx: Ctx = Depends(current)) -> dict[str, Any]:
 # ------------------------------------------------------------------ engines & models
 @app.get("/api/engines")
 async def engines(ctx: Ctx = Depends(current)) -> list[dict[str, Any]]:
+    ctx.require("models.manage")
     return list(await asyncio.gather(*(engine.probe(e) for e in ["llamacpp", "bionic", "vllm", "remote"])))
 
 
@@ -147,6 +157,7 @@ async def set_engine(eid: str, body: dict[str, Any], ctx: Ctx = Depends(current)
 
 @app.get("/api/models")
 async def models(ctx: Ctx = Depends(current)) -> list[dict[str, Any]]:
+    ctx.require("models.manage")
     ms = engine.scan_models()
     for eid in ("bionic", "vllm", "remote"):
         info = await engine.probe(eid)
@@ -158,12 +169,15 @@ async def models(ctx: Ctx = Depends(current)) -> list[dict[str, Any]]:
 
 @app.get("/api/models/loaded")
 def loaded(ctx: Ctx = Depends(current)) -> dict[str, Any]:
-    return engine.state.public()
+    pub = engine.state.public()
+    if "models.manage" not in ctx.perms:
+        return {k: pub[k] for k in ("status", "engine", "model_name")}
+    return pub
 
 
 @app.post("/api/models/load")
 def load_model(body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str, Any]:
-    ctx.require("models.manage") if not DEMO_MODE else None
+    ctx.require("models.manage")
     res = engine.load(body.get("engine", "llamacpp"), body["model_id"], body.get("load_config") or {})
     audit.write(ctx.actor, "model.load", f"model:{body['model_id']}", {"engine": body.get("engine"), "config": body.get("load_config")})
     return res
@@ -171,6 +185,7 @@ def load_model(body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str, A
 
 @app.post("/api/models/unload")
 def unload_model(ctx: Ctx = Depends(current)) -> dict[str, Any]:
+    ctx.require("models.manage")
     engine.unload()
     audit.write(ctx.actor, "model.unload", "model")
     return {"ok": True}
@@ -178,11 +193,13 @@ def unload_model(ctx: Ctx = Depends(current)) -> dict[str, Any]:
 
 @app.get("/api/params/schema")
 def params_schema(ctx: Ctx = Depends(current)) -> dict[str, Any]:
+    ctx.require("ai.settings")
     return schema(engine.scan_models())
 
 
 @app.post("/api/models/command-preview")
 def command_preview(body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str, Any]:
+    ctx.require("models.manage")
     from .llm_params import llama_args
     m = engine.model_by_id(body.get("model_id", "")) or {"path": body.get("model_id", "<model.gguf>"), "name": "model"}
     cfg = body.get("load_config") or {}
@@ -193,6 +210,7 @@ def command_preview(body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[s
 # ------------------------------------------------------------------ presets
 @app.get("/api/presets")
 def presets(ctx: Ctx = Depends(current)) -> list[dict[str, Any]]:
+    ctx.require("ai.settings")
     rows = q("SELECT * FROM presets WHERE builtin=1 OR user_id=? ORDER BY builtin DESC, created_at", (ctx.user["id"],))
     return [{"id": r["id"], "name": r["name"], "description": r["description"], "system_prompt": r["system_prompt"],
              "prediction": uj(r["prediction_json"], {}), "load": uj(r["load_json"], {}), "builtin": bool(r["builtin"])} for r in rows]
@@ -200,6 +218,7 @@ def presets(ctx: Ctx = Depends(current)) -> list[dict[str, Any]]:
 
 @app.post("/api/presets")
 def create_preset(body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str, Any]:
+    ctx.require("ai.settings")
     pid = new_id()
     ex("INSERT INTO presets(id, user_id, name, description, system_prompt, prediction_json, load_json, builtin, created_at) VALUES(?,?,?,?,?,?,?,0,?)",
        (pid, ctx.user["id"], body.get("name", "Preset"), body.get("description", ""), body.get("system_prompt", ""),
@@ -259,7 +278,8 @@ def get_chat(cid: str, ctx: Ctx = Depends(current)) -> dict[str, Any]:
         raise err(404, "not_found", "Chat not found")
     msgs = q("SELECT * FROM messages WHERE chat_id=? ORDER BY created_at, rowid", (cid,))
     return {"id": c["id"], "title": c["title"], "project_id": c["project_id"], "system_prompt": c["system_prompt"] or "",
-            "prediction": {**DEFAULT_PREDICTION, **uj(c["prediction_json"], {})}, "messages": [chat.message_out(m) for m in msgs],
+            "prediction": ({**admin.ai_settings()["prediction"], **uj(c["prediction_json"], {})} if "ai.settings" in ctx.perms else {}),
+            "messages": [chat.message_out(m) for m in msgs],
             "updated_at": c["updated_at"]}
 
 
@@ -289,10 +309,14 @@ async def send_message(cid: str, body: dict[str, Any], ctx: Ctx = Depends(curren
     c = q1("SELECT * FROM chats WHERE id=? AND user_id=?", (cid, ctx.user["id"]))
     if not c:
         raise err(404, "not_found", "Chat not found")
-    pred = body.get("prediction") or uj(c["prediction_json"], {})
-    sp = body.get("system_prompt") if body.get("system_prompt") is not None else c["system_prompt"]
-    if body.get("prediction") is not None or body.get("system_prompt") is not None:
-        ex("UPDATE chats SET prediction_json=?, system_prompt=? WHERE id=?", (j(pred), sp or "", cid))
+    org = admin.ai_settings()
+    if "ai.settings" in ctx.perms:  # admins may override per chat (testing)
+        pred = {**org["prediction"], **(body.get("prediction") or uj(c["prediction_json"], {}))}
+        sp = body.get("system_prompt") if body.get("system_prompt") is not None else (c["system_prompt"] or org["system_prompt"])
+        if body.get("prediction") is not None or body.get("system_prompt") is not None:
+            ex("UPDATE chats SET prediction_json=?, system_prompt=? WHERE id=?", (j(body.get("prediction") or {}), sp or "", cid))
+    else:  # employees always use organisation settings
+        pred, sp = org["prediction"], org["system_prompt"]
     return _sse_response(chat.run_turn(ctx, cid, str(body.get("content", "")), sp, pred, bool(body.get("use_knowledge", True))))
 
 
@@ -302,8 +326,12 @@ async def regenerate(cid: str, body: dict[str, Any], ctx: Ctx = Depends(current)
     c = q1("SELECT * FROM chats WHERE id=? AND user_id=?", (cid, ctx.user["id"]))
     if not c or not last_user:
         raise err(404, "not_found", "Nothing to regenerate")
-    pred = body.get("prediction") or uj(c["prediction_json"], {})
-    return _sse_response(chat.run_turn(ctx, cid, last_user["content"], c["system_prompt"], pred, bool(body.get("use_knowledge", True)), regenerate=True))
+    org = admin.ai_settings()
+    if "ai.settings" in ctx.perms:
+        pred, spr = {**org["prediction"], **(body.get("prediction") or uj(c["prediction_json"], {}))}, (c["system_prompt"] or org["system_prompt"])
+    else:
+        pred, spr = org["prediction"], org["system_prompt"]
+    return _sse_response(chat.run_turn(ctx, cid, last_user["content"], spr, pred, bool(body.get("use_knowledge", True)), regenerate=True))
 
 
 @app.post("/api/chats/{cid}/stop")
@@ -320,7 +348,8 @@ def _doc_out(d: dict[str, Any]) -> dict[str, Any]:
             "doc_type": d["doc_type"], "department": d["department"], "classification": CLEARANCE_LABELS[int(d["classification"])],
             "pages": d["pages"], "page_modes": {"digital": modes.get("digital", 0), "scanned": modes.get("scanned", 0) + modes.get("image", 0)},
             "asset_tags": uj(d["asset_tags_json"], []), "created_at": d["created_at"], "size_bytes": d["size_bytes"],
-            "file_name": d["file_name"], "effective_date": d["effective_date"]}
+            "file_name": d["file_name"], "effective_date": d["effective_date"], "is_example": bool(d.get("is_example")),
+            "is_public": bool(d.get("is_public")), "source_url": d.get("source_url")}
 
 
 @app.get("/api/documents")
@@ -351,6 +380,7 @@ async def upload(background: BackgroundTasks, file: UploadFile = File(...), titl
     cl = CLEARANCE_BY_LABEL.get(classification.upper(), 1)
     if cl > ctx.subject.clearance:
         raise err(403, "policy_denied", "You cannot upload above your own clearance.")
+    department = ctx.user["department"]  # HODs add data only for their own department
     did = rag.create_document({"title": title or Path(file.filename or "upload").stem, "doc_type": doc_type, "department": department,
                                "classification": cl, "doc_number": doc_number or None, "revision": revision,
                                "effective_date": date.today().isoformat()}, file.filename or "upload.bin", data, ctx.actor)
@@ -398,7 +428,9 @@ def document_file(did: str, ctx: Ctx = Depends(current)) -> FileResponse:
 @app.delete("/api/documents/{did}")
 def delete_document(did: str, ctx: Ctx = Depends(current)) -> dict[str, Any]:
     ctx.require("documents.upload")
-    _doc_or_403(did, ctx)
+    d = _doc_or_403(did, ctx)
+    if d["department"] != ctx.user["department"] or d.get("is_public"):
+        raise err(403, "policy_denied", "HODs can remove only their own department's documents.")
     for c in q("SELECT id FROM chunks WHERE document_id=?", (did,)):
         ex("DELETE FROM chunks_fts WHERE chunk_id=?", (c["id"],))
     ex("DELETE FROM documents WHERE id=?", (did,))
@@ -515,7 +547,7 @@ def assets(request: Request, ctx: Ctx = Depends(current)) -> list[dict[str, Any]
             continue
         items = _items(a["tag"])
         out.append({**{k: a[k] for k in ("tag", "name", "unit", "class", "vendor", "serial", "location", "owner_department", "criticality", "model")},
-                    "items": items, "nearest_days": min((i["days_left"] for i in items if i["days_left"] is not None), default=None)})
+                    "is_example": bool(a.get("is_example")), "items": items, "nearest_days": min((i["days_left"] for i in items if i["days_left"] is not None), default=None)})
     return out
 
 
@@ -556,15 +588,38 @@ def read_notification(nid: str, ctx: Ctx = Depends(current)) -> dict[str, Any]:
 
 
 # ------------------------------------------------------------------ findings
-def _finding_out(f: dict[str, Any]) -> dict[str, Any]:
+def _is_discipline_approver(f: dict[str, Any], ctx: Ctx) -> bool:
+    return (f"approver:{(f['discipline'] or '').lower()}" in ctx.subject.roles or f["approver_id"] == ctx.user["id"]
+            or "plant_manager" in ctx.subject.roles or "admin" in ctx.subject.roles)
+
+
+def _allowed_actions(f: dict[str, Any], ctx: Ctx) -> list[str]:
+    st = f["state"]
+    appr = _is_discipline_approver(f, ctx)
+    acts: list[str] = []
+    if st in ("PENDING", "ESCALATED"):
+        acts += ["acknowledge"] if appr or "findings.view" in ctx.perms else []
+        acts += ["approve", "reject"] if appr else []
+        acts += ["escalate"] if appr or "findings.view" in ctx.perms else []
+    elif st == "ACKNOWLEDGED":
+        acts += ["approve", "reject", "escalate"] if appr else (["escalate"] if "findings.view" in ctx.perms else [])
+    if "findings.view" in ctx.perms or appr:
+        acts.append("note")
+    return acts
+
+
+def _finding_out(f: dict[str, Any], ctx: Ctx) -> dict[str, Any]:
     a = user_by_id(f["approver_id"]) or {}
     return {**{k: f[k] for k in ("id", "title", "tag", "discipline", "severity", "state", "due_date", "evidence", "source_document_id", "page", "created_at")},
-            "approver_name": a.get("display_name"), "history": uj(f["history_json"], [])}
+            "approver_name": a.get("display_name"), "history": uj(f["history_json"], []), "is_example": bool(f.get("is_example")),
+            "discipline_approver": _is_discipline_approver(f, ctx), "allowed_actions": _allowed_actions(f, ctx)}
 
 
 @app.get("/api/findings")
 def findings(ctx: Ctx = Depends(current)) -> list[dict[str, Any]]:
-    return [_finding_out(f) for f in q("SELECT * FROM findings ORDER BY created_at DESC")]
+    if "findings.view" not in ctx.perms and "inbox" not in ctx.perms:
+        return []
+    return [_finding_out(f, ctx) for f in q("SELECT * FROM findings ORDER BY created_at DESC")]
 
 
 @app.post("/api/findings/{fid}/action")
@@ -573,24 +628,18 @@ def finding_action(fid: str, body: dict[str, Any], ctx: Ctx = Depends(current)) 
     if not f:
         raise err(404, "not_found", "Finding not found")
     act = body.get("action")
-    trans = {"acknowledge": ("PENDING", "ACKNOWLEDGED"), "approve": ("ACKNOWLEDGED", "APPROVED"), "reject": ("ACKNOWLEDGED", "REJECTED"),
-             "escalate": (None, "ESCALATED")}
-    if act not in trans:
-        raise err(422, "invalid", "Unknown action")
-    frm, to = trans[act]
-    if act in ("approve", "reject"):
-        ctx.require("findings.approve")
-    if frm and f["state"] not in (frm, "ESCALATED"):
-        raise err(409, "conflict", f"Cannot {act} a finding in state {f['state']}")
+    if act not in _allowed_actions(f, ctx):
+        raise err(403, "policy_denied", f"'{act}' is not allowed for you on a finding in state {f['state']}.")
+    to = {"acknowledge": "ACKNOWLEDGED", "approve": "APPROVED", "reject": "REJECTED", "escalate": "ESCALATED", "note": f["state"]}[act]
     hist = uj(f["history_json"], [])
-    hist.append({"at": now_iso(), "event": to, "by": ctx.user["display_name"], "note": body.get("note", "")})
+    hist.append({"at": now_iso(), "event": "NOTE" if act == "note" else to, "by": ctx.user["display_name"], "note": body.get("note", "")})
     approver = f["approver_id"]
     if act == "escalate":
         approver = _approver_for("Management") or approver
         notify(approver, "escalation", f"Escalated finding: {f['title']}", body.get("note", ""), "/inbox")
     ex("UPDATE findings SET state=?, history_json=?, approver_id=? WHERE id=?", (to, j(hist), approver, fid))
     audit.write(ctx.actor, f"finding.{act}", f"finding:{fid}", {"from": f["state"], "to": to})
-    return _finding_out(q1("SELECT * FROM findings WHERE id=?", (fid,)))
+    return _finding_out(q1("SELECT * FROM findings WHERE id=?", (fid,)), ctx)
 
 
 # ------------------------------------------------------------------ production
@@ -600,27 +649,42 @@ def prod_overview(ctx: Ctx = Depends(current)) -> dict[str, Any]:
     return production.overview()
 
 
+@app.get("/api/production/model")
+def prod_model(ctx: Ctx = Depends(current)) -> dict[str, Any]:
+    ctx.require("production.view")
+    return production.get_model()
+
+
+@app.put("/api/production/model")
+def prod_model_put(body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str, Any]:
+    ctx.require("production.edit")
+    m = production.save_model(body, ctx.actor)
+    audit.write(ctx.actor, "production.model.saved", "production_model", {"complete": m["complete"], "missing": len(m["missing"])})
+    return m
+
+
 @app.post("/api/production/scenario")
 async def prod_scenario(body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str, Any]:
     ctx.require("production.view")
-    res = production.solve(float(body.get("hcu_down_days", 0)), float(body.get("diesel_crack_delta", 0)),
-                           float(body.get("petchem_margin_delta", 0)), float(body.get("crude_price_delta", 0)))
-    # LLM explains, numbers come only from the JSON
+    res = production.solve(body)
+    if res.get("error"):
+        raise HTTPException(status_code=422, detail={"code": "model_incomplete", "message": "The plant model is incomplete.", "missing": res["missing"]})
     top = sorted(res["delta_pct"].items(), key=lambda kv: -abs(kv[1]))[:5]
-    facts = (f"Margin baseline ₹{res['margin_cr']['baseline']} Cr vs scenario ₹{res['margin_cr']['scenario']} Cr per month. "
-             f"Largest product changes: " + ", ".join(f"{k} {v:+.1f}%" for k, v in top) + ". Binding: " + (", ".join(res["binding"]) or "none") + ".")
+    facts = (f"Monthly margin baseline US$ {res['margin_usd']['baseline']:,.0f} vs scenario US$ {res['margin_usd']['scenario']:,.0f}. "
+             "Largest product changes: " + ", ".join(f"{k} {v:+.1f}%" for k, v in top) + ". Binding: " + (", ".join(res["binding"]) or "none") + ".")
     explanation = facts
     if engine.state.status == "ready":
         try:
+            import re as _re
             txt = await asyncio.wait_for(engine.complete_once([
-                {"role": "system", "content": "You explain refinery planning LP results to planners in 4 short bullet points. Use ONLY the numbers given; do not invent numbers. End with: 'Planners decide.'"},
-                {"role": "user", "content": facts + "\nAssumptions: " + " ".join(res["assumptions"])}]), timeout=40)
-            nums_ok = all(n in facts + " ".join(res["assumptions"]) for n in __import__("re").findall(r"\d+(?:\.\d+)?", txt))
-            explanation = txt if nums_ok else facts + " (LLM explanation withheld: it contained numbers not present in the optimizer output.)"
+                {"role": "system", "content": "Explain these refinery planning LP results to planners in 4 short bullet points. Use ONLY the numbers given. End with: 'Planners decide.'"},
+                {"role": "user", "content": facts}]), timeout=40)
+            ok = all(n in facts for n in _re.findall(r"\d+(?:\.\d+)?", txt.replace(",", "")) if n not in ("4",))
+            explanation = txt if ok else facts + " (LLM wording withheld: it contained numbers not in the optimizer output.)"
         except Exception:
             pass
     res["explanation"] = explanation
-    audit.write(ctx.actor, "production.scenario", "scenario", {"inputs": body, "margin_cr": res["margin_cr"]})
+    audit.write(ctx.actor, "production.scenario", "scenario", {"inputs": body, "margin_usd": res["margin_usd"]})
     return res
 
 
@@ -656,7 +720,11 @@ def laya_classify(body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str
 
 @app.get("/api/laya/stats")
 def laya_stats(ctx: Ctx = Depends(current)) -> dict[str, Any]:
-    return laya.get().stats()
+    st = laya.get().stats()
+    bench = admin.get_setting("laya_benchmark")
+    st["baseline_llm_router_ms"] = bench.get("llm_router_avg_ms") if bench else None
+    st["benchmark"] = bench
+    return st
 
 
 # ------------------------------------------------------------------ reports (A2 dossier PDF)
@@ -697,6 +765,39 @@ def audit_list(request: Request, ctx: Ctx = Depends(current)) -> list[dict[str, 
              "detail": uj(r["detail_json"], {}), "hash": r["hash"], "prev_hash": r["prev_hash"]} for r in rows]
 
 
+@app.post("/api/messages/{mid}/feedback")
+def message_feedback(mid: str, body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str, Any]:
+    m = q1("SELECT m.id FROM messages m JOIN chats c ON c.id=m.chat_id WHERE m.id=? AND c.user_id=?", (mid, ctx.user["id"]))
+    if not m:
+        raise err(404, "not_found", "Message not found")
+    rating = 1 if int(body.get("rating", 1)) > 0 else -1
+    ex("DELETE FROM feedback WHERE message_id=? AND user_id=?", (mid, ctx.user["id"]))
+    ex("INSERT INTO feedback(id, message_id, user_id, rating, comment, created_at) VALUES(?,?,?,?,?,?)",
+       (new_id(), mid, ctx.user["id"], rating, str(body.get("comment", ""))[:2000], now_iso()))
+    audit.write(ctx.actor, "chat.feedback", f"message:{mid}", {"rating": rating})
+    return {"ok": True}
+
+
+@app.get("/api/audit/export")
+def audit_export(request: Request, ctx: Ctx = Depends(current)):  # type: ignore[no-untyped-def]
+    ctx.require("audit.view")
+    import csv
+    import io
+    fmt = request.query_params.get("format", "csv")
+    rows = q("SELECT seq, at, actor, event, entity, detail_json, prev_hash, hash FROM audit_log ORDER BY seq")
+    audit.write(ctx.actor, "audit.exported", "audit", {"format": fmt, "records": len(rows)})
+    if fmt == "jsonl":
+        import json as _json
+        body = "\n".join(_json.dumps(r, ensure_ascii=False) for r in rows)
+        return StreamingResponse(iter([body]), media_type="application/x-ndjson",
+                                 headers={"Content-Disposition": "attachment; filename=yukti_audit.jsonl"})
+    buf = io.StringIO()
+    w = csv.DictWriter(buf, fieldnames=["seq", "at", "actor", "event", "entity", "detail_json", "prev_hash", "hash"])
+    w.writeheader()
+    w.writerows(rows)
+    return StreamingResponse(iter([buf.getvalue()]), media_type="text/csv", headers={"Content-Disposition": "attachment; filename=yukti_audit.csv"})
+
+
 @app.get("/api/audit/verify")
 def audit_verify(ctx: Ctx = Depends(current)) -> dict[str, Any]:
     ctx.require("audit.view")
@@ -718,14 +819,6 @@ def server_status(ctx: Ctx = Depends(current)) -> dict[str, Any]:
     return {"engine": s.engine, "status": s.status, "port": 8080 if s.engine == "llamacpp" else None, "openai_base_url": url,
             "uptime_s": round(time.time() - s.started_at) if s.started_at else 0, "requests": s.requests, "model_name": s.model_name,
             "command": " ".join(s.command) if s.command else None}
-
-
-@app.get("/api/admin/users")
-def admin_users(ctx: Ctx = Depends(current)) -> list[dict[str, Any]]:
-    ctx.require("admin")
-    return [{"id": u["id"], "username": u["username"], "display_name": u["display_name"], "post": u["post"], "department": u["department"],
-             "clearance": u["clearance"], "clearance_label": CLEARANCE_LABELS[u["clearance"]], "roles": uj(u["roles_json"], []),
-             "asset_scopes": uj(u["asset_scopes_json"], []), "status": u["status"]} for u in q("SELECT * FROM users ORDER BY rowid")]
 
 
 @app.get("/api/admin/policies")

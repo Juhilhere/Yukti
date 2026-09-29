@@ -250,9 +250,10 @@ def load(engine: str, model_id: str, cfg: dict[str, Any]) -> dict[str, Any]:
         state.error = "Model file not found"
         return state.public()
     draft = cfg.get("draft_model") or None
-    binary = LLAMA_BINARIES.get(cfg.get("backend") or "cuda", LLAMA_SERVER)
-    if not Path(binary).exists() and not Path(binary).with_suffix(".exe").exists() and binary != LLAMA_BINARIES["vulkan"]:
-        binary = LLAMA_SERVER
+    from .config import pick_backend
+    backend = pick_backend(cfg.get("backend"))
+    binary = LLAMA_BINARIES.get(backend) or LLAMA_SERVER
+    log(f"Compute backend: {backend} ({binary})")
     args = [binary, *filter_args(binary, llama_args(cfg, m["path"], draft) + [
         "--host", "127.0.0.1", "--port", str(LLAMA_PORT), "--alias", m["name"], "--no-webui", "--metrics",
         "--slot-save-path", str(LOG_DIR.parent / "slots"), "--offline"])]
@@ -405,5 +406,5 @@ def autoload_default() -> None:
         return
     pick = next((m for m in ms if "gemma" in m["name"].lower()), ms[0])
     log(f"Auto-loading default model {pick['name']}")
-    load("llamacpp", pick["id"], {"backend": "cuda", "ctx_size": 16384, "gpu_layers": 99, "flash_attn": "on",
+    load("llamacpp", pick["id"], {"backend": "auto", "ctx_size": 16384, "gpu_layers": 99, "flash_attn": "on",
                                   "cache_type_k": "q8_0", "cache_type_v": "q8_0", "parallel": 2})

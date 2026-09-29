@@ -1,5 +1,5 @@
 {
-  "refinery": "Yukti Refinery (synthetic)",
+  "refinery": "Example Plant (EXAMPLE)",
   "capacity_mmtpa": 15,
   "units": "kt/month",
   "products": [

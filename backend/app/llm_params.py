@@ -29,7 +29,7 @@ LOAD: list[dict[str, Any]] = [
     f("keep", "Tokens to keep on overflow", "Context", "int", 0, "Number of prompt tokens kept when the context is shifted (-1 = all).", [L], min=-1, max=8192, step=1, advanced=True, flag="--keep"),
     f("context_shift", "Context shift", "Context", "bool", False, "Discard old tokens instead of failing when the context fills during generation.", [L], advanced=True, flag="--context-shift"),
     # GPU & offload
-    f("backend", "Compute backend", "GPU & Offload", "select", "cuda", "llama.cpp build to use: CUDA (NVIDIA, fastest) or Vulkan (any GPU incl. AMD iGPU).", [L], options=[{"value": "cuda", "label": "CUDA 12.4 (NVIDIA)"}, {"value": "vulkan", "label": "Vulkan"}]),
+    f("backend", "Compute backend", "GPU & Offload", "select", "auto", "Bundled llama.cpp build: auto (CUDA if an NVIDIA GPU is present, else Vulkan), CUDA 12.4 (NVIDIA) or Vulkan (AMD/Intel GPUs; CPU when GPU layers = 0).", [L], options=[{"value": "auto", "label": "Auto-detect"}, {"value": "cuda", "label": "CUDA 12.4 (NVIDIA)"}, {"value": "vulkan", "label": "Vulkan / CPU"}]),
     f("gpu_layers", "GPU offload (layers)", "GPU & Offload", "int", 99, "Transformer layers kept in VRAM. 99 = all layers; 0 = CPU only. Partial offload trades speed for VRAM.", [L], min=0, max=99, step=1, flag="-ngl"),
     f("fit", "Auto-fit to device memory", "GPU & Offload", "select", "on", "Let llama.cpp shrink unset arguments (context, offload) so the model fits in VRAM.", [L], options=[{"value": "on", "label": "on"}, {"value": "off", "label": "off"}], flag="--fit"),
     f("main_gpu", "Main GPU index", "GPU & Offload", "int", 0, "GPU used for the model / intermediate results.", [L], min=0, max=8, step=1, advanced=True, flag="-mg"),
@@ -109,7 +109,7 @@ LOAD: list[dict[str, Any]] = [
 
 PREDICTION: list[dict[str, Any]] = [
     # Sampling
-    f("temperature", "Temperature", "Sampling", "number", 0.7, "Randomness. 0 = greedy/deterministic; higher = more creative.", ALL, min=0, max=2, step=0.05),
+    f("temperature", "Temperature", "Sampling", "number", 0.8, "Randomness. 0 = greedy/deterministic; higher = more creative.", ALL, min=0, max=2, step=0.05),
     f("top_k", "Top-K", "Sampling", "int", 40, "Sample only from the K most likely tokens (0 = off).", [L, B, V], min=0, max=200, step=1),
     f("top_p", "Top-P (nucleus)", "Sampling", "number", 0.95, "Sample from the smallest set whose probability ≥ P (1 = off).", ALL, min=0, max=1, step=0.01),
     f("min_p", "Min-P", "Sampling", "number", 0.05, "Drop tokens below P × probability of the top token (0 = off).", [L, B, V], min=0, max=1, step=0.01),
@@ -119,7 +119,7 @@ PREDICTION: list[dict[str, Any]] = [
     f("dynatemp_exponent", "Dynamic temperature exponent", "Sampling", "number", 1, "Exponent for dynamic temperature.", [L], min=0, max=4, step=0.1, advanced=True),
     f("samplers", "Sampler order", "Sampling", "text", "", "Semicolon list, e.g. penalties;dry;top_n_sigma;top_k;typ_p;top_p;min_p;xtc;temperature.", [L], advanced=True),
     # Penalties
-    f("repeat_penalty", "Repeat penalty", "Penalties", "number", 1.1, "Penalise repeated tokens (1 = off).", [L, B, V], min=0.5, max=2, step=0.01),
+    f("repeat_penalty", "Repeat penalty", "Penalties", "number", 1.0, "Penalise repeated tokens (1 = off).", [L, B, V], min=0.5, max=2, step=0.01),
     f("repeat_last_n", "Repeat window", "Penalties", "int", 64, "Tokens considered for repeat penalty (0 off, -1 = context).", [L], min=-1, max=4096, step=1),
     f("presence_penalty", "Presence penalty", "Penalties", "number", 0.0, "Penalise tokens that already appeared (topic novelty).", ALL, min=-2, max=2, step=0.05),
     f("frequency_penalty", "Frequency penalty", "Penalties", "number", 0.0, "Penalise tokens by how often they appeared.", ALL, min=-2, max=2, step=0.05),
@@ -136,7 +136,7 @@ PREDICTION: list[dict[str, Any]] = [
     f("mirostat_tau", "Mirostat τ (target entropy)", "Mirostat", "number", 5.0, "Target surprise.", [L], min=0, max=10, step=0.1, advanced=True),
     f("mirostat_eta", "Mirostat η (learning rate)", "Mirostat", "number", 0.1, "Adaptation speed.", [L], min=0, max=1, step=0.01, advanced=True),
     # Output
-    f("max_tokens", "Max response tokens", "Output", "int", 1024, "Limit on generated tokens (-1 = until stop).", ALL, min=-1, max=32768, step=16),
+    f("max_tokens", "Max response tokens", "Output", "int", -1, "Limit on generated tokens (-1 = until stop).", ALL, min=-1, max=32768, step=16),
     f("stop", "Stop strings", "Output", "tags", [], "Generation stops when any of these strings appears.", ALL),
     f("seed", "Seed", "Output", "int", -1, "RNG seed for reproducible sampling (-1 = random).", ALL, min=-1, max=2147483647, step=1),
     f("context_overflow", "Context overflow policy", "Output", "select", "truncate_middle", "What to do when the conversation exceeds the context: keep system + recent turns, or stop.", ALL, options=[{"value": "truncate_middle", "label": "Truncate middle"}, {"value": "rolling_window", "label": "Rolling window"}, {"value": "stop", "label": "Stop at limit"}]),

@@ -1,19 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { BookOpen, CheckCircle2, Circle, FileUp, Search, Upload, XCircle, MinusCircle } from 'lucide-react';
 import { api, qs } from '../lib/api';
 import type { DocumentSummary, Job, JobStage } from '../lib/types';
 import { useAuth } from '../lib/auth';
-import { Badge, ErrorBox, Field, PageHeader, QueryState, Spinner, StatusChip } from '../components/ui';
+import { Badge, ErrorBox, Field, PageHeader, ProvenanceBadges, QueryState, Spinner, StatusChip } from '../components/ui';
+import { useT } from '../lib/i18n';
 import { DataTable, type Column } from '../components/DataTable';
 import { Modal } from '../components/Modal';
 import { toast } from '../components/Toast';
 import { cx, fmtBytes, fmtDate } from '../lib/format';
-import { useDepartments } from '../lib/queries';
 
 const DOC_TYPES = ['SOP', 'P&ID', 'SLD', 'datasheet', 'inspection_report', 'manual', 'audit_report', 'work_orders', 'asset_register', 'other'];
-const DEPARTMENTS = ['Operations', 'Maintenance', 'Electrical', 'Instrumentation', 'Process', 'Safety', 'Inspection', 'Planning', 'Quality', 'IT'];
 const CLASSIFICATIONS = ['PUBLIC', 'INTERNAL', 'RESTRICTED', 'CONFIDENTIAL'];
 
 function useDebounced<T>(v: T, ms = 300) {
@@ -26,13 +25,16 @@ export default function Knowledge() {
   const [q, setQ] = useState('');
   const dq = useDebounced(q);
   const nav = useNavigate();
-  const { can } = useAuth();
+  const { me } = useAuth();
+  // Only Heads of Department hold documents.upload (checked literally — no admin bypass).
+  const canUpload = !!me?.permissions?.includes('documents.upload');
   const [uploadOpen, setUploadOpen] = useState(false);
+  const t = useT();
   const docs = useQuery({ queryKey: ['documents', dq], queryFn: () => api.get<DocumentSummary[]>(`/api/documents${qs({ q: dq })}`) });
   const rows = Array.isArray(docs.data) ? docs.data : [];
 
   const columns: Column<DocumentSummary>[] = [
-    { key: 'title', header: 'Title', render: (d) => <div className="min-w-[220px]"><div className="font-medium text-text">{d.title || '(untitled)'}</div><div className="text-[11px] text-faint">{fmtDate(d.created_at)} · {fmtBytes(d.size_bytes)}</div></div> },
+    { key: 'title', header: 'Title', render: (d) => <div className="min-w-[220px]"><div className="flex flex-wrap items-center gap-1.5 font-medium text-text">{d.title || '(untitled)'}<ProvenanceBadges isExample={d.is_example} isPublic={d.is_public} /></div><div className="text-[11px] text-faint">{fmtDate(d.created_at)} · {fmtBytes(d.size_bytes)}</div></div> },
     { key: 'doc_number', header: 'Doc no', mono: true, render: (d) => <span className="text-cyan">{d.doc_number || '—'}</span> },
     { key: 'revision', header: 'Rev', mono: true, render: (d) => d.revision || '—' },
     { key: 'status', header: 'Status', render: (d) => <StatusChip status={d.status} /> },
@@ -59,18 +61,20 @@ export default function Knowledge() {
 
   return (
     <div className="flex h-full flex-col">
-      <PageHeader icon={<BookOpen size={18} />} title="Knowledge" subtitle="Controlled documents indexed for retrieval — only those your attributes permit are listed"
+      <PageHeader icon={<BookOpen size={18} />} title={t('page.knowledge')} subtitle={t('page.knowledge.sub')}
         actions={<>
           <div className="relative w-[280px]">
             <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-faint" />
             <input className="input !pl-8" placeholder="Search title, doc no, tag…" value={q} onChange={(e) => setQ(e.target.value)} />
           </div>
-          {can('documents.upload') && <button className="btn btn-primary" onClick={() => setUploadOpen(true)}><Upload size={14} /> Upload</button>}
+          {canUpload
+            ? <button className="btn btn-primary" onClick={() => setUploadOpen(true)}><Upload size={14} /> {t('btn.upload')}</button>
+            : <span className="text-[11.5px] text-muted">{t('knowledge.hodOnly')}</span>}
         </>} />
       <div className="min-h-0 flex-1 overflow-hidden p-4">
         <div className="h-full overflow-hidden rounded-md border border-border bg-surface">
           <QueryState q={docs} empty={rows.length === 0} emptyTitle={dq ? 'No documents match your search' : 'No documents yet'}
-            emptyHint={can('documents.upload') ? 'Upload SOPs, P&IDs, datasheets, inspection reports — scanned pages are OCR’d on-prem.' : undefined}>
+            emptyHint={canUpload ? 'Upload SOPs, P&IDs, datasheets, inspection reports — scanned pages are OCR’d on-prem.' : undefined}>
             <DataTable rows={rows} columns={columns} rowKey={(d) => d.id} onRowClick={(d) => nav(`/knowledge/${d.id}`)} maxHeight="100%" />
           </QueryState>
         </div>
@@ -135,24 +139,12 @@ function UploadDialog({ onClose }: { onClose: () => void }) {
   const [drag, setDrag] = useState(false);
   const [title, setTitle] = useState('');
   const [docType, setDocType] = useState('SOP');
-  const [dept, setDept] = useState('Operations');
-  const deptQ = useDepartments();
-  const deptGroups = useMemo(() => {
-    const list = deptQ.data ?? [];
-    if (!list.length) return null;
-    const m = new Map<string, string[]>();
-    list.forEach((d) => { const g = d.group?.trim() || 'Other'; if (!m.has(g)) m.set(g, []); m.get(g)!.push(d.name); });
-    return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([g, ns]) => [g, [...new Set(ns)].sort()] as const);
-  }, [deptQ.data]);
-  useEffect(() => {
-    // Keep the selection valid once the directory arrives.
-    if (!deptGroups) return;
-    const names = deptGroups.flatMap(([, ns]) => ns);
-    if (names.includes(dept)) return;
-    const lc = dept.toLowerCase();
-    setDept(names.find((n) => n.toLowerCase() === lc) ?? names.find((n) => n.toLowerCase().includes(lc)) ?? names[0]);
-  }, [deptGroups]); // eslint-disable-line react-hooks/exhaustive-deps
-  const [cls, setCls] = useState('INTERNAL');
+  const { me } = useAuth();
+  // Uploads always go into the HOD's own department.
+  const dept = me?.user.department ?? '';
+  const clearance = me?.user.clearance ?? 0;
+  const allowedCls = CLASSIFICATIONS.filter((_, i) => i <= clearance);
+  const [cls, setCls] = useState(() => (allowedCls.includes('INTERNAL') ? 'INTERNAL' : allowedCls[0] ?? 'PUBLIC'));
   const [docNo, setDocNo] = useState('');
   const [rev, setRev] = useState('');
   const [job, setJob] = useState<{ job_id: string; document_id: string } | null>(null);
@@ -187,7 +179,7 @@ function UploadDialog({ onClose }: { onClose: () => void }) {
         <button className="btn" onClick={onClose}>{doneDoc ? 'Close' : 'Run in background'}</button>
       </> : <>
         <button className="btn" onClick={onClose}>Cancel</button>
-        <button className="btn btn-primary" disabled={!file || upload.isPending} onClick={() => upload.mutate()}>
+        <button className="btn btn-primary" disabled={!file || !dept || upload.isPending} onClick={() => upload.mutate()}>
           {upload.isPending ? <Spinner /> : <Upload size={14} />} Upload & index
         </button>
       </>}>
@@ -220,14 +212,10 @@ function UploadDialog({ onClose }: { onClose: () => void }) {
               <select className="input" value={docType} onChange={(e) => setDocType(e.target.value)}>{DOC_TYPES.map((d) => <option key={d}>{d}</option>)}</select>
             </Field>
             <Field label="Department">
-              <select className="input" value={dept} onChange={(e) => setDept(e.target.value)}>
-                {deptGroups
-                  ? deptGroups.map(([g, names]) => <optgroup key={g} label={g}>{names.map((d) => <option key={d} value={d}>{d}</option>)}</optgroup>)
-                  : DEPARTMENTS.map((d) => <option key={d}>{d}</option>)}
-              </select>
+              <input className="input" value={dept} readOnly disabled title="Documents are always added to your own department" />
             </Field>
             <Field label="Classification">
-              <select className="input" value={cls} onChange={(e) => setCls(e.target.value)}>{CLASSIFICATIONS.map((d) => <option key={d}>{d}</option>)}</select>
+              <select className="input" value={cls} onChange={(e) => setCls(e.target.value)}>{allowedCls.map((d) => <option key={d}>{d}</option>)}</select>
             </Field>
           </div>
           <div className="grid grid-cols-2 gap-3">

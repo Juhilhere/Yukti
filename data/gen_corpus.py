@@ -1,4 +1,4 @@
-"""Synthetic document corpus generator for the Yukti Refinery AI demo (SIH 2026).
+"""Synthetic document corpus generator for the Example Plant AI demo (SIH 2026).
 
 Everything produced here is FICTIONAL ("SYNTHETIC - SIH DEMO"). Deterministic (seed 2026).
 Run:  cd backend && uv run python ../data/gen_corpus.py
@@ -33,7 +33,7 @@ CORPUS.mkdir(parents=True, exist_ok=True)
 STRUCT.mkdir(parents=True, exist_ok=True)
 
 REF = date(2026, 9, 29)
-WM = "SYNTHETIC – SIH DEMO"
+WM = "EXAMPLE – prepared by Team UniMinds – NOT MRPL DATA"
 FONTS = Path("C:/Windows/Fonts")
 
 # ---------------------------------------------------------------- fonts
@@ -422,7 +422,7 @@ def build_production():
             atf_crack_usd_bbl=round(16 + 3 * math.cos(2 * math.pi * (mm - 12) / 12) + NP.normal(0, 1.5), 2),
             pp_margin_usd_t=round(310 + 40 * math.sin(i / 5) + NP.normal(0, 20), 1),
             px_margin_usd_t=round(360 + 50 * math.cos(i / 6) + NP.normal(0, 25), 1))))
-    return dict(refinery="Yukti Refinery (synthetic)", capacity_mmtpa=15, units="kt/month",
+    return dict(refinery="Example Plant (EXAMPLE)", capacity_mmtpa=15, units="kt/month",
                 products=list(shares), months=rows)
 
 
@@ -437,7 +437,7 @@ class Pdf:
         self.W, self.H = self.size
         self.c = canvas.Canvas(str(path), pagesize=self.size)
         self.c.setTitle(title)
-        self.c.setAuthor(f"Yukti Refinery - {dept} (synthetic)")
+        self.c.setAuthor(f"Example Plant - {dept} (EXAMPLE)")
         self.c.setSubject(WM)
         self.title, self.docno, self.rev, self.cls, self.unit = title, doc_number, revision, classification, unit
         self.page = 1
@@ -457,7 +457,7 @@ class Pdf:
         c.rect(0, H - 52, W, 52, stroke=0, fill=1)
         c.setFillColor(colors.white)
         c.setFont(FB, 13)
-        c.drawString(self.m, H - 22, f"Yukti Refinery – {self.unit}")
+        c.drawString(self.m, H - 22, f"Example Plant – {self.unit}")
         c.setFont(F, 9)
         c.drawString(self.m, H - 40, self.title[:95])
         c.setFont(FB, 9)
@@ -642,7 +642,7 @@ def doc_sops():
         st.font.size = Pt(10)
         sec = d.sections[0]
         hp = sec.header.paragraphs[0]
-        hp.text = f"Yukti Refinery – CDU-1  |  SOP-EL-014  |  Rev {rev}  |  INTERNAL"
+        hp.text = f"Example Plant – CDU-1  |  SOP-EL-014  |  Rev {rev}  |  INTERNAL"
         fp = sec.footer.paragraphs[0]
         fp.text = f"{WM}  |  Fictional data – not MRPL  |  Uncontrolled when printed"
         fp.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -802,7 +802,7 @@ def doc_pids():
         revs = [("A", "2016-03-10", "Issued for construction"), ("B", "2022-08-05", "As-built update, A2/A2B tags")]
         if rev == "C":
             revs.append(("C", "2025-10-20", "A2 disch. isolation valve replaced & retagged (MOC-2025-118)"))
-        title_block(c, p.W, [("CLIENT", "Yukti Refinery (synthetic)"), ("TITLE", "P&ID CDU-1 CHARGE BOOSTER PUMPS"),
+        title_block(c, p.W, [("CLIENT", "Example Plant (EXAMPLE)"), ("TITLE", "P&ID CDU-1 CHARGE BOOSTER PUMPS"),
                              ("", "A2 / A2B"), ("DWG NO", "PID-CDU-03"), ("REV", rev), ("DATE", eff),
                              ("STATUS", "CURRENT" if rev == "C" else "SUPERSEDED")], revs)
         p.save()
@@ -858,7 +858,7 @@ def doc_slds():
         revs = [("A", "2016-01-12", "Issued for construction"), ("B", "2021-05-18", "As-built update, F07 feeder schedule")]
         if rev == "C":
             revs.append(("C", "2025-06-30", "F07 O/L setting revised to 45 A"))
-        title_block(c, p.W, [("CLIENT", "Yukti Refinery (synthetic)"), ("TITLE", "SLD 415 V MCC-2"),
+        title_block(c, p.W, [("CLIENT", "Example Plant (EXAMPLE)"), ("TITLE", "SLD 415 V MCC-2"),
                              ("DWG NO", "SLD-MCC-2"), ("REV", rev), ("DATE", eff),
                              ("STATUS", "CURRENT" if rev == "C" else "SUPERSEDED"), ("DEPT", "Electrical")], revs)
         p.save()
@@ -946,7 +946,7 @@ def doc_e310_scan():
         d.text((x, y), t, font=f, fill=(20, 20, 20))
         gt.append(t)
 
-    line(80, "Yukti Refinery – CDU-1   |   Inspection & Corrosion Section", fs)
+    line(80, "Example Plant – CDU-1   |   Inspection & Corrosion Section", fs)
     line(130, "ULTRASONIC THICKNESS SURVEY — E-310 shell", fb)
     line(185, "Report No: UT-E310-2026-07     Date of survey: 2026-09-18")
     line(220, "Equipment: E-310 Crude / diesel pumparound exchanger, shell side (CS, SA-516 Gr.70)")
@@ -998,7 +998,7 @@ def doc_psv_cert():
     d.rectangle((50, 50, W - 50, H - 50), outline=(30, 60, 110), width=5)
     d.text((W // 2, 120), "Deccan Valves – Calibration & Test Services", font=pil_font("arialbd.ttf", 28), fill=(30, 60, 110), anchor="mm")
     d.text((W // 2, 190), "CERTIFICATE OF CALIBRATION – PRESSURE SAFETY VALVE", font=fb, fill=(10, 10, 10), anchor="mm")
-    items = [("Certificate No", "DV-CAL-25-118"), ("Customer", "Yukti Refinery, CDU-1"), ("Tag No", "PSV-118"),
+    items = [("Certificate No", "DV-CAL-25-118"), ("Customer", "Example Plant, CDU-1"), ("Tag No", "PSV-118"),
              ("Service", "A2 discharge / E-101 inlet, crude"), ("Make / Model", "Nilgiri Safety Valves NSV-2600, 1.5D2"),
              ("Set pressure (CDTP)", "18.5 barg"), ("Pop pressure observed", "18.4 barg"), ("Reseat pressure", "16.9 barg"),
              ("Seat leakage test", "API 527 – PASSED"), ("Test medium", "Nitrogen"), ("Calibration date", "2025-10-04"),
@@ -1185,7 +1185,7 @@ def xlsx_write(path, sheets):
     wb.remove(wb.active)
     for name, header, rows in sheets:
         ws = wb.create_sheet(name)
-        ws.append([f"Yukti Refinery – {name}   [{WM}]"])
+        ws.append([f"Example Plant – {name}   [{WM}]"])
         ws["A1"].font = Font(bold=True, color="123A63")
         ws.append(header)
         for c in ws[2]:
@@ -1284,7 +1284,7 @@ def main():
     doc_datasheet(); doc_sops(); doc_pids(); doc_slds(); doc_troubleshooting()
     doc_e310_scan(); doc_psv_cert(); doc_letter_1998(); doc_audit(); doc_msds(); doc_process_manual()
     doc_shift_log(); doc_xlsx(assets, wos, contacts)
-    jdump({"generated_for": "Yukti Refinery AI demo (SIH 2026)", "notice": WM, "seed": SEED,
+    jdump({"generated_for": "Example Plant AI demo (SIH 2026)", "notice": WM, "seed": SEED,
            "reference_date": iso(REF), "documents": MANIFEST}, CORPUS / "manifest.json")
 
     exp = [(a["tag"], i["type"], i["expires_on"]) for a in assets for i in a["items"]]

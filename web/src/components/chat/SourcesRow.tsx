@@ -2,18 +2,20 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FileText, ShieldAlert } from 'lucide-react';
 import type { Denied, Source } from '../../lib/types';
-import { Badge, StatusChip } from '../ui';
+import { Badge, ProvenanceBadges, StatusChip } from '../ui';
+import { useT } from '../../lib/i18n';
 import { sourceElId } from './types';
 import { AccessRequestDialog } from './AccessRequestDialog';
 
 export function SourcesRow({ msgId, sources }: { msgId: string; sources: Source[] }) {
   const nav = useNavigate();
+  const t = useT();
   if (!sources?.length) return null;
   return (
     <div className="mt-3">
       <div className="mb-1.5 flex items-center gap-2">
         <FileText size={12} className="text-cyan" />
-        <span className="label">Sources</span>
+        <span className="label">{t('chat.sources')}</span>
         <span className="font-mono text-[10.5px] text-faint">{sources.length}</span>
       </div>
       <div className="flex gap-2 overflow-x-auto pb-1.5">
@@ -31,6 +33,7 @@ export function SourcesRow({ msgId, sources }: { msgId: string; sources: Source[
               <StatusChip status={s.status} />
               <Badge mono tone="muted">p.{s.page}</Badge>
               {s.classification && <StatusChip status={s.classification} />}
+              <ProvenanceBadges isExample={s.is_example} isPublic={s.is_public} />
             </div>
             <div className="mt-1.5 line-clamp-3 text-[11.5px] leading-snug text-muted">{s.snippet}</div>
           </button>
@@ -42,6 +45,7 @@ export function SourcesRow({ msgId, sources }: { msgId: string; sources: Source[
 
 export function DeniedCard({ denied, question }: { denied: Denied; question?: string }) {
   const [open, setOpen] = useState(false);
+  const t = useT();
   if (!denied || !denied.count) return null;
   const depts = denied.departments ?? [];
   return (
@@ -52,7 +56,7 @@ export function DeniedCard({ denied, question }: { denied: Denied; question?: st
         {depts.length > 0 && <span className="text-muted"> ({depts.join(', ')})</span>}
         <div className="text-[11.5px] text-muted">Your clearance or department does not cover these documents. The answer above uses only what you may read.</div>
       </div>
-      <button className="btn btn-sm !border-amber/50 !text-amber" onClick={() => setOpen(true)}>Request access</button>
+      <button className="btn btn-sm !border-amber/50 !text-amber" onClick={() => setOpen(true)}>{t('btn.requestAccess')}</button>
       <AccessRequestDialog open={open} onClose={() => setOpen(false)} departments={depts} context={question} />
     </div>
   );

@@ -56,7 +56,7 @@ def _approver_username(name: str, group: str) -> str:
     n = f"{name} {group}".lower()
     if re.search(r"financ|account|treasur|audit|tax|investor|secretar", n):
         return "kavita.fm"
-    if re.search(r"electric|instrument|power|utilit", n):
+    if re.search(r"electric|instrument", n):
         return "suresh.em"
     return "ramesh.pm"
 
@@ -79,10 +79,8 @@ def ensure_departments() -> None:
             ex("INSERT INTO departments(id, code, name, manager_user_id, grp, description, short_code, evidence_url) VALUES(?,?,?,?,?,?,?,?)",
                (new_id(), name, name, mgr["id"] if mgr else None, d.get("group"), d.get("description"), d.get("code"), d.get("evidence_url")))
     # internal (demo) departments keep working; give them a group
-    for code, grp in [("Electrical", "Maintenance"), ("Mechanical", "Maintenance"), ("Instrumentation", "Maintenance"),
-                      ("Operations", "Operations"), ("Utilities", "Operations"), ("HSE", "HSE"), ("Finance", "Finance"),
-                      ("Management", "Corporate")]:
-        ex("UPDATE departments SET grp=COALESCE(grp, ?) WHERE code=?", (grp, code))
+    for r in q("SELECT code FROM departments WHERE grp IS NULL"):
+        ex("UPDATE departments SET grp='Other' WHERE code=?", (r["code"],))
 
 
 def departments() -> list[dict[str, Any]]:
@@ -111,8 +109,8 @@ def ensure_public_docs() -> int:
                 ex("DELETE FROM chunks_fts WHERE chunk_id=?", (c["id"],))
             ex("DELETE FROM documents WHERE id=?", (cur["id"],))
         meta = {"title": title, "doc_number": doc_number, "revision": (load().get("retrieved_on") or "2026-09-29"),
-                "status": "CURRENT", "doc_type": "public_briefing", "department": "Corporate Communications",
-                "classification": 0, "effective_date": load().get("retrieved_on"), "asset_tags": []}
+                "status": "CURRENT", "doc_type": "public_briefing", "department": "Corporate Branding & Corporate Communication",
+                "classification": 0, "effective_date": load().get("retrieved_on"), "asset_tags": [], "is_public": 1}
         did = rag.create_document(meta, f"{doc_number}.txt", data, "system")
         rag.ingest(did, None, "system")
         n += 1

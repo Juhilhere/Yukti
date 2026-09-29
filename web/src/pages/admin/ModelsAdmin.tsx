@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Boxes, Cpu, Eye, Power, Search, Server, Upload } from 'lucide-react';
-import { api } from '../lib/api';
-import type { Engine, Model } from '../lib/types';
-import { fmtBytes, fmtTime } from '../lib/format';
-import { qk, uiStore, useEngines, useLoaded, useModels } from '../lib/queries';
-import { useAuth } from '../lib/auth';
-import { Badge, Card, Dot, EmptyState, ErrorBox, JsonView, Loading, PageHeader, QueryState, Spinner, StatusChip } from '../components/ui';
-import { DataTable, type Column } from '../components/DataTable';
-import { toast } from '../components/Toast';
+import { Boxes, Cpu, Eye, FolderInput, HardDriveDownload, Power, Search, Server, Trash2, Upload } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { Modal } from '../../components/Modal';
+import { api, errMsg } from '../../lib/api';
+import type { Engine, Model } from '../../lib/types';
+import { fmtBytes, fmtTime } from '../../lib/format';
+import { qk, uiStore, useEngines, useLoaded, useModels } from '../../lib/queries';
+import { useAuth } from '../../lib/auth';
+import { Badge, Card, Dot, EmptyState, ErrorBox, Field, JsonView, Loading, QueryState, Spinner, StatusChip } from '../../components/ui';
+import { DataTable, type Column } from '../../components/DataTable';
+import { toast } from '../../components/Toast';
 
 function LoadedCard() {
   const q = useLoaded();
@@ -86,7 +88,69 @@ function EngineRow({ e, editable }: { e: Engine; editable: boolean }) {
   );
 }
 
-export default function Models() {
+/** Folder path with a trailing separator, ready for the file name to be typed. */
+function joinDir(d: string) {
+  const sep = d.includes('\\') ? '\\' : '/';
+  return d.endsWith(sep) ? d : d + sep;
+}
+
+function ImportCard() {
+  const qc = useQueryClient();
+  const dirs = useQuery({ queryKey: ['admin', 'import-dirs'], queryFn: () => api.get<{ dirs: string[] }>('/api/admin/models/import-dirs'), retry: false });
+  const [path, setPath] = useState('');
+  const imp = useMutation({
+    mutationFn: () => api.post<Model>('/api/admin/models/import', { path: path.trim() }),
+    onSuccess: (m) => { toast.success('Model imported', m?.name ?? path); setPath(''); qc.invalidateQueries({ queryKey: qk.models }); },
+  });
+  const valid = /\.gguf$/i.test(path.trim());
+  return (
+    <Card title="Import model from path" icon={<HardDriveDownload size={14} className="text-amber" />}>
+      <div className="space-y-2">
+        <div className="text-[12px] text-muted">Yukti is air-gapped: bring a <span className="font-mono">.gguf</span> file on approved media (e.g. USB drive) and give its absolute path on the server. It is copied into the Yukti models folder and its SHA-256 is recorded in the audit log.</div>
+        <Field label="Absolute path on the server">
+          <div className="flex gap-2">
+            <input className="input flex-1 font-mono text-[12px]" value={path} onChange={(e) => setPath(e.target.value)} placeholder="E:\models\model-Q4_K_M.gguf" />
+            <button className="btn btn-primary" disabled={!valid || imp.isPending} onClick={() => imp.mutate()}>
+              {imp.isPending ? <Spinner className="!text-[#1a1204]" /> : <FolderInput size={13} />}Import
+            </button>
+          </div>
+        </Field>
+        {path.trim() && !valid && <div className="text-[11.5px] text-amber">Path must point to a .gguf file.</div>}
+        {(dirs.data?.dirs ?? []).length > 0 && (
+          <div className="text-[11.5px] text-muted">Allowed source folders:{' '}
+            {dirs.data!.dirs.map((d) => <button key={d} type="button" className="mr-1 rounded border border-border px-1.5 font-mono text-[11px] hover:border-cyan hover:text-cyan" onClick={() => setPath(joinDir(d))}>{d}</button>)}
+          </div>
+        )}
+        {imp.isPending && <div className="text-[11.5px] text-cyan">Copying and hashing the file — large models can take several minutes…</div>}
+        {imp.error ? <ErrorBox error={imp.error} /> : null}
+      </div>
+    </Card>
+  );
+}
+
+function DeleteModelButton({ m }: { m: Model }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const del = useMutation({
+    mutationFn: () => api.del(`/api/admin/models/${encodeURIComponent(m.id)}`),
+    onSuccess: () => { toast.success('Model deleted', m.name); setOpen(false); qc.invalidateQueries({ queryKey: qk.models }); },
+    onError: (e) => toast.error('Delete failed', errMsg(e)),
+  });
+  return (
+    <>
+      <button className="btn btn-sm btn-danger btn-icon" title="Delete imported model file" onClick={(e) => { e.stopPropagation(); setOpen(true); }}><Trash2 size={12} /></button>
+      <Modal open={open} onClose={() => setOpen(false)} width={420} title="Delete model file?"
+        footer={<>
+          <button className="btn btn-ghost" onClick={() => setOpen(false)}>Cancel</button>
+          <button className="btn btn-danger" disabled={del.isPending} onClick={() => del.mutate()}>{del.isPending ? <Spinner size={12} /> : <Trash2 size={12} />}Delete</button>
+        </>}>
+        <div className="text-[12.5px]">Permanently remove <span className="font-mono text-amber">{m.file_name || m.name}</span> from the Yukti models folder?</div>
+      </Modal>
+    </>
+  );
+}
+
+export default function ModelsAdmin() {
   const models = useModels();
   const engines = useEngines();
   const loaded = useLoaded();
@@ -116,16 +180,21 @@ export default function Models() {
     { key: 'source', header: 'Source', render: (m) => <Badge tone={m.source === 'yukti' ? 'amber' : m.source === 'lmstudio' ? 'cyan' : 'violet'}>{m.source}</Badge> },
     { key: 'vision', header: 'Vision', render: (m) => (m.vision ? <Eye size={13} className="text-cyan" /> : <span className="text-faint">—</span>) },
     { key: 'actions', header: '', render: (m) => (
-      <button className="btn btn-sm btn-primary" onClick={(e) => { e.stopPropagation(); uiStore.openLoader(m.id); }}><Upload size={12} />Load</button>
+      <div className="flex justify-end gap-1">
+        <button className="btn btn-sm btn-primary" onClick={(e) => { e.stopPropagation(); uiStore.openLoader(m.id); }}><Upload size={12} />Load</button>
+        {m.source === 'yukti' && <DeleteModelButton m={m} />}
+      </div>
     ) },
   ];
 
   return (
-    <div className="h-full overflow-y-auto">
-      <PageHeader title="My Models" subtitle="Local GGUF files and models reported by connected engines" icon={<Boxes size={18} />}
-        actions={<button className="btn btn-primary" onClick={() => uiStore.openLoader()}><Cpu size={13} />Model loader <span className="font-mono text-[10.5px] opacity-70">Ctrl+L</span></button>} />
+    <div>
       <div className="space-y-4 p-5">
+        <div className="flex justify-end">
+          <button className="btn btn-primary" onClick={() => uiStore.openLoader()}><Cpu size={13} />Model loader <span className="font-mono text-[10.5px] opacity-70">Ctrl+L</span></button>
+        </div>
         <LoadedCard />
+        <ImportCard />
         <Card title={`Local models${models.data ? ` (${models.data.length})` : ''}`} icon={<Boxes size={14} className="text-cyan" />} bodyClass="p-0"
           actions={<div className="relative"><Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-faint" />
             <input className="input !w-56 !py-0.5 !pl-6 text-[12px]" placeholder="Search models…" value={q} onChange={(e) => setQ(e.target.value)} /></div>}>

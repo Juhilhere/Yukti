@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { CheckCircle2, ChevronDown, ChevronRight, RefreshCw, ScrollText, Search, ShieldCheck, XCircle } from 'lucide-react';
-import { api, qs } from '../lib/api';
+import { CheckCircle2, ChevronDown, ChevronRight, Download, RefreshCw, ScrollText, Search, ShieldCheck, XCircle } from 'lucide-react';
+import { api, downloadFile, errMsg, qs } from '../lib/api';
+import { useT } from '../lib/i18n';
+import { toast } from '../components/Toast';
 import type { AuditRecord, AuditVerify } from '../lib/types';
 import { fmtTime, num } from '../lib/format';
 import { Badge, Card, EmptyState, ErrorBox, PageHeader, QueryState, Spinner } from '../components/ui';
@@ -63,12 +65,18 @@ export default function Audit() {
     return f ? list.filter((r) => `${r.actor} ${r.event} ${r.entity} ${detailStr(r.detail)}`.toLowerCase().includes(f)) : list;
   }, [q.data, text]);
   const v = verify.data;
+  const t = useT();
+  const exp = async (fmt: 'csv' | 'jsonl') => {
+    try { await downloadFile(`/api/audit/export?format=${fmt}`, `yukti-audit.${fmt}`); } catch (e) { toast.error('Export failed', errMsg(e)); }
+  };
 
   return (
     <div className="h-full overflow-y-auto">
-      <PageHeader title="Audit log" icon={<ScrollText size={18} />} subtitle="Hash-chained, tamper-evident record of every decision"
+      <PageHeader title={t('page.audit')} icon={<ScrollText size={18} />} subtitle="Hash-chained, tamper-evident record of every decision"
         actions={<>
-          <button className="btn btn-sm" onClick={() => q.refetch()}><RefreshCw size={12} className={q.isFetching ? 'animate-spin' : ''} />Refresh</button>
+          <button className="btn btn-sm" onClick={() => q.refetch()}><RefreshCw size={12} className={q.isFetching ? 'animate-spin' : ''} />{t('btn.refresh')}</button>
+          <button className="btn btn-sm" onClick={() => void exp('csv')}><Download size={12} />CSV</button>
+          <button className="btn btn-sm" onClick={() => void exp('jsonl')}><Download size={12} />JSONL</button>
           <button className="btn btn-cyan btn-sm" disabled={verify.isPending} onClick={() => verify.mutate()}>
             {verify.isPending ? <Spinner size={12} /> : <ShieldCheck size={12} />}Verify chain
           </button>
