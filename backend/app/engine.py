@@ -1,6 +1,7 @@
 """Inference engines: a Yukti-managed llama-server process + OpenAI-compatible connectors (Bionic, vLLM, remote)."""
 from __future__ import annotations
 
+import asyncio
 import collections
 import json
 import re
@@ -183,6 +184,10 @@ class EngineState:
         self.last_stats: dict[str, Any] = {}
         self.command: list[str] = []
         self.lock = threading.Lock()
+        self.intentional_stop = False           # set while Yukti itself stops llama-server
+        self.last_load: tuple[str, str, dict[str, Any]] | None = None
+        self.ready_proc: subprocess.Popen | None = None
+        self.restarts: list[float] = []         # timestamps of automatic restarts (crash-loop guard)
 
     def public(self) -> dict[str, Any]:
         return {"status": self.status, "engine": self.engine, "model_id": self.model_id, "model_name": self.model_name,
@@ -194,16 +199,80 @@ class EngineState:
 state = EngineState()
 
 
+MAX_RESTARTS = 3
+RESTART_WINDOW_S = 600
+
+
 def _reader(proc: subprocess.Popen) -> None:
     assert proc.stdout is not None
     for line in iter(proc.stdout.readline, ""):
         if line:
             log("[llama] " + line)
-    log("[llama] process exited")
+    code = proc.wait()
+    log(f"[llama] process exited (code {code})")
+    _on_exit(proc, code)
+
+
+def _on_exit(proc: subprocess.Popen, code: int) -> None:
+    """Watchdog: a llama-server that was serving and died unexpectedly is restarted with the same settings."""
+    if proc is not state.proc or state.intentional_stop:
+        return
+    if state.ready_proc is not proc:
+        return  # load-time failures are reported by wait_ready (usually out of memory) - never crash-loop
+    now = time.time()
+    state.restarts = [t for t in state.restarts if now - t < RESTART_WINDOW_S]
+    if len(state.restarts) >= MAX_RESTARTS or not state.last_load:
+        state.status = "error"
+        state.error = (f"llama-server crashed (exit code {code}) {len(state.restarts)} times in {RESTART_WINDOW_S // 60} min; "
+                       "automatic restart stopped. Check Developer logs, reduce context/GPU layers, then reload the model.")
+        log("[watchdog] " + state.error)
+        return
+    state.restarts.append(now)
+    state.status = "restarting"
+    state.error = f"llama-server stopped unexpectedly (exit code {code}); restarting automatically"
+    log(f"[watchdog] {state.error} (restart {len(state.restarts)}/{MAX_RESTARTS})")
+    eng, mid, cfg = state.last_load
+
+    def again() -> None:
+        time.sleep(2)
+        try:
+            load(eng, mid, cfg, _auto=True)
+        except Exception as e:  # pragma: no cover
+            state.status = "error"
+            state.error = f"Automatic restart failed: {e}"
+
+    threading.Thread(target=again, daemon=True).start()
+
+
+def _health_monitor() -> None:
+    """Detect a hung llama-server (process alive but not answering) and kill it so the watchdog restarts it."""
+    fails = 0
+    while True:
+        time.sleep(15)
+        proc = state.proc
+        if state.engine != "llamacpp" or state.status != "ready" or not proc or proc.poll() is not None:
+            fails = 0
+            continue
+        try:
+            r = httpx.get(f"http://127.0.0.1:{LLAMA_PORT}/health", timeout=10)
+            fails = 0 if r.status_code == 200 else fails + 1
+        except Exception:
+            fails += 1
+        if fails >= 4:
+            log("[watchdog] llama-server not responding for ~60 s - restarting it")
+            fails = 0
+            try:
+                proc.kill()
+            except Exception:
+                pass
+
+
+threading.Thread(target=_health_monitor, daemon=True, name="llama-health").start()
 
 
 def unload() -> None:
     with state.lock:
+        state.intentional_stop = True
         if state.proc and state.proc.poll() is None:
             log(f"Unloading {state.model_name} (pid {state.proc.pid})")
             state.proc.terminate()
@@ -212,6 +281,7 @@ def unload() -> None:
             except Exception:
                 state.proc.kill()
         state.proc = None
+        state.ready_proc = None
         state.status = "idle"
         state.model_id = None
         state.model_name = None
@@ -219,8 +289,12 @@ def unload() -> None:
         state.command = []
 
 
-def load(engine: str, model_id: str, cfg: dict[str, Any]) -> dict[str, Any]:
+def load(engine: str, model_id: str, cfg: dict[str, Any], _auto: bool = False) -> dict[str, Any]:
     unload()
+    state.intentional_stop = False
+    if not _auto:
+        state.restarts = []
+    state.last_load = (engine, model_id, dict(cfg or {}))
     state.engine = engine
     state.load_config = cfg or {}
     state.error = None
@@ -275,22 +349,28 @@ def load(engine: str, model_id: str, cfg: dict[str, Any]) -> dict[str, Any]:
     def wait_ready(proc: subprocess.Popen) -> None:
         t0 = time.time()
         while time.time() - t0 < 300:
+            if proc is not state.proc:
+                return  # superseded by a newer load - never touch the new load's state
             if proc.poll() is not None:
-                state.status = "error"
-                state.error = "llama-server exited during load — see Developer logs (likely out of memory: lower context/GPU layers)."
+                if not state.intentional_stop:
+                    state.status = "error"
+                    state.error = "llama-server exited during load — see Developer logs (likely out of memory: lower context/GPU layers)."
                 return
             try:
                 r = httpx.get(f"http://127.0.0.1:{LLAMA_PORT}/health", timeout=1)
-                if r.status_code == 200:
+                if r.status_code == 200 and proc is state.proc:
                     state.status = "ready"
+                    state.ready_proc = proc
+                    state.error = None
                     state.started_at = time.time()
                     log(f"Model ready in {time.time() - t0:.1f}s")
                     return
             except Exception:
                 pass
             time.sleep(0.5)
-        state.status = "error"
-        state.error = "Timed out waiting for llama-server"
+        if proc is state.proc:
+            state.status = "error"
+            state.error = "Timed out waiting for llama-server"
 
     threading.Thread(target=wait_ready, args=(state.proc,), daemon=True).start()
     return state.public()
@@ -319,9 +399,39 @@ def prepare_messages(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 async def stream_chat(messages: list[dict[str, Any]], pred: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
-    """Yields {'type': 'token'|'reasoning'|'done'|'error', ...}."""
+    """Yields {'type': 'token'|'reasoning'|'done'|'error', ...}.
+
+    If the engine is switched or restarted before any text was produced (admin reload, watchdog restart),
+    the request is transparently retried once on the new engine instead of failing the employee.
+    """
+    for attempt in range(2):
+        proc_before = state.ready_proc
+        produced = False
+        retry = False
+        async for ev in _stream_once(messages, pred):
+            if ev["type"] in ("token", "reasoning"):
+                produced = True
+            if ev["type"] == "error" and not produced and attempt == 0 and ev.get("code") in ("engine_unreachable", "engine_error"):
+                await asyncio.sleep(1.0)
+                if state.status in ("loading", "restarting") or state.ready_proc is not proc_before:
+                    log("[chat] engine changed during request - retrying on the new engine")
+                    retry = True
+                    break
+            if ev["type"] == "error" and produced:
+                ev = {**ev, "message": "The model was restarted or switched while answering. Please press Regenerate. (" + ev["message"] + ")"}
+            yield ev
+        if not retry:
+            return
+
+
+async def _stream_once(messages: list[dict[str, Any]], pred: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
+    # wait (bounded) while the model is loading or being restarted by the watchdog, instead of failing the user
+    t_wait = time.time()
+    while state.status in ("loading", "restarting") and time.time() - t_wait < 120:
+        await asyncio.sleep(0.5)
     if state.status != "ready":
-        yield {"type": "error", "code": "no_model", "message": "No model is loaded. Open the model loader (Ctrl+L) and load one."}
+        msg = state.error or "No model is loaded. An administrator must load one (Admin -> Models)."
+        yield {"type": "error", "code": "no_model" if state.status == "idle" else "engine_" + state.status, "message": msg}
         return
     engine = state.engine
     url, key = engine_url(engine)

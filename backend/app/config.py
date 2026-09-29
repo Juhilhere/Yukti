@@ -12,7 +12,7 @@ ROOT = Path(os.environ.get("YUKTI_HOME") or (Path(sys.executable).parent if geta
                                                else Path(__file__).resolve().parents[2]))
 BACKEND = ROOT / "backend"
 DATA = ROOT / "data"
-STORE = DATA / "store"
+STORE = Path(os.environ["YUKTI_STORE"]) if os.environ.get("YUKTI_STORE") else DATA / "store"  # runtime data (DB, uploads, logs)
 BLOBS = STORE / "blobs"
 REPORTS = STORE / "reports"
 CORPUS = DATA / "corpus"

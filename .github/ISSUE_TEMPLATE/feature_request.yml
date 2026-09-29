@@ -1,0 +1,52 @@
+name: Feature request
+description: Suggest an improvement or a new capability for Yukti.
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Who needs this (role), in what situation, and what is hard today?
+      placeholder: "As a shift electrician at 2 AM, I need ... because ..."
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Chat / retrieval / facts
+        - Knowledge and ingestion
+        - Workflows (access, findings, alerts)
+        - Production optimizer
+        - Administration
+        - Security / policy / audit
+        - Desktop app / installation
+        - Other
+    validations:
+      required: true
+  - type: checkboxes
+    id: principles
+    attributes:
+      label: Design principles
+      description: Yukti's non-negotiables. Please confirm the proposal respects them, or explain below why not.
+      options:
+        - label: Access decisions stay in deterministic host code, never in the LLM.
+        - label: Works fully offline / on-premise.
+        - label: Introduces no invented numbers; shows only measured or sourced values.
+        - label: Security-relevant actions are audited.
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional context

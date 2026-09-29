@@ -15,6 +15,11 @@ from .db import ex, j, new_id, now_iso, q, q1, uj
 from .policy import Subject, pdp
 
 _OCR = None
+# pdfium is not thread-safe and uploads are ingested in worker threads: serialise PDF parsing/rendering and OCR.
+import threading as _threading  # noqa: E402
+
+_PDFIUM_LOCK = _threading.Lock()
+_OCR_LOCK = _threading.Lock()
 
 
 def ocr_engine():
@@ -28,7 +33,8 @@ def ocr_engine():
 def ocr_image(img) -> tuple[str, float]:
     import numpy as np
     arr = np.array(img.convert("RGB"))
-    res, _ = ocr_engine()(arr)
+    with _OCR_LOCK:
+        res, _ = ocr_engine()(arr)
     if not res:
         return "", 0.0
     # sort boxes top-to-bottom, left-to-right, group into lines
@@ -112,6 +118,13 @@ def _chunks(text: str, size: int = 900, overlap: int = 150) -> list[str]:
 
 
 def extract(path: Path, mime_hint: str, jid: str | None) -> list[dict[str, Any]]:
+    if path.suffix.lower() == ".pdf":
+        with _PDFIUM_LOCK:
+            return _extract(path, mime_hint, jid)
+    return _extract(path, mime_hint, jid)
+
+
+def _extract(path: Path, mime_hint: str, jid: str | None) -> list[dict[str, Any]]:
     """Returns pages: [{page_no, mode, text, ocr_conf}]."""
     ext = path.suffix.lower()
     pages: list[dict[str, Any]] = []

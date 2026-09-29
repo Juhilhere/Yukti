@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend tests (Python 3.12, no GPU)
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      UV_PYTHON_PREFERENCE: only-managed
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - run: uv python install 3.12
+      - run: uv sync --frozen
+      - name: Import check
+        run: uv run python -c "import app.main"
+      - name: Test suite (auth, policy, evidence, guardrails, HOD uploads, OCR, findings, audit chain, engine mapping, Laya)
+        run: uv run pytest -q
+
+  web:
+    name: Web UI (type-check + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm run build
+      - name: No external URLs in bundle (offline product)
+        shell: bash
+        run: |
+          if grep -rhoE "https?://(fonts\.googleapis|cdn\.|unpkg|jsdelivr)[^\"' ]*" dist; then echo "external asset reference found"; exit 1; fi
+
+  desktop:
+    name: Desktop app (syntax + installer self-test)
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: desktop
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - run: npm ci
+      - name: Syntax check
+        shell: bash
+        run: for f in src/*.js src/ui/*.js scripts/*.js; do node --check "$f"; done
+      - name: Installer self-test (download, resume, SHA-256, GPU-aware selection, idempotent update)
+        run: npm test

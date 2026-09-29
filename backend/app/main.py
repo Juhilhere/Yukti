@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import hashlib
 import socket
 import threading
@@ -62,7 +63,6 @@ def install_guard() -> None:
     socket.getaddrinfo = _guard_gai  # type: ignore[assignment]
 
 
-@app.on_event("startup")
 def startup() -> None:
     if admin.apply_pending_restore():
         engine.log("Restored database and documents from staged backup.")
@@ -78,7 +78,7 @@ def startup() -> None:
     install_guard()
     audit.write("system", "app.started", "api", {"version": VERSION})
     ai = admin.ai_settings()
-    if ai.get("autoload", True):
+    if ai.get("autoload", True) and os.environ.get("YUKTI_AUTOLOAD", "1") != "0":
         if ai.get("default_model_id"):
             threading.Thread(target=engine.load, args=(ai.get("default_engine") or "llamacpp", ai["default_model_id"],
                                                         ai.get("default_load_config") or {}), daemon=True).start()
@@ -86,9 +86,23 @@ def startup() -> None:
             threading.Thread(target=engine.autoload_default, daemon=True).start()
 
 
-@app.on_event("shutdown")
 def shutdown() -> None:
     engine.unload()
+
+
+from contextlib import asynccontextmanager  # noqa: E402
+
+
+@asynccontextmanager
+async def _lifespan(_app: FastAPI):  # type: ignore[no-untyped-def]
+    startup()
+    try:
+        yield
+    finally:
+        shutdown()
+
+
+app.router.lifespan_context = _lifespan
 
 
 @app.exception_handler(HTTPException)

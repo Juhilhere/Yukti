@@ -1,0 +1,105 @@
+name: Bug report
+description: Something in Yukti does not work as documented.
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. **Security vulnerabilities must not be filed here.** Email juhilprogramming@gmail.com instead (see SECURITY.md).
+        Do not paste real plant documents, passwords, TOTP secrets, session cookies or backup files.
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - Chat / answers / citations
+        - Knowledge / upload / OCR
+        - Access requests / findings / inbox
+        - Assets / alerts / dossier
+        - Production optimizer
+        - MRPL public intelligence
+        - Authentication / MFA / sessions
+        - Admin (users, AI settings, models, usage, backups)
+        - Engine / llama-server / watchdog
+        - Desktop app / installer
+        - Website release tooling (ops/)
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Yukti version
+      description: Shown in the desktop app's About box or at /api/health.
+      placeholder: "0.3.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment
+      options:
+        - Server package, plant LAN
+        - Server package, this PC only
+        - Desktop app, installed from website
+        - Source checkout (ops/start.ps1)
+    validations:
+      required: true
+  - type: dropdown
+    id: role
+    attributes:
+      label: Role of the signed-in user
+      options:
+        - Employee
+        - Head of Department (dept_manager)
+        - Plant manager
+        - Planner
+        - Auditor
+        - Administrator
+        - Not signed in
+  - type: input
+    id: hardware
+    attributes:
+      label: Hardware and backend
+      description: GPU (and VRAM), RAM, compute backend (CUDA / Vulkan / CPU), model.
+      placeholder: "RTX 4050 6 GB, 16 GB RAM, CUDA, gemma-2-2b-it-Q8_0"
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Include the exact error message or code (for example policy_denied, model_incomplete).
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Sign in as ravi.e (demo tier)
+        2. Ask "..."
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: From Admin > Developer or data\store\logs\. Remove anything sensitive.
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues.
+          required: true
+        - label: This report contains no confidential plant data or credentials.
+          required: true

@@ -2,7 +2,7 @@
   "name": "yukti-desktop",
   "productName": "Yukti",
   "version": "0.3.0",
-  "description": "Yukti — Sovereign Industrial AI Workbench (desktop client)",
+  "description": "Yukti \u2014 Sovereign Industrial AI Workbench (desktop client)",
   "author": "Team UniMinds <juhilprogramming@gmail.com>",
   "license": "UNLICENSED",
   "private": true,
@@ -10,7 +10,8 @@
   "scripts": {
     "start": "electron .",
     "icon": "node scripts/make-icon.js",
-    "dist": "node scripts/make-icon.js && electron-builder --win nsis"
+    "dist": "node scripts/make-icon.js && electron-builder --win nsis",
+    "test": "node scripts/installer-selftest.js"
   },
   "devDependencies": {
     "electron": "30.5.1",

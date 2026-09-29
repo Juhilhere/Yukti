@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: mailto:juhilprogramming@gmail.com?subject=%5BYukti%20security%5D
+    about: Please report vulnerabilities privately by email, not as a public issue.
+  - name: Documentation
+    url: https://github.com/Juhilhere/Yukti/tree/main/docs
+    about: Architecture, security model, deployment, user and admin guides.

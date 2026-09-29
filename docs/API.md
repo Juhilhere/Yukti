@@ -1,3 +1,5 @@
+> **Legacy design document** (v0.1/v0.2 contract). The live, authoritative API is served by the running server at `/api/docs` (OpenAPI).
+
 # Yukti API contract (v0.1 — demo build)
 
 Base: same origin, prefix `/api`. JSON everywhere. Cookie session `yukti_sid` (HttpOnly).

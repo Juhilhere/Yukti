@@ -1,4 +1,4 @@
-"""End-to-end API test for Yukti v0.2 — run against a live server:  uv run python ../docs/e2e_v2.py"""
+"""End-to-end API test for Yukti v0.2 — run against a live server:  cd backend && uv run python tests/live/e2e_live.py"""
 import json
 import sys
 import time
@@ -161,7 +161,9 @@ check("model starts incomplete", m["complete"] is False and len(m["missing"]) > 
 check("scenario refused while incomplete", arj.post("/api/production/scenario", json={}).status_code == 422)
 
 print("== data is added only by HODs, for their own department")
-pdf = open(__file__.replace("docs\\e2e_v2.py", "data\\corpus\\A2_troubleshooting_guide.pdf").replace("docs/e2e_v2.py", "data/corpus/A2_troubleshooting_guide.pdf"), "rb").read()
+import os  # noqa: E402
+
+pdf = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "data", "corpus", "A2_troubleshooting_guide.pdf"), "rb").read()
 check("employee cannot upload", ravi.post("/api/documents", files={"file": ("t.pdf", pdf, "application/pdf")}).status_code == 403)
 check("admin cannot upload", a.post("/api/documents", files={"file": ("t.pdf", pdf, "application/pdf")}).status_code == 403)
 raj = session("rajesh.mm", "Rajesh@2026")
