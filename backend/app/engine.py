@@ -19,7 +19,8 @@ import socket
 
 import psutil
 from .db import q, q1, ex
-from .llm_params import llama_args, request_body
+from .llm_params import DEFAULT_PREDICTION, llama_args, request_body
+from . import ollama
 
 LOG = collections.deque(maxlen=3000)
 LOG_FILE = LOG_DIR / "engine.log"
@@ -39,9 +40,13 @@ ENGINE_META = {
     "llamacpp": ("llama.cpp (Yukti-managed)", "Yukti launches and tunes a local llama-server process with the full load configuration."),
     "bionic": ("Bionic / LM Studio server", "Use a model already running in Bionic's local server (OpenAI-compatible)."),
     "vllm": ("vLLM (plant GPU server)", "High-throughput serving on the plant GPU server (Tier 2)."),
-    "remote": ("Remote OpenAI-compatible", "Any OpenAI-compatible endpoint (Tier 1 remote GPU — synthetic data only)."),
+    "ollama": ("Ollama", "Models already downloaded in Ollama (native API: context length, GPU layers and sampling are applied)."),
+    "remote": ("Custom server (OpenAI-compatible)", "Any OpenAI-compatible server by URL: LM Studio, llama.cpp server, vLLM, "
+               "LocalAI, Jan, text-generation-webui, or a plant GPU server."),
 }
-DEFAULT_URLS = {"llamacpp": f"http://127.0.0.1:{LLAMA_PORT}/v1", "bionic": BIONIC_URL, "vllm": VLLM_URL, "remote": ""}
+ENGINE_IDS = ["llamacpp", "ollama", "bionic", "vllm", "remote"]
+DEFAULT_URLS = {"llamacpp": f"http://127.0.0.1:{LLAMA_PORT}/v1", "bionic": BIONIC_URL, "vllm": VLLM_URL, "remote": "",
+                "ollama": ollama.DEFAULT_URL}
 
 
 def _free_port(start: int = LLAMA_PORT) -> int:
@@ -221,16 +226,33 @@ async def probe(eid: str) -> dict[str, Any]:
         out["available"] = Path(LLAMA_SERVER).exists() or bool(cached_llama_version())
         out["version"] = cached_llama_version()
         return out
+    if eid == "ollama":
+        out.update(await ollama.probe(url))
+        return out
     if not url:
+        out["error"] = "No server address set. Enter the URL the model server listens on (e.g. http://127.0.0.1:1234/v1)."
         return out
     try:
-        async with httpx.AsyncClient(timeout=1.5) as c:
+        async with httpx.AsyncClient(timeout=2.5) as c:
             r = await c.get(f"{url}/models", headers={"Authorization": f"Bearer {key}"} if key else {})
             out["available"] = r.status_code == 200
             if r.status_code == 200:
-                out["models"] = [m.get("id") for m in r.json().get("data", [])]
-    except Exception:
-        pass
+                out["models"] = [m.get("id") for m in r.json().get("data", []) if m.get("id")]
+                if not out["models"]:
+                    out["error"] = "The server is reachable but reports no models."
+            elif r.status_code in (401, 403):
+                out["error"] = f"{url} refused the request ({r.status_code}): check the API key."
+            elif r.status_code == 404:
+                out["error"] = (f"{url}/models was not found (404). OpenAI-compatible servers usually need the /v1 suffix, "
+                                f"e.g. {url.rstrip('/')}/v1")
+            else:
+                out["error"] = f"{url} answered {r.status_code}."
+    except httpx.ConnectError:
+        out["error"] = f"Nothing is listening at {url}. Start the model server or correct the address."
+    except httpx.TimeoutException:
+        out["error"] = f"{url} did not answer within 2.5 s."
+    except Exception as e:  # noqa: BLE001
+        out["error"] = f"Could not reach {url}: {e}"
     return out
 
 
@@ -253,13 +275,26 @@ def scan_models() -> list[dict[str, Any]]:
             qm = QUANT_RE.search(p.stem)
             pm = PARAMS_RE.search(p.stem)
             fam = re.split(r"[-_]", p.stem)[0].lower()
-            vision = any("mmproj" in x.name.lower() for x in p.parent.glob("*.gguf"))
+            vision = False  # Yukti's chat is text-only; a vision projector next to the model is not used
             out.append({
                 "id": str(p), "name": p.stem, "file_name": p.name, "path": str(p), "size_bytes": p.stat().st_size,
                 "family": fam, "params_b": float(pm.group(1)) if pm else None, "quant": qm.group(1).upper() if qm else "?",
                 "arch": fam, "source": "lmstudio" if ".lmstudio" in str(p) else "yukti", "vision": vision,
             })
+    for m in ollama.library_models():
+        if m["path"] not in seen:
+            seen.add(m["path"])
+            out.append(m)
     return sorted(out, key=lambda m: m["size_bytes"])
+
+
+def _short_path(path: str) -> str:
+    if path.isascii() or not hasattr(__import__("ctypes"), "windll"):
+        return path
+    import ctypes
+    buf = ctypes.create_unicode_buffer(1024)
+    n = ctypes.windll.kernel32.GetShortPathNameW(path, buf, 1024)
+    return buf.value if 0 < n < 1024 else path
 
 
 def model_by_id(mid: str) -> dict[str, Any] | None:
@@ -302,10 +337,45 @@ MAX_RESTARTS = 3
 RESTART_WINDOW_S = 600
 
 
+_TAILS: dict[int, collections.deque] = {}
+
+
+def diagnose(lines: list[str]) -> str:
+    """Turn llama-server's last output lines into an explanation an administrator can act on."""
+    text = "\n".join(lines)
+    low = text.lower()
+    m = re.search(r"unknown model architecture: '([^']+)'", text)
+    if m:
+        return (f"This llama.cpp build does not support the model architecture '{m.group(1)}'. Use a model in a supported "
+                "architecture, or run it through Ollama / LM Studio and connect that engine.")
+    if "invalid magic" in low or "failed to read magic" in low or "not a gguf" in low or "gguf_init_from_file" in low and "failed" in low:
+        return "The model file is not a valid GGUF (corrupt or incomplete download). Download or copy it again."
+    if "key not found in model" in low or "wrong shape" in low or "check_tensor_dims" in low:
+        return ("This model file was written in a variant (typically by Ollama) that the built-in llama.cpp cannot read. "
+                "Choose the same model under the Ollama engine instead (Ollama must be running), or use a standard GGUF.")
+    if "wrong number of tensors" in low or "missing tensor" in low or "done_getting_tensors" in low:
+        return ("The model file contains tensors this llama.cpp build cannot read (for example Ollama's combined vision "
+                "models). Load it through the Ollama engine instead, or use a plain GGUF of the same model.")
+    if re.search(r"out of memory|cudamalloc failed|failed to allocate|unable to allocate|alloc_buffer.*failed|insufficient memory", low):
+        return ("Not enough GPU/CPU memory for this model with these settings. Lower Context length or GPU offload layers, "
+                "or use a smaller / more quantized model.")
+    if "failed to open" in low or "no such file" in low or "cannot open" in low:
+        return "The model file could not be opened. Check that it still exists and that the path is accessible."
+    if re.search(r"error while handling argument|invalid argument|unknown argument|error: invalid", low):
+        bad = next((l for l in lines if re.search(r"argument|invalid", l, re.I)), "")
+        return f"llama-server rejected a load setting: {bad.strip()[:200]}"
+    err = [l.strip() for l in lines if re.search(r"\berror\b|failed|exception", l, re.I)]
+    if err:
+        return f"llama-server stopped while loading: {err[-1][:240]}"
+    return "llama-server stopped while loading. See Admin → Developer → Logs for its output."
+
+
 def _reader(proc: subprocess.Popen) -> None:
     assert proc.stdout is not None
+    tail = _TAILS.setdefault(proc.pid, collections.deque(maxlen=80))
     for line in iter(proc.stdout.readline, ""):
         if line:
+            tail.append(line.rstrip())
             log("[llama] " + line)
     code = proc.wait()
     log(f"[llama] process exited (code {code})")
@@ -370,6 +440,9 @@ threading.Thread(target=_health_monitor, daemon=True, name="llama-health").start
 
 
 def unload() -> None:
+    if state.engine == "ollama" and state.model_id and state.status in ("ready", "loading"):
+        url, _ = engine_url("ollama")
+        threading.Thread(target=ollama.release, args=(url, state.model_id), daemon=True).start()
     with state.lock:
         state.intentional_stop = True
         if state.proc and state.proc.poll() is None:
@@ -382,6 +455,7 @@ def unload() -> None:
         state.proc = None
         state.ready_proc = None
         state.status = "idle"
+        state.engine = "llamacpp"  # an unloaded engine is not "selected" any more
         state.model_id = None
         state.model_name = None
         state.error = None
@@ -404,15 +478,33 @@ def load(engine: str, model_id: str, cfg: dict[str, Any], _auto: bool = False) -
 
         def check() -> None:
             import asyncio
+            if engine == "ollama":
+                url, _ = engine_url("ollama")
+                log(f"Loading {model_id} in Ollama at {ollama.root(url)} (num_ctx {ollama.load_options(cfg).get('num_ctx')})")
+                ok, detail = ollama.preload(url, model_id, cfg or {})
+                if state.last_load and state.last_load[1] != model_id:
+                    return  # superseded by another load
+                if ok:
+                    state.status, state.started_at = "ready", time.time()
+                    log(f"Ollama model {model_id} ready" + (f" ({detail})" if detail else ""))
+                else:
+                    state.status, state.error = "error", detail
+                    log(f"[engine] {detail}")
+                return
             info = asyncio.run(probe(engine))
-            if info["available"]:
+            if not info["available"]:
+                state.status = "error"
+                state.error = info.get("error") or f"{ENGINE_META[engine][0]} is not reachable at {info['base_url']}"
+            elif info.get("models") and model_id not in info["models"]:
+                state.status = "error"
+                state.error = (f"{info['base_url']} has no model '{model_id}'. Available: "
+                               + ", ".join(info["models"][:8]))
+            else:
                 state.status = "ready"
                 state.started_at = time.time()
                 log(f"Connected to {engine} at {info['base_url']} using model {model_id}")
-            else:
-                state.status = "error"
-                state.error = f"{ENGINE_META[engine][0]} is not reachable at {info['base_url']}"
-                log(state.error)
+                return
+            log(f"[engine] {state.error}")
 
         threading.Thread(target=check, daemon=True).start()
         return state.public()
@@ -427,7 +519,7 @@ def load(engine: str, model_id: str, cfg: dict[str, Any], _auto: bool = False) -
     backend = pick_backend(cfg.get("backend"))
     binary = LLAMA_BINARIES.get(backend) or LLAMA_SERVER
     log(f"Compute backend: {backend} ({binary})")
-    args = [binary, *filter_args(binary, llama_args(cfg, m["path"], draft) + [
+    args = [binary, *filter_args(binary, llama_args(cfg, _short_path(m["path"]), _short_path(draft) if draft else draft) + [
         "--host", "127.0.0.1", "--port", str(LLAMA_PORT), "--alias", m["name"], "--no-webui", "--metrics",
         "--slot-save-path", str(LOG_DIR.parent / "slots"), "--offline"])]
     (LOG_DIR.parent / "slots").mkdir(exist_ok=True)
@@ -453,13 +545,15 @@ def load(engine: str, model_id: str, cfg: dict[str, Any], _auto: bool = False) -
 
     def wait_ready(proc: subprocess.Popen) -> None:
         t0 = time.time()
-        while time.time() - t0 < 300:
+        while time.time() - t0 < 1800:  # large models from slow disks can take many minutes
             if proc is not state.proc:
                 return  # superseded by a newer load - never touch the new load's state
             if proc.poll() is not None:
                 if not state.intentional_stop:
+                    time.sleep(0.5)  # let the reader thread collect the last lines
                     state.status = "error"
-                    state.error = "llama-server exited during load — see Developer logs (likely out of memory: lower context/GPU layers)."
+                    state.error = diagnose(list(_TAILS.get(proc.pid, [])))
+                    log(f"[engine] load failed: {state.error}")
                 return
             try:
                 r = httpx.get(f"http://127.0.0.1:{state.port}/health", timeout=1, headers=_llama_headers())
@@ -475,10 +569,26 @@ def load(engine: str, model_id: str, cfg: dict[str, Any], _auto: bool = False) -
             time.sleep(0.5)
         if proc is state.proc:
             state.status = "error"
-            state.error = "Timed out waiting for llama-server"
+            state.error = "llama-server did not become ready within 30 minutes and was stopped. " + diagnose(list(_TAILS.get(proc.pid, [])))
+            try:
+                proc.kill()  # never leave a half-loaded server holding VRAM
+            except Exception:  # noqa: BLE001
+                pass
 
     threading.Thread(target=wait_ready, args=(state.proc,), daemon=True).start()
     return state.public()
+
+
+def context_tokens() -> int:
+    """Tokens one request may use: llama.cpp divides its context between parallel slots; Ollama uses num_ctx;
+    external servers do not report theirs, so a conservative 8192 is assumed."""
+    cfg = state.load_config or {}
+    ctx = int(cfg.get("ctx_size") or 8192)
+    if state.engine == "llamacpp":
+        return max(1024, ctx // max(1, int(cfg.get("parallel") or 1)))
+    if state.engine in ("ollama", "vllm"):
+        return ctx
+    return 8192
 
 
 def is_gemma2(name: str | None) -> bool:
@@ -515,10 +625,15 @@ async def stream_chat(messages: list[dict[str, Any]], pred: dict[str, Any]) -> A
         async for ev in _stream_once(messages, pred):
             if ev["type"] in ("token", "reasoning"):
                 produced = True
-            # nothing was produced yet, so a connection failure is always safe to retry (reload, restart, crash)
-            if ev["type"] == "error" and not produced and attempt < 2 and ev.get("code") in ("engine_unreachable", "engine_error"):
+            # a connection failure (model reload, watchdog restart, crash) is retried on the engine that comes back;
+            # if part of the answer was already shown, the client is told to clear it first ("reset")
+            transient = ev["type"] == "error" and (
+                ev.get("code") == "engine_unreachable" or (ev.get("code") == "engine_error" and int(ev.get("status") or 500) >= 500))
+            if transient and attempt < 2:
                 await asyncio.sleep(1.0 + attempt)
-                log("[chat] engine unavailable before the answer started - retrying")
+                log("[chat] engine unavailable" + (" mid-answer - restarting the answer" if produced else " before the answer started") + " - retrying")
+                if produced:
+                    yield {"type": "reset"}
                 retry = True
                 break
             if ev["type"] == "error" and produced:
@@ -539,6 +654,17 @@ async def _stream_once(messages: list[dict[str, Any]], pred: dict[str, Any]) -> 
         return
     engine = state.engine
     url, key = engine_url(engine)
+    if engine == "ollama":
+        state.requests += 1
+        p = {**DEFAULT_PREDICTION, **{k: v for k, v in (pred or {}).items() if v is not None and v != ""}}
+        async for ev in ollama.stream(url, state.model_id or "", messages, p, state.load_config or {}):
+            if ev["type"] == "done":
+                ev["stats"].update(model_name=state.model_name, engine=engine)
+                state.last_stats = ev["stats"]
+            elif ev["type"] == "error":
+                log(f"[chat] {ev['message']}")
+            yield ev
+        return
     body = request_body(pred, engine)
     body["messages"] = prepare_messages(messages)
     body["stream"] = True
@@ -559,7 +685,11 @@ async def _stream_once(messages: list[dict[str, Any]], pred: dict[str, Any]) -> 
                 if r.status_code != 200:
                     txt = (await r.aread()).decode(errors="replace")[:500]
                     log(f"[chat] engine error {r.status_code}: {txt}")
-                    yield {"type": "error", "code": "engine_error", "message": f"Engine returned {r.status_code}: {txt}"}
+                    msg = f"Engine returned {r.status_code}: {txt}"
+                    if re.search(r"exceed|context|too long|n_ctx", txt, re.I) and r.status_code == 400:
+                        msg = ("This conversation plus the retrieved documents is longer than the model's context window. "
+                               "Start a new chat, or ask the administrator to raise Context length when loading the model.")
+                    yield {"type": "error", "code": "engine_error", "status": r.status_code, "message": msg}
                     return
                 async for line in r.aiter_lines():
                     if not line.startswith("data:"):
@@ -606,15 +736,30 @@ async def _stream_once(messages: list[dict[str, Any]], pred: dict[str, Any]) -> 
 
 async def complete_once(messages: list[dict[str, Any]], pred: dict[str, Any] | None = None) -> str:
     out = []
-    async for ev in stream_chat(messages, {**(pred or {}), "temperature": 0.2, "max_tokens": 400}):
+    async for ev in stream_chat(messages, {"temperature": 0.2, "max_tokens": 400, **(pred or {})}):
         if ev["type"] == "token":
             out.append(ev["t"])
+        elif ev["type"] == "error":
+            raise RuntimeError(ev.get("message") or "engine error")
     return "".join(out)
+
+
+def autoload(engine_id: str, model_id: str, cfg: dict[str, Any]) -> None:
+    """Restore the administrator's model at startup; if it cannot be loaded (e.g. Ollama not running, model deleted),
+    fall back to the bundled model so employees are not left without an assistant."""
+    log(f"Restoring model {model_id} on {engine_id}")
+    load(engine_id, model_id, cfg)
+    t0 = time.time()
+    while state.status == "loading" and time.time() - t0 < 900:
+        time.sleep(1)
+    if state.status != "ready":
+        log(f"[engine] could not restore {model_id} on {engine_id} ({state.error}); loading the bundled model instead")
+        autoload_default()
 
 
 def autoload_default() -> None:
     """Load the smallest local GGUF on startup so the demo is ready."""
-    ms = scan_models()
+    ms = [m for m in scan_models() if m.get("source") != "ollama-library"]
     if not ms:
         log("No local GGUF models found.")
         return

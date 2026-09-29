@@ -53,7 +53,7 @@ function UserMenu({ close }: { close: () => void }) {
     <div className="py-1">
       <div className="border-b border-border px-3 py-2">
         <div className="font-medium">{me?.user.display_name}</div>
-        <div className="text-[11.5px] text-muted">{me?.user.post} · {me?.user.department}</div>
+        <div className="text-[11.5px] text-muted">{[me?.user.post, me?.user.department].filter(Boolean).join(' · ')}</div>
         <div className="mt-1 font-mono text-[10.5px] text-faint">@{me?.user.username} · L{me?.user.clearance} {me?.user.clearance_label}</div>
       </div>
       <MenuItem icon={<User2 size={13} />} onClick={() => { close(); nav('/account'); }}>{t('menu.account')}</MenuItem>
@@ -178,7 +178,7 @@ function Notifications() {
             <div className="border-b border-border">
               <div className="label px-3 pt-2">Compliance alerts</div>
               {(alerts.data ?? []).slice(0, 8).map((a) => (
-                <button key={a.id} onClick={() => { close(); nav('/assets'); }} className="flex w-full items-start gap-2 px-3 py-2 text-left hover:bg-surface-3">
+                <button key={a.id} onClick={() => { close(); nav(a.tag ? `/assets?q=${encodeURIComponent(a.tag)}` : '/assets'); }} className="flex w-full items-start gap-2 px-3 py-2 text-left hover:bg-surface-3">
                   <AlertTriangle size={13} className={cx('mt-0.5 shrink-0', a.severity === 'red' ? 'text-danger' : a.severity === 'amber' ? 'text-amber' : 'text-cyan')} />
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-[12.5px]">{a.title}</div>

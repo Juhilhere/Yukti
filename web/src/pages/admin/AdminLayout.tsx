@@ -6,7 +6,7 @@ import { cx } from '../../lib/format';
 import { PageHeader } from '../../components/ui';
 
 /** Any of these permissions opens the admin area. */
-export const ADMIN_PERMS = ['admin', 'users.manage', 'ai.settings', 'usage.view', 'backup.manage', 'models.manage', 'developer'];
+export const ADMIN_PERMS = ['admin', 'users.manage', 'ai.settings', 'usage.view', 'backup.manage', 'models.manage', 'developer', 'audit.export'];
 
 export const ADMIN_TABS: { to: string; label: string; perm: string | string[] }[] = [
   { to: 'users', label: 'Users', perm: 'users.manage' },

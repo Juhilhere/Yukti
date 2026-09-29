@@ -51,6 +51,8 @@ function UserDialog({ user, roles, clearanceLabels, onClose }: {
   const qc = useQueryClient();
   const deps = useDepartments();
   const creating = !user;
+  const { me } = useAuth();
+  const self = !!user && user.id === me?.user.id;  // nobody changes their own rank, roles, department or scope
   const [f, setF] = useState<FormState>(() => user ? {
     username: user.username, display_name: user.display_name ?? '', post: user.post ?? '', department: user.department ?? '',
     clearance: user.clearance ?? 0, roles: [...(user.roles ?? [])], asset_scopes: [...(user.asset_scopes ?? [])],
@@ -97,7 +99,7 @@ function UserDialog({ user, roles, clearanceLabels, onClose }: {
           <Field label="Display name"><input className="input" autoFocus={!creating} value={f.display_name} onChange={(e) => set('display_name', e.target.value)} /></Field>
           <Field label="Post / designation"><input className="input" value={f.post} onChange={(e) => set('post', e.target.value)} /></Field>
           <Field label="Department">
-            <select className="input" value={f.department} onChange={(e) => set('department', e.target.value)} disabled={deps.isLoading}>
+            <select className="input" value={f.department} onChange={(e) => set('department', e.target.value)} disabled={deps.isLoading || self}>
               <option value="">{deps.isLoading ? 'Loading…' : '— Select department —'}</option>
               {f.department && !depList.some((d) => d.name === f.department) && <option value={f.department}>{f.department}</option>}
               {depList.map((d) => <option key={d.code || d.name} value={d.name}>{d.name}{d.code ? ` (${d.code})` : ''}</option>)}
@@ -105,6 +107,8 @@ function UserDialog({ user, roles, clearanceLabels, onClose }: {
             {deps.error ? <div className="mt-1 text-[11px] text-danger">Could not load departments: {errMsg(deps.error)}</div> : null}
           </Field>
         </div>
+        {self && <div className="rounded-md border border-border bg-surface-2/50 px-3 py-1.5 text-[12px] text-muted">This is your own account: department, clearance, roles and asset scopes can only be changed by another administrator.</div>}
+        <fieldset disabled={self} className="contents">
         <Field label="Clearance level">
           <div className="flex flex-wrap gap-1.5">
             {[0, 1, 2, 3, 4].map((c) => (
@@ -138,6 +142,7 @@ function UserDialog({ user, roles, clearanceLabels, onClose }: {
         <Field label="Asset scopes" hint="Units / areas this user may see assets for. Press Enter or comma to add.">
           <TagsInput value={f.asset_scopes} onChange={(v) => set('asset_scopes', v)} placeholder="e.g. CDU-1" />
         </Field>
+        </fieldset>
         {save.error ? <ErrorBox error={save.error} /> : null}
       </div>
     </Modal>

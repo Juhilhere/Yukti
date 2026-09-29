@@ -28,6 +28,40 @@ const FIRST_RUN_TIMEOUT_MS = 10 * 60 * 1000;
 const READY_TIMEOUT_MS = 5 * 60 * 1000;
 
 // Download source for "Install Yukti on this PC": set at build time in distribution.json (the publisher's website).
+// Single-zip distribution: Yukti.exe with the complete Yukti Server in ./server next to it.
+const BUNDLED_ROOT = app.isPackaged ? path.join(path.dirname(process.execPath), 'server') : null;
+function bundledServer() {
+  return BUNDLED_ROOT && fs.existsSync(path.join(BUNDLED_ROOT, 'yukti-server.exe')) ? BUNDLED_ROOT : null;
+}
+// Windows lets people double-click Yukti.exe inside a zip without extracting it; the server folder is then missing.
+function runningFromZipPreview() {
+  const exe = process.execPath.toLowerCase();
+  const tmp = String(process.env.TEMP || require('os').tmpdir()).toLowerCase();
+  return app.isPackaged && !bundledServer() && (exe.startsWith(tmp) || /\\temp\\/.test(exe) || /\.zip\\/.test(exe));
+}
+
+// A zip has no installer: create Desktop and Start-menu shortcuts on first run, and repoint them when a newer
+// version is extracted to another folder (only shortcuts Yukti created itself are updated).
+function ensureShortcuts() {
+  if (!app.isPackaged || !bundledServer() || process.platform !== 'win32') return;
+  const exe = process.execPath;
+  if (config.shortcutExe === exe) return;
+  const targets = [
+    path.join(app.getPath('desktop'), 'Yukti.lnk'),
+    path.join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Yukti.lnk'),
+  ];
+  const opts = { target: exe, cwd: path.dirname(exe), icon: exe, iconIndex: 0, description: 'Yukti — Sovereign Industrial AI Workbench' };
+  for (const t of targets) {
+    try {
+      const exists = fs.existsSync(t);
+      if (!config.shortcutExe && !exists) shell.writeShortcutLink(t, 'create', opts);
+      else if (exists) shell.writeShortcutLink(t, 'replace', opts);
+    } catch (e) { log(`[shortcut] ${t}: ${e.message}`); }
+  }
+  config.shortcutExe = exe; saveConfig();
+  log(`[shortcut] Desktop and Start-menu shortcuts point to ${exe}`);
+}
+
 function distribution() {
   try { return JSON.parse(fs.readFileSync(path.join(ROOT, 'distribution.json'), 'utf8')); } catch { return {}; }
 }
@@ -100,8 +134,15 @@ function log(line) {
   sendUi('splash', 'splash:log', s);
 }
 function serverLogDir(root = config.installRoot) {
-  const d = path.join(root || '', 'data', 'store', 'logs');
-  return root && fs.existsSync(d) ? d : null;
+  // packaged servers keep data in %LOCALAPPDATA%\Yukti\data (older installs: <install>\data\store)
+  const legacy = path.join(root || '', 'data', 'store', 'logs');
+  if (root && fs.existsSync(path.join(root, 'data', 'store', 'yukti.db'))) return fs.existsSync(legacy) ? legacy : null;
+  const appdata = path.join(process.env.LOCALAPPDATA || path.join(require('os').homedir(), 'AppData', 'Local'), 'Yukti', 'data', 'logs');
+  return fs.existsSync(appdata) ? appdata : (root && fs.existsSync(legacy) ? legacy : null);
+}
+// same fingerprint as the server's /api/health "instance" (sha256 of the lower-cased install folder)
+function instanceId(root) {
+  return require('crypto').createHash('sha256').update(path.resolve(root || '').toLowerCase()).digest('hex').slice(0, 12);
 }
 function openLogs(which) {
   const dir = (which !== 'desktop' && serverLogDir()) || desktopLogDir();
@@ -183,6 +224,15 @@ function startLocalServer(installRoot, port) {
   proc.on('exit', (code, sig) => {
     log(`[yukti-desktop] server exited (code ${code}${sig ? ', ' + sig : ''})`);
     me.exited = true;
+    // exit code 75 = the server asked to be restarted (e.g. Admin > Backup > Restart now after staging a restore)
+    if (code === 75 && !quitting && !stopping && server === me) {
+      log('[yukti-desktop] server requested a restart');
+      bootSeq++;
+      showSplash();
+      setTimeout(bootLocal, 500);
+      updateTray();
+      return;
+    }
     if (me.error == null && code) me.error = `The Yukti server exited with code ${code}.`;
     // stopped unexpectedly while the user works in the app → show the startup page with the error panel
     if (!quitting && !stopping && server === me && page === 'app' && activeUrl === me.url) {
@@ -237,13 +287,19 @@ async function bootLocal() {
     if (serverAlive()) await stopLocalServer();                                   // ours, but another folder
     for (const port of [...new Set([DEFAULT_PORT, config.localPort].filter(Boolean))]) {
       const h = await health(localUrl(port), 1500);
-      if (h.ok) { base = localUrl(port); log(`[yukti-desktop] Yukti ${h.version} already serving on ${base} — connecting.`); break; }
+      if (!h.ok) continue;
+      // only reuse a server started from THIS install folder (not an older version or another copy)
+      if (h.instance && h.instance !== instanceId(config.installRoot)) {
+        log(`[yukti-desktop] a different Yukti installation is running on ${localUrl(port)} — starting this one on another port.`);
+        continue;
+      }
+      base = localUrl(port); log(`[yukti-desktop] Yukti ${h.version} already serving on ${base} — connecting.`); break;
     }
   }
   if (!live()) return;
   if (!base) {
     let port = DEFAULT_PORT;
-    if (!(await portFree(DEFAULT_PORT))) {
+    if (!(await portFree(DEFAULT_PORT))) {  // also when another Yukti installation holds 8000
       port = await firstFreePort();
       if (!port) return failStart(`Port ${DEFAULT_PORT} is used by another program and no free port was found in ${PORT_RANGE[0]}–${PORT_RANGE[1]}.`);
       log(`[yukti-desktop] port ${DEFAULT_PORT} is used by another program — starting Yukti on port ${port} instead.`);
@@ -519,6 +575,7 @@ function handle(channel, fn) {
 
 function defaultMode() {
   if (config.mode === 'remote') return 'remote';
+  if (bundledServer() && (!config.mode || config.installRoot === bundledServer())) return 'local';
   if (config.mode === 'local') return fs.existsSync(path.join(config.installRoot || '', 'installed.json')) ? 'install' : 'local';
   return distribution().manifestUrl ? 'install' : 'remote';   // first run
 }
@@ -527,7 +584,9 @@ handle('yukti:getConfig', () => {
   const notice = setupNotice; setupNotice = null;
   const canGoBack = !!activeUrl && (config.mode === 'remote' || serverAlive());
   return {
-    mode: config.mode, defaultMode: defaultMode(), serverUrl: config.serverUrl, installRoot: config.installRoot,
+    mode: config.mode, defaultMode: defaultMode(), serverUrl: config.serverUrl,
+    installRoot: config.mode === 'local' && serverKind(config.installRoot) ? config.installRoot : (bundledServer() || config.installRoot),
+    bundled: bundledServer(),
     dest: config.mode === 'local' && config.installRoot && fs.existsSync(path.join(config.installRoot, 'installed.json')) ? config.installRoot : DEFAULT_DEST,
     manifestUrl: manifestUrl(), version: app.getVersion(), connected: activeUrl, canGoBack, notice,
     serverRunning: serverAlive() ? server.url : null,
@@ -634,6 +693,20 @@ if (!app.requestSingleInstanceLock()) {
     openLogFile();
     setupSession();
     ensureTray();
+    const bundle = bundledServer();
+    if (bundle) {
+      ensureShortcuts();
+      // first run of the single-zip build, or the previous folder was replaced/moved by a newer version: use this bundle
+      if (!config.mode || (config.mode === 'local' && !serverKind(config.installRoot))) {
+        if (config.installRoot !== bundle) config.startedOnce = false;
+        config.mode = 'local'; config.installRoot = bundle; saveConfig();
+        log(`[setup] using the Yukti Server bundled with this app: ${bundle}`);
+      }
+    }
+    if (runningFromZipPreview()) {
+      showSetup('Yukti is running from inside the zip file, so its server is not available. Close Yukti, right-click the zip → Extract All…, then open Yukti.exe from the extracted folder.');
+      return;
+    }
     if (config.mode === 'local' && serverKind(config.installRoot)) bootLocal();
     else if (config.mode === 'remote') {
       const h = await health(config.serverUrl, 4000);

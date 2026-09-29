@@ -150,7 +150,8 @@ function Financials({ rows }: { rows: Record<string, unknown>[] }) {
 /* ----------------------------- model editor ----------------------------- */
 function NumIn({ value, onChange, disabled, placeholder, className }: { value: number | null | undefined; onChange: (v: number | null) => void; disabled?: boolean; placeholder?: string; className?: string }) {
   return (
-    <input type="number" className={cx('input !py-0.5 font-mono text-[12px]', className)} disabled={disabled} placeholder={placeholder}
+    <input type="number" min={0} step="any" className={cx('input !py-0.5 font-mono text-[12px]', className, value !== null && value !== undefined && value < 0 && '!border-danger')}
+      disabled={disabled} placeholder={placeholder} title={value !== null && value !== undefined && value < 0 ? 'Must be 0 or more' : undefined}
       value={value === null || value === undefined ? '' : value}
       onChange={(e) => onChange(e.target.value === '' ? null : Number(e.target.value))} />
   );

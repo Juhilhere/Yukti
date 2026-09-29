@@ -153,9 +153,15 @@ def _extract(path: Path, mime_hint: str, jid: str | None) -> list[dict[str, Any]
         from PIL import Image
         _stage(jid, 1, "done", "Image · treated as a scanned page")
         _stage(jid, 2, "running", "OCR")
-        text, conf = ocr_image(Image.open(path))
-        pages.append({"page_no": 1, "mode": "image", "text": text, "ocr_conf": round(conf, 3)})
-        _stage(jid, 2, "done", f"OCR confidence {conf:.2f}")
+        im = Image.open(path)
+        n_frames = getattr(im, "n_frames", 1)
+        confs = []
+        for fi in range(n_frames):
+            im.seek(fi)
+            text, conf = ocr_image(im.convert("RGB"))
+            confs.append(conf)
+            pages.append({"page_no": fi + 1, "mode": "image", "text": text, "ocr_conf": round(conf, 3)})
+        _stage(jid, 2, "done", f"OCR on {n_frames} page(s), mean confidence {sum(confs) / len(confs):.2f}")
     elif ext == ".docx":
         import docx
         d = docx.Document(str(path))
@@ -182,13 +188,24 @@ def _extract(path: Path, mime_hint: str, jid: str | None) -> list[dict[str, Any]
             pages.append({"page_no": si + 1, "mode": "digital", "text": "\n".join(lines), "ocr_conf": None})
         _stage(jid, 1, "done", f"XLSX · {len(pages)} sheet(s) as records")
         _stage(jid, 2, "done", "Rows converted to citable records")
-    else:
-        pages.append({"page_no": 1, "mode": "digital", "text": path.read_text(encoding="utf-8", errors="replace"), "ocr_conf": None})
+    elif ext in TEXT_EXTS:
+        raw = path.read_bytes()
+        try:
+            txt = raw.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            txt = raw.decode("cp1252", errors="replace")
+        pages.append({"page_no": 1, "mode": "digital", "text": txt, "ocr_conf": None})
         _stage(jid, 1, "done", "Plain text")
         _stage(jid, 2, "done", "Read")
+    else:
+        raise ValueError(f"Unsupported file type '{ext}'. Supported: " + ", ".join(sorted(SUPPORTED_EXTS)))
     for p in pages:
         p.pop("_img", None)
     return pages
+
+
+TEXT_EXTS = {".txt", ".csv", ".md", ".log", ".json", ".xml"}
+SUPPORTED_EXTS = {".pdf", ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".webp", ".docx", ".xlsx", ".xlsm"} | TEXT_EXTS
 
 
 def ingest(document_id: str, jid: str | None, actor: str) -> None:
@@ -221,6 +238,9 @@ def ingest(document_id: str, jid: str | None, actor: str) -> None:
                 header = f"{doc['title']} {doc['doc_number'] or ''} rev {doc['revision'] or ''}"
                 ex("INSERT INTO chunks_fts(text, tags, chunk_id) VALUES(?,?,?)", (header + "\n" + ch, ctags + " " + " ".join(tags), cid))
                 n += 1
+        if n == 0:
+            raise ValueError("No readable text was found in this file (empty, image-only with unreadable scan, or a "
+                             "spreadsheet without data rows). It is stored but cannot be searched or cited.")
         _stage(jid, 4, "done", f"{n} chunks")
         _stage(jid, 5, "done", "FTS5 BM25 index updated")
         ex("UPDATE documents SET pages=?, asset_tags_json=? WHERE id=?", (len(pages), j(tags), document_id))
@@ -256,7 +276,7 @@ def create_document(meta: dict[str, Any], file_name: str, data: bytes | Path, ac
     if meta.get("doc_number") and meta.get("status", "CURRENT") == "CURRENT":
         for old in q("SELECT id, revision FROM documents WHERE doc_number=? AND status='CURRENT' AND department=?",
                      (meta["doc_number"], meta.get("department"))):
-            if str(old["revision"]) != str(meta.get("revision")) and str(old["revision"]) < str(meta.get("revision")):
+            if str(old["revision"]) != str(meta.get("revision")) and _rev_key(old["revision"]) < _rev_key(meta.get("revision")):
                 ex("UPDATE documents SET status='SUPERSEDED' WHERE id=?", (old["id"],))
     ex("""INSERT INTO documents(id, title, doc_number, revision, status, doc_type, department, classification, effective_date,
           supersedes, asset_tags_json, file_path, file_name, mime, sha256, size_bytes, uploaded_by, created_at, is_example, is_public, source_url)
@@ -267,6 +287,12 @@ def create_document(meta: dict[str, Any], file_name: str, data: bytes | Path, ac
         j(meta.get("asset_tags", [])), str(path), file_name, mime, sha, size, actor, now_iso(),
         int(bool(meta.get("is_example"))), int(bool(meta.get("is_public"))), meta.get("source_url")))
     return did
+
+
+def _rev_key(rev: Any) -> tuple:
+    """Natural ordering of revision labels: R9 < R10, rev B < rev C, 2 < 10."""
+    parts = re.findall(r"\d+|[A-Za-z]+", str(rev or ""))
+    return tuple((0, int(x)) if x.isdigit() else (1, x.upper()) for x in parts)
 
 
 # ------------------------------------------------------------------ access helpers
@@ -307,12 +333,20 @@ def retrieve(subject: Subject, text: str, k: int = 8) -> dict[str, Any]:
     tags = detect_tags(text)
     fq = _fts_query(text, tags)
     t0 = time.time()
+    sql = """SELECT c.id cid, c.document_id, c.page, c.text, c.tags, bm25(chunks_fts) score
+             FROM chunks_fts JOIN chunks c ON c.id = chunks_fts.chunk_id
+             WHERE chunks_fts MATCH ? ORDER BY score LIMIT 80"""
     try:
-        rows = q("""SELECT c.id cid, c.document_id, c.page, c.text, c.tags, bm25(chunks_fts) score
-                    FROM chunks_fts JOIN chunks c ON c.id = chunks_fts.chunk_id
-                    WHERE chunks_fts MATCH ? ORDER BY score LIMIT 80""", (fq,))
-    except Exception:
-        rows = []
+        rows = q(sql, (fq,))
+    except Exception as e:  # noqa: BLE001 - never silently answer without evidence: retry with plain quoted terms
+        from .engine import log
+        log(f"[search] query {fq!r} failed ({e}); retrying with quoted terms")
+        words = [w for w in re.findall(r"[A-Za-z0-9][A-Za-z0-9\-]{1,}", text)][:24]
+        try:
+            rows = q(sql, (" OR ".join(f'"{w}"' for w in words),)) if words else []
+        except Exception as e2:  # noqa: BLE001
+            log(f"[search] fallback query failed too: {e2}")
+            rows = []
     docs: dict[str, dict[str, Any]] = {}
     allowed: dict[str, bool] = {}
     denied_docs: dict[str, dict[str, Any]] = {}

@@ -64,8 +64,44 @@ def _facts_block(facts: list[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
+def _tok(text: str) -> int:
+    return len(text) // 3 + 8  # conservative estimate (~3 characters per token for mixed English/technical text)
+
+
+def fit_to_context(msgs: list[dict[str, Any]], budget: int) -> tuple[list[dict[str, Any]], bool]:
+    """Keep the prompt inside the model's context: drop the oldest history turns first, then shorten the retrieved
+    document context. The system prompt and the question are always kept."""
+    trimmed = False
+    msgs = [dict(m) for m in msgs]
+    while sum(_tok(m["content"]) for m in msgs) > budget and len(msgs) > 2:
+        msgs.pop(1)  # oldest turn after the system prompt
+        trimmed = True
+    over = sum(_tok(m["content"]) for m in msgs) - budget
+    if over > 0:
+        last = msgs[-1]["content"]
+        q_at = last.rfind("\n\nQUESTION: ")
+        if q_at > 0:
+            keep = max(0, q_at - over * 3 - 64)
+            cut = last.rfind("</doc>", 0, keep)
+            head = last[: cut + 6] if cut > 0 else last[:keep]
+            msgs[-1]["content"] = head + "\n(… further context omitted to fit the model's context window)" + last[q_at:]
+            trimmed = True
+    return msgs, trimmed
+
+
 async def run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | None, prediction: dict[str, Any],
                    use_knowledge: bool, regenerate: bool = False) -> AsyncIterator[str]:
+    """Wrapper: any unexpected failure ends the stream with an explicit error event (never a silent cut-off)."""
+    try:
+        async for chunk in _run_turn(ctx, chat_id, content, system_prompt, prediction, use_knowledge, regenerate):
+            yield chunk
+    except Exception as e:  # noqa: BLE001
+        engine.log(f"[chat] turn failed: {e!r}")
+        yield _sse("error", {"code": "internal", "message": "The answer was interrupted by a server error. Please try again."})
+
+
+async def _run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | None, prediction: dict[str, Any],
+                    use_knowledge: bool, regenerate: bool = False) -> AsyncIterator[str]:
     _STOP.discard(chat_id)
     chat = q1("SELECT * FROM chats WHERE id=? AND user_id=?", (chat_id, ctx.user["id"]))
     if not chat:
@@ -75,7 +111,10 @@ async def run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | No
         ex("INSERT INTO messages(id, chat_id, role, content, created_at) VALUES(?,?,?,?,?)",
            (new_id(), chat_id, "user", content, now_iso()))
         if chat["title"] in (None, "", "New chat"):
-            ex("UPDATE chats SET title=? WHERE id=?", (content[:60], chat_id))
+            t = " ".join(content.split())
+            if len(t) > 60:  # cut at a word boundary and mark the cut
+                t = t[:60].rsplit(" ", 1)[0].rstrip(" ,.;:-") + "…"
+            ex("UPDATE chats SET title=? WHERE id=?", (t, chat_id))
     ex("UPDATE chats SET updated_at=? WHERE id=?", (now_iso(), chat_id))
     meta: dict[str, Any] = {}
 
@@ -177,6 +216,10 @@ async def run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | No
     msgs += hist
     user_content = (ctx_block + "\n\nQUESTION: " + content) if ctx_block else content
     msgs.append({"role": "user", "content": user_content})
+    max_out = int((prediction or {}).get("max_tokens") or -1)
+    msgs, trimmed = fit_to_context(msgs, engine.context_tokens() - (max_out if max_out > 0 else 1024) - 128)
+    if trimmed:
+        meta["context_trimmed"] = True
 
     # 5) Stream from engine
     text_parts: list[str] = []
@@ -184,9 +227,14 @@ async def run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | No
     stats: dict[str, Any] = {}
     async for ev in engine.stream_chat(msgs, prediction or {}):
         if chat_id in _STOP:
-            stats = {**engine.state.last_stats, "stop_reason": "user_stopped"}
+            stats = {"tokens_out": len(text_parts), "stop_reason": "user_stopped", "model_name": engine.state.model_name,
+                     "engine": engine.state.engine}
             break
-        if ev["type"] == "token":
+        if ev["type"] == "reset":  # the engine restarted mid-answer: the answer is regenerated from the start
+            text_parts.clear()
+            reasoning_parts.clear()
+            yield _sse("reset", {})
+        elif ev["type"] == "token":
             text_parts.append(ev["t"])
             yield _sse("token", {"t": ev["t"]})
         elif ev["type"] == "reasoning":
@@ -196,6 +244,15 @@ async def run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | No
             yield _sse("error", {"code": ev["code"], "message": ev["message"]})
             audit.write(ctx.actor, "chat.error", f"chat:{chat_id}", {"code": ev["code"]})
             _record(ctx, route, None, ev["code"])
+            # keep the turn (route, guard, sources, withheld documents, the error) so it survives refresh and reload,
+            # and the "request access" card stays reachable even when no model is loaded
+            meta["error"] = {"code": ev["code"], "message": ev["message"]}
+            if regenerate:
+                last = q1("SELECT id FROM messages WHERE chat_id=? AND role='assistant' ORDER BY created_at DESC, rowid DESC LIMIT 1", (chat_id,))
+                if last:
+                    ex("DELETE FROM messages WHERE id=?", (last["id"],))
+            ex("INSERT INTO messages(id, chat_id, role, content, reasoning, meta_json, created_at) VALUES(?,?,?,?,?,?,?)",
+               (new_id(), chat_id, "assistant", "".join(text_parts), "".join(reasoning_parts) or None, j(meta), now_iso()))
             return
         elif ev["type"] == "done":
             stats = ev["stats"]
@@ -223,4 +280,5 @@ def message_out(m: dict[str, Any]) -> dict[str, Any]:
     meta = uj(m.get("meta_json"), {})
     return {"id": m["id"], "role": m["role"], "content": m["content"], "created_at": m["created_at"],
             "reasoning": m.get("reasoning"), "route": meta.get("route"), "guard": meta.get("guard"),
-            "sources": meta.get("sources"), "denied": meta.get("denied"), "facts": meta.get("facts"), "stats": meta.get("stats")}
+            "sources": meta.get("sources"), "denied": meta.get("denied"), "facts": meta.get("facts"), "stats": meta.get("stats"),
+            "error": meta.get("error")}

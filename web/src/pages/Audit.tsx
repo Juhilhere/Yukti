@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { CheckCircle2, ChevronDown, ChevronRight, Download, RefreshCw, ScrollText, Search, ShieldCheck, XCircle } from 'lucide-react';
+import { CheckCircle2, ChevronDown, ChevronRight, Download, History, RefreshCw, ScrollText, Search, ShieldCheck, XCircle } from 'lucide-react';
 import { api, downloadFile, errMsg, qs } from '../lib/api';
 import { useT } from '../lib/i18n';
 import { useAuth } from '../lib/auth';
@@ -55,18 +55,31 @@ export default function Audit() {
   const [event, setEvent] = useState('');
   const [text, setText] = useState('');
   const q = useQuery({ queryKey: ['audit', event], queryFn: () => api.get<AuditRecord[]>(`/api/audit${qs({ limit: 200, event })}`) });
-  const all = useQuery({ queryKey: ['audit', ''], queryFn: () => api.get<AuditRecord[]>(`/api/audit${qs({ limit: 200 })}`), enabled: event !== '' });
+  const eventsQ = useQuery({ queryKey: ['audit', 'events'], queryFn: () => api.get<string[]>('/api/audit/events') });
+  // older pages, loaded on demand ("Load older records")
+  const [older, setOlder] = useState<AuditRecord[]>([]);
+  const [olderDone, setOlderDone] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  useEffect(() => { setOlder([]); setOlderDone(false); }, [event, q.dataUpdatedAt]);
+  const loadOlder = async () => {
+    const all0 = [...(q.data ?? []), ...older];
+    const last = all0[all0.length - 1];
+    if (!last) return;
+    setLoadingOlder(true);
+    try {
+      const more = await api.get<AuditRecord[]>(`/api/audit${qs({ limit: 500, event, before: String(last.seq) })}`);
+      setOlder((o) => [...o, ...more]);
+      if (more.length < 500) setOlderDone(true);
+    } catch (e) { toast.error('Could not load older records', errMsg(e)); } finally { setLoadingOlder(false); }
+  };
   const verify = useMutation({ mutationFn: () => api.get<AuditVerify>('/api/audit/verify') });
 
-  const events = useMemo(() => {
-    const src = (event ? all.data : q.data) ?? [];
-    return [...new Set(src.map((r) => r.event))].sort();
-  }, [q.data, all.data, event]);
+  const events = eventsQ.data ?? [];
   const rows = useMemo(() => {
     const f = text.trim().toLowerCase();
-    const list = q.data ?? [];
+    const list = [...(q.data ?? []), ...older];
     return f ? list.filter((r) => `${r.actor} ${r.event} ${r.entity} ${detailStr(r.detail)}`.toLowerCase().includes(f)) : list;
-  }, [q.data, text]);
+  }, [q.data, older, text]);
   const v = verify.data;
   const t = useT();
   const exp = async (fmt: 'csv' | 'jsonl') => {
@@ -125,6 +138,13 @@ export default function Audit() {
                   </thead>
                   <tbody>{rows.map((r) => <Row key={r.seq} r={r} />)}</tbody>
                 </table>
+                {(q.data ?? []).length >= 200 && !olderDone && (
+                  <div className="border-t border-border p-2 text-center">
+                    <button className="btn btn-sm" disabled={loadingOlder} onClick={() => void loadOlder()}>
+                      {loadingOlder ? <Spinner size={12} /> : <History size={12} />}Load older records
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </QueryState>

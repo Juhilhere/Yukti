@@ -100,15 +100,14 @@ The full design is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Get started
 
-### For users: install the desktop app
+### For users: one zip, nothing else to install
 
-1. Open your organisation's Yukti download page and click **Download Yukti for Windows**.
-2. Run `Yukti-Setup-0.3.0.exe` (per-user install, no admin rights needed).
-3. On first start, choose one of:
-   - **Connect to our plant Yukti server** (typical), then enter `http://<server>:8000`.
-   - **Install Yukti on this PC**, which downloads only the components this PC needs.
-   - **Use an existing Yukti Server folder**.
-4. Sign in with the account your administrator gave you.
+1. Download **`Yukti-0.3.0-Windows.zip`** (one file: the app, the AI server, the llama.cpp CUDA and Vulkan engines and the model).
+2. Right-click it → **Extract All…**, open the folder and double-click **`Yukti.exe`**. No admin rights are needed.
+3. Yukti starts its bundled server and opens the sign-in page (about a minute on the first start). Desktop and Start-menu shortcuts are
+   created. Data is kept in `%LOCALAPPDATA%\Yukti`, so extracting a newer version later keeps everything.
+4. Sign in with the account your administrator gave you. On employee PCs of a plant deployment, use **File → Switch server → Connect**
+   to use the central server instead.
 
 See the [User Guide](docs/USER_GUIDE.md).
 
@@ -116,13 +115,14 @@ See the [User Guide](docs/USER_GUIDE.md).
 
 The **Yukti Server** package is self-contained. It includes `yukti-server.exe`, llama.cpp CUDA 12.4 and Vulkan builds,
 the default model Gemma-2-2B-it Q8_0, a pre-trained Laya, the UI and the data. You do **not** need to install Python,
-Bionic/LM Studio, Ollama or vLLM.
+Bionic/LM Studio, Ollama or vLLM. If they are present, Yukti can use them too: models already downloaded in **Ollama**, an **LM Studio**
+server, **vLLM**, or any **OpenAI-compatible server by URL** (Model loader → engine → Connection → *Test & save*).
 
 | Goal | Run (inside the package folder) |
 |---|---|
-| This PC only | `Start Yukti Server.cmd` |
-| Serve desktop clients on the plant LAN | `Start Yukti Server (Plant LAN).cmd` (0.0.0.0:8000; allow TCP 8000 **for the plant subnet only**) |
-| Publish the one-click installer on a website | `ops\build-release.ps1`, then `ops\release-site.ps1 -SiteUrl https://<your-site>/yukti/`, then upload `E:\yukti-build\publish\` |
+| This PC only | open `Yukti.exe` (or `server\Start Yukti Server.cmd` for the server alone) |
+| Serve desktop clients on the plant LAN | `server\Start Yukti Server (Plant LAN).cmd` (0.0.0.0:8000; allow TCP 8000 **for the plant subnet only**) |
+| Publish the download on a website | `ops\build-release.ps1`, then `ops\release-site.ps1`, then upload `E:\yukti-build\publish\` (download page + the one zip) |
 
 See [Deployment](docs/DEPLOYMENT.md) and the [Admin Guide](docs/ADMIN_GUIDE.md).
 

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Box, ChevronDown, ChevronRight, Cpu, Eye, HardDrive, Power, Search, Zap } from 'lucide-react';
+import { Box, ChevronDown, ChevronRight, Cpu, Eye, HardDrive, Plug, Power, Search, Zap } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import { ParamForm, diffFromDefaults } from '../components/ParamForm';
 import { Badge, Dot, ErrorBox, Spinner, Toggle } from '../components/ui';
@@ -8,11 +8,18 @@ import { toast } from '../components/Toast';
 import { api, errMsg } from '../lib/api';
 import { cx, fmtBytes } from '../lib/format';
 import { qk, uiStore, useEngines, useLoaded, useModels, useSchema, useUI } from '../lib/queries';
-import type { LoadedModel, Model } from '../lib/types';
+import type { Engine, LoadedModel, Model } from '../lib/types';
 import { useAuth } from '../lib/auth';
 
-export const ENGINE_LABEL: Record<string, string> = { llamacpp: 'llama.cpp', bionic: 'Bionic', vllm: 'vLLM', remote: 'Remote' };
-const SOURCE_LABEL: Record<string, string> = { yukti: 'Yukti models folder', lmstudio: 'Bionic / LM Studio library', engine: 'Reported by engines' };
+export const ENGINE_LABEL: Record<string, string> = { llamacpp: 'llama.cpp (built-in)', ollama: 'Ollama', bionic: 'Bionic / LM Studio', vllm: 'vLLM', remote: 'Custom server' };
+const SOURCE_LABEL: Record<string, string> = {
+  yukti: 'Yukti models folder', lmstudio: 'Bionic / LM Studio library (runs on built-in llama.cpp)',
+  ollama: 'Ollama (running) — loads through Ollama (recommended for Ollama models)', 'ollama-library': 'Ollama library on disk — tries the built-in llama.cpp; newer Ollama models (e.g. Gemma 3) only load through Ollama',
+  engine: 'Reported by connected servers',
+};
+const URL_HINT: Record<string, string> = {
+  ollama: 'http://127.0.0.1:11434', bionic: 'http://127.0.0.1:1234/v1', vllm: 'http://gpu-server:8000/v1', remote: 'http://127.0.0.1:8080/v1',
+};
 
 export function ModelLoader() {
   const { loaderOpen, loaderModelId } = useUI();
@@ -40,7 +47,7 @@ export function ModelLoader() {
     const cur = loaded.data;
     setSelected(loaderModelId ?? cur?.model_id ?? null);
     if (loaderModelId) setShowCfg(true);
-    if (cur?.engine) setEngine(cur.engine);
+    if (cur?.engine && cur.status !== 'idle') setEngine(cur.engine);
     else {
       const firstAvail = engines.data?.find((e) => e.available);
       if (firstAvail) setEngine(firstAvail.id);
@@ -53,10 +60,11 @@ export function ModelLoader() {
   const selectedModel = models.data?.find((m) => m.id === selected) ?? null;
   useEffect(() => {
     if (!selectedModel) return;
-    if (selectedModel.source === 'lmstudio' && engine === 'llamacpp') return;
+    if (selectedModel.source === 'ollama') { setEngine('ollama'); return; }
+    if (['yukti', 'lmstudio', 'ollama-library'].includes(selectedModel.source)) { setEngine('llamacpp'); return; }
     if (selectedModel.source === 'engine') {
-      const guess = engines.data?.find((e) => e.available && e.id !== 'llamacpp');
-      if (guess) setEngine(guess.id);
+      const guess = selectedModel.engine ?? engines.data?.find((e) => e.available && e.id !== 'llamacpp')?.id;
+      if (guess) setEngine(guess);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected]);
@@ -75,6 +83,12 @@ export function ModelLoader() {
   const st = loaded.data;
   const isLoading = st?.status === 'loading' || busy;
   const loadFields = (schema.data?.load ?? []).filter((f) => !f.engines?.length || f.engines.includes(engine));
+  const engineInfo = engines.data?.find((e) => e.id === engine);
+  // a model file can only be served by the engine that owns it: files -> built-in llama.cpp, Ollama names -> Ollama, etc.
+  const mismatch = selectedModel && (
+    (['yukti', 'lmstudio', 'ollama-library'].includes(selectedModel.source) && engine !== 'llamacpp') ||
+    (selectedModel.source === 'ollama' && engine !== 'ollama') ||
+    (selectedModel.source === 'engine' && !!selectedModel.engine && engine !== selectedModel.engine));
 
   const doLoad = async () => {
     if (!selected) return;
@@ -126,7 +140,7 @@ export function ModelLoader() {
         {st && st.status !== 'idle' && (
           <button className="btn btn-danger" disabled={busy || !canManage} onClick={doUnload}><Power size={13} /> Unload</button>
         )}
-        <button className="btn btn-primary" disabled={!selected || isLoading || !canManage} onClick={doLoad}
+        <button className="btn btn-primary" disabled={!selected || isLoading || !canManage || !!mismatch} onClick={doLoad}
           title={!canManage ? 'You lack the models.manage permission' : undefined}>
           {isLoading ? <Spinner className="!text-[#1a1204]" /> : <Zap size={13} />} {isLoading ? 'Loading…' : 'Load model'}
         </button>
@@ -141,7 +155,7 @@ export function ModelLoader() {
         <div className="max-h-[300px] overflow-y-auto rounded-md border border-border">
           {models.isLoading && <div className="flex items-center gap-2 p-4 text-muted"><Spinner /> Scanning models…</div>}
           {models.error && <div className="p-3"><ErrorBox error={models.error} onRetry={() => models.refetch()} /></div>}
-          {!models.isLoading && !models.error && grouped.length === 0 && <div className="p-6 text-center text-muted">No models found{q ? ` for “${q}”` : ''}. Place GGUF files in the models folder or start Bionic.</div>}
+          {!models.isLoading && !models.error && grouped.length === 0 && <div className="p-6 text-center text-muted">No models found{q ? ` for “${q}”` : ''}. Put GGUF files in the Yukti models folder, pull a model with Ollama, or connect a model server below.</div>}
           {grouped.map(([src, list]) => (
             <div key={src}>
               <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-border bg-surface-2 px-3 py-1">
@@ -178,7 +192,7 @@ export function ModelLoader() {
         <div>
           <div className="mb-1.5 flex items-center gap-2"><span className="label">Engine</span></div>
           {engines.error && <ErrorBox error={engines.error} />}
-          <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
             {(engines.data ?? []).map((e) => (
               <button key={e.id} onClick={() => setEngine(e.id)} title={e.description}
                 className={cx('rounded-md border p-2 text-left transition-colors',
@@ -189,12 +203,19 @@ export function ModelLoader() {
                   {e.version && <span className="ml-auto font-mono text-[10px] text-faint">{e.version}</span>}
                 </div>
                 <div className="mt-0.5 truncate font-mono text-[10.5px] text-faint">{e.base_url || (e.id === 'llamacpp' ? 'managed llama-server' : '—')}</div>
-                <div className={cx('mt-0.5 text-[10.5px]', e.available ? 'text-green-300' : 'text-faint')}>{e.available ? 'available' : 'unavailable'}</div>
+                <div className={cx('mt-0.5 text-[10.5px]', e.available ? 'text-green-300' : 'text-faint')}>{e.available ? `available${e.models?.length ? ` · ${e.models.length} model${e.models.length === 1 ? '' : 's'}` : ''}` : 'not connected'}</div>
               </button>
             ))}
             {engines.isLoading && <div className="flex items-center gap-2 text-muted"><Spinner /> engines…</div>}
           </div>
         </div>
+
+        {engine !== 'llamacpp' && engineInfo && <ConnectionPanel e={engineInfo} canManage={canManage} />}
+        {mismatch && (
+          <div className="rounded-md border border-amber/40 bg-amber/10 px-3 py-1.5 text-[12px] text-amber">
+            “{selectedModel?.name}” is served by {ENGINE_LABEL[selectedModel?.source === 'ollama' ? 'ollama' : selectedModel?.engine ?? 'llamacpp']}, not {ENGINE_LABEL[engine]}. Select that engine, or pick a model listed for {ENGINE_LABEL[engine]}.
+          </div>
+        )}
 
         <div className="rounded-md border border-border">
           <button className="flex w-full items-center gap-2 px-3 py-2 text-left" onClick={() => setShowCfg((s) => !s)}>
@@ -206,20 +227,34 @@ export function ModelLoader() {
           </button>
           {showCfg && (
             <div className="border-t border-border p-3">
-              <div className="mb-2 flex items-center justify-between">
-                <Toggle size="sm" checked={showAdv} onChange={setShowAdv} label={<span className="text-[12px] text-muted">Show advanced settings</span>} />
-                <button className="btn btn-ghost btn-sm" onClick={() => setCfg({})}>Reset all to defaults</button>
-              </div>
+              {loadFields.length > 0 && (
+                <div className="mb-2 flex items-center justify-between">
+                  <Toggle size="sm" checked={showAdv} onChange={setShowAdv} label={<span className="text-[12px] text-muted">Show advanced settings</span>} />
+                  <button className="btn btn-ghost btn-sm" onClick={() => setCfg({})}>Reset all to defaults</button>
+                </div>
+              )}
               {schema.isLoading && <div className="flex items-center gap-2 text-muted"><Spinner /> Loading schema…</div>}
               {schema.error && <ErrorBox error={schema.error} onRetry={() => schema.refetch()} />}
-              {schema.data && (
+              {schema.data && loadFields.length === 0 && (
+                <div className="rounded-md border border-border bg-surface-2/50 px-3 py-2 text-[12px] text-muted">
+                  {ENGINE_LABEL[engine]} manages how the model is loaded (context length, GPU memory) on its own server, so there are no load settings to change here.
+                  Sampling settings (temperature, top-p, max tokens, …) from <span className="text-text">Admin → AI settings</span> are still applied to every request.
+                </div>
+              )}
+              {schema.data && engine === 'vllm' && loadFields.length > 0 && (
+                <div className="mb-2 rounded-md border border-border bg-surface-2/50 px-3 py-2 text-[12px] text-muted">
+                  vLLM runs on its own server, so Yukti cannot apply these settings there. Use them to build the command below and start vLLM with it;
+                  Yukti uses Context length to keep prompts within the model's window.
+                </div>
+              )}
+              {schema.data && loadFields.length > 0 && (
                 <div className="grid gap-2 md:grid-cols-2 [&>div]:contents">
                   <ParamForm fields={loadFields} values={cfg} engine={engine} showAdvanced={showAdv}
                     collapsedGroups={['CPU', 'Batching', 'RoPE', 'Memory', 'Speculative Decoding', 'MoE', 'Parallelism', 'vLLM', 'Advanced']}
                     onChange={(k, v) => setCfg((c) => { const n = { ...c }; if (v === undefined) delete n[k]; else n[k] = v; return n; })} />
                 </div>
               )}
-              {schema.data && selected && <CommandPreview modelId={selected} cfg={diffFromDefaults(schema.data.load, cfg)} />}
+              {schema.data && selected && (engine === 'llamacpp' || engine === 'vllm') && <CommandPreview modelId={selected} cfg={diffFromDefaults(schema.data.load, cfg)} />}
             </div>
           )}
         </div>
@@ -235,6 +270,67 @@ export function ModelLoader() {
         {err && errMsg(err).includes('insufficient') ? <div className="text-[12px] text-muted">Tip: reduce GPU offload layers or context length.</div> : null}
       </div>
     </Modal>
+  );
+}
+
+/** Server address (and API key) of an external engine, with a live connection test. */
+function ConnectionPanel({ e, canManage }: { e: Engine; canManage: boolean }) {
+  const qc = useQueryClient();
+  const [url, setUrl] = useState(e.base_url ?? '');
+  const [key, setKey] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<Engine | null>(null);
+  const [error, setError] = useState<unknown>(null);
+  useEffect(() => { setUrl(e.base_url ?? ''); setResult(null); setError(null); setKey(''); }, [e.id, e.base_url]);
+  const shown = result ?? e;
+  const test = async () => {
+    setBusy(true); setError(null);
+    try {
+      const r = await api.put<Engine>(`/api/engines/${e.id}`, key ? { base_url: url.trim(), api_key: key } : { base_url: url.trim() });
+      setResult(r); setKey('');
+      await Promise.all([qc.invalidateQueries({ queryKey: qk.engines }), qc.invalidateQueries({ queryKey: qk.models })]);
+      if (r.available) toast.success(`Connected to ${ENGINE_LABEL[e.id] ?? e.name}`, `${r.models?.length ?? 0} model(s) available`);
+    } catch (err) { setError(err); } finally { setBusy(false); }
+  };
+  return (
+    <div className="rounded-md border border-border p-3">
+      <div className="mb-2 flex items-center gap-2">
+        <Plug size={14} className="text-cyan" /><span className="font-medium">Connection</span>
+        <span className="text-[11.5px] text-muted">where {ENGINE_LABEL[e.id] ?? e.name} is listening</span>
+        <span className={cx('ml-auto text-[11.5px]', shown.available ? 'text-green-300' : 'text-faint')}>{shown.available ? `connected${shown.version ? ` · v${shown.version}` : ''}` : 'not connected'}</span>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <input className="input flex-1 font-mono text-[12px] !py-1.5" style={{ minWidth: 240 }} value={url} disabled={!canManage}
+          onChange={(ev) => setUrl(ev.target.value)} placeholder={URL_HINT[e.id] ?? 'http://host:port/v1'}
+          onKeyDown={(ev) => { if (ev.key === 'Enter' && url.trim()) void test(); }} />
+        {e.id !== 'ollama' && (
+          <input className="input !w-44 font-mono text-[12px] !py-1.5" type="password" disabled={!canManage} placeholder="API key (if required)"
+            value={key} onChange={(ev) => setKey(ev.target.value)} />
+        )}
+        <button className="btn btn-cyan btn-sm" disabled={!canManage || busy || !url.trim()} onClick={() => void test()}>
+          {busy ? <Spinner size={12} /> : <Plug size={12} />}Test &amp; save
+        </button>
+        <button className="btn btn-ghost btn-sm" disabled={!canManage || busy} title="Forget the saved address and API key"
+          onClick={() => void (async () => {
+            setBusy(true); setError(null);
+            try {
+              const r = await api.del<Engine>(`/api/engines/${e.id}`);
+              setResult(r); setUrl(r.base_url ?? '');
+              await Promise.all([qc.invalidateQueries({ queryKey: qk.engines }), qc.invalidateQueries({ queryKey: qk.models })]);
+            } catch (err) { setError(err); } finally { setBusy(false); }
+          })()}>Reset</button>
+      </div>
+      {error ? <ErrorBox className="mt-2" error={error} /> : null}
+      {!error && shown.error && <div className="mt-2 rounded border border-amber/40 bg-amber/10 px-2 py-1 text-[12px] text-amber">{shown.error}</div>}
+      {!error && shown.available && !!shown.models?.length && (
+        <div className="mt-2 text-[11.5px] text-muted">Models on this server: <span className="font-mono text-text">{shown.models.slice(0, 12).join(', ')}{shown.models.length > 12 ? ' …' : ''}</span> — select one in the list above.</div>
+      )}
+      <div className="mt-1.5 text-[11px] text-faint">
+        {e.id === 'ollama' ? 'Default: http://127.0.0.1:11434. For Ollama on another PC, start it with OLLAMA_HOST=0.0.0.0 and use http://<that-pc>:11434.'
+          : 'Any OpenAI-compatible server (LM Studio, llama.cpp server, vLLM, LocalAI, Jan …). The address usually ends in /v1.'}
+        {' '}Only addresses you save here are allowed through Yukti’s offline guard.
+      </div>
+    </div>
   );
 }
 

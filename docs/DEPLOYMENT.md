@@ -87,53 +87,38 @@ yukti-server.exe --host 0.0.0.0 --port 8000
 
 From a source checkout, the equivalent is `.\ops\start-server.ps1 -Lan`, and `.\ops\stop.ps1` stops it.
 
-## 4. Desktop clients
+## 4. Desktop app (the single zip)
 
-Install `Yukti-Setup-0.3.0.exe` on each employee PC. It is a per-user NSIS installer, needs no admin rights, and creates Start-menu and desktop shortcuts.
-On first start the user chooses one of these:
+Every PC uses the same file, `Yukti-0.3.0-Windows.zip`: extract it and open `Yukti.exe`. It needs no admin rights, creates Desktop and
+Start-menu shortcuts on first start, and keeps data in `%LOCALAPPDATA%\Yukti` (settings in `%APPDATA%\Yukti`).
 
-| Choice | When |
+| Use | What happens |
 |---|---|
-| **Connect to our plant Yukti server** | Normal plant deployment. Enter `http://<server>:8000` and press **Test connection**. |
-| **Install Yukti on this PC** | All-in-one. Downloads the server components from the website manifest into `%LOCALAPPDATA%\Yukti\Server`. |
-| **Use an existing Yukti Server folder** | All-in-one with a package copied by USB or a network share |
+| **All-in-one (default)** | `Yukti.exe` finds the bundled `server\` folder, starts it, shows the start-up steps and opens Yukti. It stops the server when you quit. |
+| **Employee PC in a plant deployment** | **File → Switch server → Connect to our plant Yukti server**, enter `http://<server>:8000`, **Test connection**. |
 
-A browser pointed at `http://<server>:8000` works as well.
+A browser pointed at `http://<server>:8000` works as well. Remove Yukti by deleting the folder, the shortcuts and `%LOCALAPPDATA%\Yukti`.
 
-## 5. Website release (one-click install)
+## 5. Website release (one zip)
 
 ```powershell
-# 1. build the server package and the desktop installer
-.\ops\build-release.ps1          # -> E:\yukti-build\Yukti-Server-0.3.0\ and desktop\dist\Yukti-Setup-0.3.0.exe
-
-# 2. bake the site URL into the desktop app, split and hash components, write manifest.json + index.html
-.\ops\release-site.ps1 -SiteUrl "https://www.example.com/yukti/"          # add -PartMB 95 for 100 MB host limits
-
-# 3. test locally (build with -SiteUrl http://127.0.0.1:9000/ for this)
-python ops\serve_site.py E:\yukti-build\publish --port 9000
-
-# 4. upload everything in E:\yukti-build\publish\ to the site URL, keeping the folder structure
+.\ops\build-release.ps1 -Demo     # server package (omit -Demo for a production build without sample accounts)
+.\ops\release-site.ps1            # -> E:\yukti-build\publish\ : index.html, Yukti-0.3.0-Windows.zip, .sha256
+python ops\serve_site.py E:\yukti-build\publish --port 9000     # optional local test
 ```
 
-`E:\yukti-build\publish\` contains `index.html` (the download page), `Yukti-Setup-0.3.0.exe`, `manifest.json` and `files\*.partNN`.
-Users click **Download Yukti**, run the installer and choose **Install Yukti on this PC**. The app then:
-
-- downloads the CUDA runtime only on PCs with an NVIDIA GPU,
-- resumes interrupted downloads,
-- verifies every part and every component with SHA-256,
-- installs, starts the server and opens Yukti.
-
-Serve the site over **HTTPS**. The manifest is the root of trust for the downloaded components.
+Upload the contents of `E:\yukti-build\publish\` to your website. The page shows one **Download Yukti** button, the SHA-256 and the three
+steps. Serve it over **HTTPS**. (GitHub release assets are limited to 2 GB per file, so host the 3.5 GB zip on your own site.)
 
 Build machine requirements: uv, Node 22, the extracted llama.cpp CUDA and Vulkan release folders, and the GGUF model (see the parameters at the top of
 `ops\build-release.ps1`).
 
 ## 6. Updates
 
-- **Website installs.** Publish a new release to the same URL. Users choose **Install Yukti on this PC** again. Components whose SHA-256 is
-  unchanged are skipped, so only what changed is downloaded. `data\store\` is never touched.
-- **Plant server.** Take a backup (§7). Stop the server, replace everything in the package folder **except `data\store\`**, and start it again.
-  Then update the desktop clients by running the new `Yukti-Setup-<ver>.exe`.
+- **Single zip.** Take a backup (§7), quit Yukti, extract the new version's zip and open its `Yukti.exe`. Data lives in
+  `%LOCALAPPDATA%\Yukti`, so nothing is lost; the shortcuts are repointed to the new folder automatically. Delete the old folder afterwards.
+- **Plant server.** Same: stop the server, extract the new zip, start `server\Start Yukti Server (Plant LAN).cmd` from it. Servers set up by
+  older versions keep using their `data\store\` folder (copy it into the new `server\data\store\` to carry it over).
 - **Models.** Use **Admin → Models → Import from path** to add GGUF files from a USB drive or share. No reinstall is needed.
 
 ## 7. Backups and restore

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Activity, FileCode2, Gauge, ShieldQuestion, Sparkles, Timer } from 'lucide-react';
 import { api } from '../../lib/api';
+import { useLoaded } from '../../lib/queries';
 import type { LayaBenchmark, LayaStats, PolicyDoc, RouteDecision } from '../../lib/types';
 import { fmtTime, num } from '../../lib/format';
 import { Badge, Card, ErrorBox, JsonView, Loading, Meter, QueryState, Spinner } from '../../components/ui';
@@ -39,6 +40,7 @@ function LayaCard() {
   const [text, setText] = useState('');
   const stats = useQuery({ queryKey: ['laya', 'stats'], queryFn: () => api.get<LayaStats>('/api/laya/stats'), refetchInterval: 10_000, retry: false });
   const classify = useMutation({ mutationFn: (t: string) => api.post<RouteDecision>('/api/laya/classify', { text: t }), onSuccess: () => stats.refetch() });
+  const loadedQ = useLoaded();
   const bench = useMutation({
     mutationFn: () => api.post<LayaBenchmark>('/api/admin/laya/benchmark', {}),
     onSuccess: (r) => { toast.success('Baseline measured', `${r.n} logged queries`); stats.refetch(); },
@@ -84,7 +86,8 @@ function LayaCard() {
             <div className="rounded-md border border-border p-3">
               <div className="flex items-center gap-2">
                 <Timer size={14} className="text-cyan" /><span className="font-medium">LLM-router baseline</span>
-                <button className="btn btn-sm btn-cyan ml-auto" disabled={bench.isPending} onClick={() => bench.mutate()}>
+                <button className="btn btn-sm btn-cyan ml-auto" disabled={bench.isPending || loadedQ.data?.status !== 'ready'}
+                  title={loadedQ.data?.status !== 'ready' ? 'Load a model first (Ctrl+L)' : undefined} onClick={() => bench.mutate()}>
                   {bench.isPending ? <Spinner size={12} /> : <Gauge size={12} />}Measure LLM-router baseline
                 </button>
               </div>

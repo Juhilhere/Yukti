@@ -78,8 +78,10 @@ function DepartmentPicker({ value, onChange, all, withheld, loading }: {
   );
 }
 
-export function AccessRequestDialog({ open, onClose, departments, context }: {
+export function AccessRequestDialog({ open, onClose, departments, context, suggest }: {
   open: boolean; onClose: () => void; departments: string[]; context?: string;
+  /** department the question is about (Laya's route), used to preselect the right withheld department */
+  suggest?: string;
 }) {
   const deptQ = useDepartments();
   const all = useMemo(() => deptQ.data ?? [], [deptQ.data]);
@@ -105,9 +107,15 @@ export function AccessRequestDialog({ open, onClose, departments, context }: {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
+  // preselect only when it is clear which department holds what the user needs; otherwise make them choose
+  const pickDefault = () => {
+    const s = norm(suggest);
+    const bySuggest = s ? withheld.find((d) => norm(d.name).includes(s) || s.includes(norm(d.name)) || norm(d.code) === s) : undefined;
+    return bySuggest?.name ?? (withheld.length === 1 ? withheld[0].name : '');
+  };
   useEffect(() => {
     if (open) {
-      setDept(withheld[0]?.name ?? '');
+      setDept(pickDefault());
       setJust(context ? `Needed to answer: "${context.slice(0, 160)}"` : '');
       setHours(2);
       setErr('');
@@ -117,7 +125,7 @@ export function AccessRequestDialog({ open, onClose, departments, context }: {
   // When the directory resolves after opening, upgrade the preselected label (e.g. a code) to its canonical name.
   useEffect(() => {
     if (!open) return;
-    if (!dept && withheld[0]) { setDept(withheld[0].name); return; }
+    if (!dept) { const d = pickDefault(); if (d) { setDept(d); return; } }
     const hit = all.find((d) => norm(d.code) === norm(dept) && norm(d.name) !== norm(dept));
     if (hit) setDept(hit.name);
   }, [open, all, withheld]); // eslint-disable-line react-hooks/exhaustive-deps

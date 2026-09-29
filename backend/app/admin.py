@@ -4,6 +4,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import io
+import re
 import secrets
 import shutil
 import statistics
@@ -19,14 +20,14 @@ from fastapi.responses import FileResponse, PlainTextResponse
 
 from . import audit, engine
 from .auth import ROLE_PERMS, Ctx, current, err, hash_password, strong_password_problem
-from .config import BLOBS, CLEARANCE_LABELS, DB_PATH, ROOT, STORE
+from .config import BLOBS, CLEARANCE_LABELS, DB_PATH, ROOT, STORE, USER_MODELS
 from .db import db, ex, get_setting, j, new_id, now_iso, q, q1, set_setting, uj
 from .llm_params import DEFAULT_LOAD, DEFAULT_PREDICTION
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 BACKUPS = STORE / "backups"
 BACKUPS.mkdir(parents=True, exist_ok=True)
-MODELS_DIR = ROOT / "models"
+MODELS_DIR = USER_MODELS
 
 ROLE_DESC = {
     "engineer": "Plant engineer / technician — asks questions, uploads documents in own scope",
@@ -84,6 +85,12 @@ def roles(ctx: Ctx = Depends(current)) -> list[dict[str, Any]]:
 def _validate(body: dict[str, Any], creating: bool) -> None:
     if creating and not str(body.get("username", "")).strip():
         raise err(422, "invalid", "username is required")
+    if creating and not str(body.get("display_name", "")).strip():
+        raise err(422, "invalid", "display name is required")
+    if creating and not str(body.get("department", "")).strip():
+        raise err(422, "invalid", "department is required")
+    if creating and not re.match(r"^[a-z0-9][a-z0-9._-]{1,39}$", str(body["username"]).strip().lower()):
+        raise err(422, "invalid", "username may contain letters, digits, dot, dash and underscore (2-40 characters)")
     if "clearance" in body and int(body["clearance"]) not in CLEARANCE_LABELS:
         raise err(422, "invalid", "clearance must be 0-4")
     if "department" in body and not q1("SELECT 1 FROM departments WHERE code=? OR name=?", (body["department"], body["department"])):
@@ -189,9 +196,21 @@ def template(ctx: Ctx = Depends(current)) -> PlainTextResponse:
 @router.post("/users/import")
 async def import_users(file: UploadFile = File(...), ctx: Ctx = Depends(current)) -> dict[str, Any]:
     ctx.require("users.manage")
-    text = (await file.read()).decode("utf-8-sig", errors="replace")
+    raw = await file.read()
+    try:
+        text = raw.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        text = raw.decode("cp1252", errors="replace")  # Excel's default "CSV (comma delimited)" on Windows
+    try:
+        dialect = csv.Sniffer().sniff(text.splitlines()[0] if text else "username", delimiters=",;\t")
+    except csv.Error:
+        dialect = csv.excel
+    reader = csv.DictReader(io.StringIO(text), dialect=dialect)
+    if not reader.fieldnames or "username" not in [f.strip().lower() for f in reader.fieldnames]:
+        raise err(422, "invalid", "The file needs a header row with at least a 'username' column (download the template).")
+    reader.fieldnames = [f.strip().lower() for f in reader.fieldnames]
     created, errors = [], []
-    for i, row in enumerate(csv.DictReader(io.StringIO(text)), start=2):
+    for i, row in enumerate(reader, start=2):
         try:
             body = {"username": row.get("username", ""), "display_name": row.get("display_name", ""), "post": row.get("post", ""),
                     "department": row.get("department", ""), "clearance": int(row.get("clearance") or 1),
@@ -225,6 +244,34 @@ def put_ai(body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str, Any]:
     ctx.require("ai.settings")
     cur = ai_settings()
     new = {k: body.get(k, cur[k]) for k in cur}
+    from .llm_params import PREDICTION
+    if new.get("default_engine") and new["default_engine"] not in engine.ENGINE_META:
+        raise err(422, "invalid", f"Unknown engine '{new['default_engine']}'")
+    pred = dict(new.get("prediction") or {})
+    for f in PREDICTION:  # every value must match its type and range, otherwise nothing is saved
+        k, v = f["key"], pred.get(f["key"])
+        if v is None or v == "":
+            continue
+        try:
+            if f["type"] == "int":
+                v = int(v)
+            elif f["type"] in ("float", "number"):
+                v = float(v)
+            elif f["type"] == "bool":
+                if not isinstance(v, bool):
+                    raise ValueError
+            elif f["type"] == "select" and f.get("options") and v not in [o["value"] for o in f["options"]]:
+                raise ValueError
+            elif f["type"] in ("json", "json_schema") or k in ("json_schema", "logit_bias"):
+                import json as _json
+                if isinstance(v, str) and v.strip():
+                    _json.loads(v)
+            if f["type"] in ("int", "float", "number") and ((f.get("min") is not None and v < f["min"]) or (f.get("max") is not None and v > f["max"])):
+                raise ValueError
+        except (TypeError, ValueError):
+            raise err(422, "invalid", f"{f['label']}: '{pred.get(k)}' is not a valid value")
+        pred[k] = v
+    new["prediction"] = pred
     set_setting("ai_settings", new, ctx.actor)
     audit.write(ctx.actor, "admin.ai_settings.updated", "ai_settings", {"keys": list(body.keys())})
     return ai_settings()
@@ -234,10 +281,12 @@ def put_ai(body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str, Any]:
 @router.get("/usage")
 def usage(days: int = 14, ctx: Ctx = Depends(current)) -> dict[str, Any]:
     ctx.require("usage.view")
-    since = (date.today() - timedelta(days=days - 1)).isoformat()
+    # timestamps are stored in UTC; days are counted in the server's local time zone (as the chart shows them)
+    local_midnight = datetime.now().astimezone().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=days - 1)
+    since = local_midnight.astimezone(timezone.utc).isoformat(timespec="seconds")
     week = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
-    qpd = {r["d"]: r["n"] for r in q("SELECT substr(at,1,10) d, COUNT(*) n FROM answer_stats WHERE at>=? GROUP BY d", (since,))}
-    dpd = {r["d"]: r["n"] for r in q("""SELECT substr(at,1,10) d, COUNT(*) n FROM audit_log WHERE at>=? AND
+    qpd = {r["d"]: r["n"] for r in q("SELECT date(at, 'localtime') d, COUNT(*) n FROM answer_stats WHERE at>=? GROUP BY d", (since,))}
+    dpd = {r["d"]: r["n"] for r in q("""SELECT date(at, 'localtime') d, COUNT(*) n FROM audit_log WHERE at>=? AND
             (event='document.denied' OR (event='retrieval' AND detail_json NOT LIKE '%"denied_n":0%')) GROUP BY d""", (since,))}
     days_list = [(date.today() - timedelta(days=i)).isoformat() for i in range(days - 1, -1, -1)]
     perf_rows = q("SELECT tok_per_s, ttft_ms, total_ms FROM answer_stats WHERE error IS NULL AND tok_per_s>0 ORDER BY id DESC LIMIT 500")
@@ -247,7 +296,7 @@ def usage(days: int = 14, ctx: Ctx = Depends(current)) -> dict[str, Any]:
             "avg_ttft_ms": round(statistics.mean(ttfts)) if ttfts else None,
             "p95_ttft_ms": round(ttfts[min(len(ttfts) - 1, int(0.95 * len(ttfts)))]) if ttfts else None,
             "avg_total_ms": round(statistics.mean(r["total_ms"] for r in perf_rows)) if perf_rows else None}
-    du = psutil.disk_usage(str(ROOT))
+    du = psutil.disk_usage(str(STORE))  # the disk that holds the data
     vm = psutil.virtual_memory()
     from .main import gpu_stats  # local import (avoid cycle)
     s = engine.state
@@ -309,7 +358,7 @@ def create_backup(ctx: Ctx = Depends(current)) -> dict[str, Any]:
     snap = BACKUPS / "db-snapshot.sqlite"
     if snap.exists():
         snap.unlink()
-    db().execute(f"VACUUM INTO '{snap.as_posix()}'")  # consistent online snapshot
+    db().execute("VACUUM INTO ?", (snap.as_posix(),))  # consistent online snapshot
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
         z.write(snap, "yukti.db")
         for f in BLOBS.rglob("*"):
@@ -350,15 +399,68 @@ def download_backup(name: str, ctx: Ctx = Depends(current)) -> FileResponse:
 def restore_backup(name: str, ctx: Ctx = Depends(current)) -> dict[str, Any]:
     ctx.require("backup.manage")
     p = _backup_path(name)
-    stage = STORE / "restore-pending"
-    if stage.exists():
-        shutil.rmtree(stage)
-    stage.mkdir()
-    with zipfile.ZipFile(p) as z:
-        z.extractall(stage)
+    side = BACKUPS / (name + ".sha256")
+    if side.exists() and hashlib.sha256(p.read_bytes()).hexdigest() != side.read_text(encoding="utf-8").strip():
+        raise err(422, "invalid", "This backup file does not match its recorded SHA-256 checksum (damaged or altered). Not restored.")
+    try:
+        with zipfile.ZipFile(p) as z:
+            if z.testzip() is not None or "yukti.db" not in z.namelist():
+                raise err(422, "invalid", "This backup is damaged or does not contain a Yukti database. Not restored.")
+            stage = STORE / "restore-pending"
+            if stage.exists():
+                shutil.rmtree(stage)
+            stage.mkdir()
+            z.extractall(stage)
+    except zipfile.BadZipFile:
+        raise err(422, "invalid", "This backup is not a valid zip file. Not restored.")
+    import sqlite3
+    try:
+        chk = sqlite3.connect(stage / "yukti.db")
+        ok = chk.execute("PRAGMA quick_check").fetchone()[0] == "ok"
+        chk.close()
+    except sqlite3.DatabaseError:
+        ok = False
+    if not ok:
+        shutil.rmtree(stage, ignore_errors=True)
+        raise err(422, "invalid", "The database inside this backup is damaged. Not restored.")
+    (stage / ".from").write_text(name, encoding="utf-8")
     audit.write(ctx.actor, "admin.backup.restore_staged", f"backup:{name}")
-    return {"ok": True, "restart_required": True,
-            "message": "Backup staged. Restart the Yukti server; it will restore the database and documents on start-up."}
+    return {"ok": True, "restart_required": True, "pending": name,
+            "message": "Backup checked and staged. Restart Yukti to replace the current data with it."}
+
+
+@router.get("/backups/restore-pending")
+def restore_pending(ctx: Ctx = Depends(current)) -> dict[str, Any]:
+    ctx.require("backup.manage")
+    f = STORE / "restore-pending" / ".from"
+    return {"pending": f.read_text(encoding="utf-8") if f.exists() else None}
+
+
+@router.delete("/backups/restore-pending")
+def cancel_restore(ctx: Ctx = Depends(current)) -> dict[str, Any]:
+    ctx.require("backup.manage")
+    stage = STORE / "restore-pending"
+    name = (stage / ".from").read_text(encoding="utf-8") if (stage / ".from").exists() else None
+    shutil.rmtree(stage, ignore_errors=True)
+    audit.write(ctx.actor, "admin.backup.restore_cancelled", f"backup:{name}")
+    return {"ok": True}
+
+
+@router.post("/server/restart")
+def restart_server(ctx: Ctx = Depends(current)) -> dict[str, Any]:
+    """Exit with code 75; the desktop app and the Start Yukti Server launchers start the server again."""
+    ctx.require("backup.manage")
+    audit.write(ctx.actor, "admin.server.restart", "server")
+    import os
+    import threading
+
+    def bye() -> None:
+        time.sleep(1.0)  # let this response reach the browser
+        engine.unload()
+        os._exit(75)
+
+    threading.Thread(target=bye, daemon=True).start()
+    return {"ok": True, "message": "Yukti is restarting; this page reconnects when it is back."}
 
 
 def apply_pending_restore() -> bool:
@@ -366,14 +468,26 @@ def apply_pending_restore() -> bool:
     stage = STORE / "restore-pending"
     if not (stage / "yukti.db").exists():
         return False
-    for suffix in ("", "-wal", "-shm"):
+    import os
+    tmp = Path(str(DB_PATH) + ".restore-tmp")
+    old = Path(str(DB_PATH) + ".pre-restore")
+    shutil.copy2(stage / "yukti.db", tmp)  # copy first; the current database is only replaced once this succeeded
+    for suffix in ("-wal", "-shm"):
         f = Path(str(DB_PATH) + suffix)
         if f.exists():
             f.unlink()
-    shutil.copy2(stage / "yukti.db", DB_PATH)
-    if (stage / "blobs").exists():
-        shutil.copytree(stage / "blobs", BLOBS, dirs_exist_ok=True)
-    shutil.rmtree(stage)
+    if DB_PATH.exists():
+        os.replace(DB_PATH, old)
+    try:
+        os.replace(tmp, DB_PATH)
+        if (stage / "blobs").exists():
+            shutil.copytree(stage / "blobs", BLOBS, dirs_exist_ok=True)
+    except Exception:
+        if old.exists():
+            os.replace(old, DB_PATH)  # roll back to the data that was there before
+        raise
+    shutil.rmtree(stage, ignore_errors=True)
+    old.unlink(missing_ok=True)
     return True
 
 
@@ -381,7 +495,7 @@ def apply_pending_restore() -> bool:
 @router.get("/models/import-dirs")
 def import_dirs(ctx: Ctx = Depends(current)) -> dict[str, Any]:
     ctx.require("models.manage")
-    return {"dirs": [str(MODELS_DIR), str(Path.home() / ".lmstudio" / "models")],
+    return {"dirs": list(dict.fromkeys([str(MODELS_DIR), str(ROOT / "models"), str(Path.home() / ".lmstudio" / "models")])),
             "drives": [p.mountpoint for p in psutil.disk_partitions() if "cdrom" not in p.opts]}
 
 
@@ -394,8 +508,21 @@ def import_model(body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str,
     dest_dir = MODELS_DIR / src.stem
     dest_dir.mkdir(parents=True, exist_ok=True)
     dest = dest_dir / src.name
-    if not dest.exists():
-        shutil.copy2(src, dest)
+    import re as _re
+    shard = _re.match(r"(.+)-(\d{5})-of-(\d{5})\.gguf$", src.name, _re.I)
+    parts = sorted(src.parent.glob(f"{shard.group(1)}-*-of-{shard.group(3)}.gguf")) if shard else [src]
+    if shard and len(parts) != int(shard.group(3)):
+        raise err(422, "invalid", f"This model is split into {int(shard.group(3))} files but only {len(parts)} are in {src.parent}.")
+    for part in parts:
+        target = dest_dir / part.name
+        if target.exists() and target.stat().st_size == part.stat().st_size:
+            continue  # already imported completely
+        tmp = target.with_suffix(target.suffix + ".part")
+        shutil.copyfile(part, tmp)
+        if tmp.stat().st_size != part.stat().st_size:
+            tmp.unlink(missing_ok=True)
+            raise err(500, "copy_failed", f"Copying {part.name} did not complete (disk full or source removed).")
+        tmp.replace(target)
     for mm in src.parent.glob("*mmproj*.gguf"):  # keep vision projector alongside
         if not (dest_dir / mm.name).exists():
             shutil.copy2(mm, dest_dir / mm.name)
@@ -439,8 +566,11 @@ async def laya_benchmark(body: dict[str, Any] | None = None, ctx: Ctx = Depends(
         d = laya.get().classify(t)
         laya_ms.append((time.perf_counter() - t0) * 1000)
         t0 = time.perf_counter()
-        out = await engine.complete_once([{"role": "user", "content": "Classify the user request into exactly one intent from this list and reply with only the "
-                                          f"intent name: {', '.join(labels)}.\nRequest: {t}"}], {"max_tokens": 12, "temperature": 0})
+        try:
+            out = await engine.complete_once([{"role": "user", "content": "Classify the user request into exactly one intent from this list and reply with only the "
+                                              f"intent name: {', '.join(labels)}.\nRequest: {t}"}], {"max_tokens": 12, "temperature": 0})
+        except RuntimeError as e:
+            raise err(502, "engine_error", f"The loaded model failed during the benchmark: {e}")
         llm_ms.append((time.perf_counter() - t0) * 1000)
         agree += int(d["intent"] in out.strip().lower())
     res = {"n": len(texts), "llm_router_avg_ms": round(statistics.mean(llm_ms), 1), "laya_avg_ms": round(statistics.mean(laya_ms), 2),

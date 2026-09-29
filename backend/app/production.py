@@ -71,7 +71,45 @@ def get_model() -> dict[str, Any]:
     return m
 
 
+def _check_numbers(m: dict[str, Any]) -> list[str]:
+    """Physical values can never be negative; yields are fractions of the feed."""
+    bad: list[str] = []
+
+    def num(v: Any) -> float | None:
+        if v in (None, ""):
+            return None
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            return float("nan")
+
+    def check(label: str, v: Any, hi: float | None = None) -> None:
+        x = num(v)
+        if x is None:
+            return
+        if x != x or x < 0 or (hi is not None and x > hi):
+            bad.append(f"{label} must be a number {'between 0 and ' + str(hi) if hi is not None else 'of 0 or more'} (got {v}).")
+
+    check("Crude cost (US$/t)", m.get("crude_cost_usd_t"))
+    for u in m.get("units", []) or []:
+        code = u.get("code") or "unit"
+        check(f"{code}: capacity (kt/month)", u.get("capacity_kt_month"))
+        for k in ("min_kt_month", "opex_usd_t"):
+            if k in u:
+                check(f"{code}: {k}", u.get(k))
+        for prod, y in (u.get("yields") or {}).items():
+            check(f"{code}: yield of {prod}", y, 1.0)
+    for pr in m.get("products", []) or []:
+        for k in ("price_usd_t", "min_demand_kt", "max_demand_kt"):
+            if k in pr:
+                check(f"{pr.get('name', 'product')}: {k}", pr.get(k))
+    return bad
+
+
 def save_model(m: dict[str, Any], by: str) -> dict[str, Any]:
+    bad = _check_numbers(m)
+    if bad:
+        raise ValueError(" ".join(bad[:6]))
     clean = {"units": m.get("units", []), "products": m.get("products", []), "crude_cost_usd_t": m.get("crude_cost_usd_t"),
              "notes": m.get("notes", "")}
     set_setting("production_model", clean, by)

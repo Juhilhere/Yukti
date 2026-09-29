@@ -9,7 +9,7 @@ import { api, errMsg } from '../lib/api';
 import type { DocPage, DocumentDetail } from '../lib/types';
 import { Badge, EmptyState, ErrorBox, Loading, PageHeader, ProvenanceBadges, Spinner, StatusChip } from '../components/ui';
 import { useT } from '../lib/i18n';
-import { cx, fmtBytes, fmtDate } from '../lib/format';
+import { cx, docTypeLabel, fmtBytes, fmtDate } from '../lib/format';
 
 function confTone(c?: number) {
   if (c === undefined || c === null) return 'muted' as const;
@@ -92,7 +92,7 @@ export default function DocumentView() {
         <aside className="w-[260px] shrink-0 space-y-3 overflow-y-auto border-r border-border p-4">
           <div className="space-y-2 text-[12px]">
             {[
-              ['Type', <Badge mono key="t">{d.doc_type || '—'}</Badge>],
+              ['Type', <Badge mono key="t" title={d.doc_type}>{docTypeLabel(d.doc_type)}</Badge>],
               ['Department', d.department || '—'],
               ['Classification', <StatusChip key="c" status={d.classification} />],
               ['Created', fmtDate(d.created_at)],

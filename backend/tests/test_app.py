@@ -131,8 +131,10 @@ def test_setpoint_change_always_refused(login):
 
 # ------------------------------------------------------------------ HOD-only data
 def _pdf(root_rel: str = "A2_troubleshooting_guide.pdf") -> bytes:
+    """A valid PDF with a unique trailer, so each upload is a distinct file (identical files are rejected as duplicates)."""
+    import uuid
     from app.config import CORPUS
-    return (CORPUS / root_rel).read_bytes()
+    return (CORPUS / root_rel).read_bytes() + b"\n% " + str(uuid.uuid4()).encode() + b"\n"
 
 
 def test_only_hod_uploads_own_department(login):
@@ -306,7 +308,7 @@ def test_it_admin_cannot_read_or_grant_business_documents(login):
     a = login("admin")
     assert not any(d["doc_number"] == "FIN-AUD-2026-Q2" for d in a.get("/api/documents").json())
     anil = login("anil.u")
-    ar = anil.post("/api/access-requests", json={"department": "Finance & Accounts", "justification": "ci", "hours": 1}).json()
+    ar = anil.post("/api/access-requests", json={"department": "Finance & Accounts", "justification": "B-02 RCA cross-check", "hours": 1}).json()
     assert a.post(f"/api/access-requests/{ar['id']}/approve", json={}).status_code == 403
 
 
@@ -342,3 +344,68 @@ def test_jobs_and_chat_stop_are_owner_only(login):
     cid = hod.post("/api/chats", json={}).json()["id"]
     assert login("ravi.e").post(f"/api/chats/{cid}/stop", json={}).status_code == 404
     hod.delete(f"/api/documents/{r['document_id']}")
+
+
+def test_upload_rejects_unsupported_types_and_revision_order(login):
+    hod = login("rajesh.mm")
+    r = hod.post("/api/documents", files={"file": ("old.doc", b"\xd0\xcf\x11\xe0binary", "application/msword")}, data={"doc_type": "manual"})
+    assert r.status_code == 422 and r.json()["detail"]["code"] == "unsupported_type"
+    from app.rag import _rev_key
+    assert _rev_key("R9") < _rev_key("R10") and _rev_key("B") < _rev_key("C") and _rev_key("2") < _rev_key("10")
+
+
+def test_builtin_presets_are_protected(login):
+    a = login("admin")
+    from app.db import ex, now_iso
+    ex("INSERT OR IGNORE INTO presets(id, user_id, name, description, system_prompt, prediction_json, load_json, builtin, created_at) "
+       "VALUES('ci-builtin', NULL, 'Built-in', '', '', '{}', '{}', 1, ?)", (now_iso(),))
+    builtin = next(p for p in a.get("/api/presets").json() if p["builtin"])
+    assert a.put(f"/api/presets/{builtin['id']}", json={"name": "x"}).status_code == 403
+    assert a.delete(f"/api/presets/{builtin['id']}").status_code == 403
+
+
+def test_restore_validation_and_cancel(login):
+    a = login("admin")
+    b = a.post("/api/admin/backups").json()
+    assert a.post(f"/api/admin/backups/{b['name']}/restore", json={}).json()["pending"] == b["name"]
+    assert a.get("/api/admin/backups/restore-pending").json()["pending"] == b["name"]
+    assert a.delete("/api/admin/backups/restore-pending").json()["ok"] is True
+    assert a.get("/api/admin/backups/restore-pending").json()["pending"] is None
+
+
+def test_engines_list_includes_ollama_with_reason(login):
+    es = {e["id"]: e for e in login("admin").get("/api/engines").json()}
+    assert {"llamacpp", "ollama", "bionic", "vllm", "remote"} <= set(es)
+    assert es["remote"]["available"] is False and es["remote"]["error"]
+
+
+def test_offline_guard_blocks_async_egress(app_client):
+    import asyncio
+
+    import pytest
+    from app import main
+    main.install_guard()
+
+    async def go():
+        await asyncio.wait_for(asyncio.open_connection("1.1.1.1", 443), 3)
+    with pytest.raises(ConnectionRefusedError, match="offline guard"):
+        asyncio.run(go())
+
+
+def test_duplicates_and_bad_input_rejected(login):
+    hod = login("rajesh.mm")
+    data = _pdf()
+    first = hod.post("/api/documents", files={"file": ("d.pdf", data, "application/pdf")}, data={"doc_type": "manual"})
+    again = hod.post("/api/documents", files={"file": ("d2.pdf", data, "application/pdf")}, data={"doc_type": "manual"})
+    assert first.status_code == 200 and again.status_code == 409
+    hod.delete(f"/api/documents/{first.json()['document_id']}")
+    m = login("meera.me")
+    assert m.post("/api/access-requests", json={"department": "Process Engineering", "justification": "x"}).status_code == 422
+    assert m.post("/api/access-requests", json={"department": "Process Engineering", "justification": "SRU amine check"}).status_code == 200
+    assert m.post("/api/access-requests", json={"department": "Process Engineering", "justification": "SRU amine check"}).status_code == 409
+    a = login("admin")
+    assert a.post("/api/admin/users", json={"username": "no.name"}).status_code == 422
+    s = a.get("/api/admin/ai-settings").json()
+    assert a.put("/api/admin/ai-settings", json={**s, "prediction": {**s["prediction"], "temperature": "hot"}}).status_code == 422
+    assert a.put("/api/engines/remote", json={"base_url": "not a url"}).status_code == 422
+    assert a.post("/api/models/load", json={"engine": "bionic", "model_id": "C:/nope.gguf"}).status_code in (200, 422)

@@ -54,3 +54,33 @@ def test_guard_categories():
     assert guard_category("set FIC-101 setpoint to 180") == "control_system_change"
     assert guard_category("what MDEA amine concentration") == "process_chemistry"
     assert guard_category("how to make a bomb") == "off_domain_harm"
+
+
+def test_fit_to_context_keeps_system_and_question():
+    from app.chat import fit_to_context
+    docs = "".join(f'<doc id="S{i}">' + "x" * 1400 + "</doc>\n" for i in range(8))
+    msgs = [{"role": "system", "content": "SYSTEM"}] + [{"role": "user", "content": "old " * 400}, {"role": "assistant", "content": "a " * 400}] \
+        + [{"role": "user", "content": "CONTEXT:\n" + docs + "\n\nQUESTION: why did A2 trip?"}]
+    out, trimmed = fit_to_context(msgs, 1500)
+    assert trimmed and out[0]["content"] == "SYSTEM" and out[-1]["content"].endswith("QUESTION: why did A2 trip?")
+    assert sum(len(m["content"]) // 3 + 8 for m in out) <= 1500 + 50
+
+
+def test_llama_diagnosis_messages():
+    from app.engine import diagnose
+    assert "architecture 'qwen9'" in diagnose(["llama_model_load: error loading model: unknown model architecture: 'qwen9'"])
+    assert "not a valid GGUF" in diagnose(["gguf_init_from_file_impl: invalid magic characters"])
+    assert "memory" in diagnose(["ggml_backend_cuda_buffer_type_alloc_buffer: allocating 9000 MiB on device 0: cudaMalloc failed: out of memory"])
+    assert "Ollama engine" in diagnose(["done_getting_tensors: wrong number of tensors; expected 883, got 444"])
+
+
+def test_ollama_url_and_options():
+    from app import ollama
+    assert ollama.root("127.0.0.1:11434/v1/") == "http://127.0.0.1:11434"
+    o = ollama.options({"temperature": 0.3, "max_tokens": 200, "top_k": 20, "seed": -1}, {"ctx_size": 16384, "gpu_layers": 20})
+    assert o["num_ctx"] == 16384 and o["num_gpu"] == 20 and o["num_predict"] == 200 and "seed" not in o
+
+
+def test_diagnose_ollama_variant():
+    from app.engine import diagnose
+    assert "Ollama engine" in diagnose(["llama_model_load: error loading model: error loading model hyperparameters: key not found in model: gemma3.attention.layer_norm_rms_epsilon"])

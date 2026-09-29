@@ -113,6 +113,8 @@ export default function Chat() {
     stickRef.current = true;
     const upd = (fn: (m: UIMessage) => UIMessage) => setMessages((ms) => ms.map((m) => (m.id === aid ? fn(m) : m)));
     let doneId: string | null = null;
+    let ended = false;  // a 'done' or 'error' event arrived
+    let aborted = false;
     try {
       await streamSSE(path, body, ({ event, data }) => {
         switch (event) {
@@ -125,16 +127,19 @@ export default function Chat() {
           }
           case 'reasoning': upd((m) => ({ ...m, reasoning: (m.reasoning ?? '') + ((data as { t?: string })?.t ?? '') })); break;
           case 'token': upd((m) => ({ ...m, content: m.content + ((data as { t?: string })?.t ?? '') })); break;
+          case 'reset': upd((m) => ({ ...m, content: '', reasoning: undefined })); break;  // model restarted mid-answer: regenerating
           case 'facts': upd((m) => ({ ...m, facts: (data as { facts?: Fact[] })?.facts ?? [] })); break;
           case 'done': {
             const d = data as { message_id?: string; stats?: GenStats };
             doneId = d.message_id ?? null;
+            ended = true;
             upd((m) => ({ ...m, stats: d.stats ?? null, streaming: false }));
             if (d.stats) uiStore.setLastGen({ tok_per_s: d.stats.tok_per_s, model: d.stats.model_name, engine: d.stats.engine });
             break;
           }
           case 'error': {
             const e = data as { code?: string; message?: string };
+            ended = true;
             upd((m) => ({ ...m, error: { code: e?.code ?? 'error', message: e?.message ?? String(data) } }));
             break;
           }
@@ -143,12 +148,15 @@ export default function Chat() {
       }, ctrl.signal);
     } catch (e) {
       if ((e as Error)?.name === 'AbortError') {
+        aborted = true;
         upd((m) => ({ ...m, stats: m.stats ?? null, error: m.content ? m.error : { code: 'stopped', message: 'Generation stopped.' } }));
       } else {
         upd((m) => ({ ...m, error: { code: 'stream_failed', message: errMsg(e) } }));
       }
     } finally {
-      upd((m) => ({ ...m, streaming: false, id: doneId ?? m.id }));
+      // the connection closed without a result (server restarted, network dropped): never present it as a finished answer
+      upd((m) => ({ ...m, streaming: false, id: doneId ?? m.id,
+        error: ended || aborted || m.error ? m.error : { code: 'interrupted', message: 'The answer was interrupted before it finished (connection lost). Press Regenerate to try again.' } }));
       if (abortRef.current === ctrl) abortRef.current = null;
       if (streamChatRef.current === cid) streamChatRef.current = null;
       setBusy(false);

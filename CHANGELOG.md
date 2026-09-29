@@ -5,6 +5,24 @@ All notable changes to Yukti are documented here. The format follows [Keep a Cha
 
 ## [Unreleased]
 
+### Added
+- **Single-zip distribution** (`ops/bundle.py`, `ops/release-site.ps1`): one `Yukti-<ver>-Windows.zip` with the app, the server, both
+  llama.cpp builds and the model. `Yukti.exe` starts the bundled server itself, creates shortcuts, and keeps data in `%LOCALAPPDATA%\Yukti`.
+- **Ollama engine** (native API, context length applied, real load errors) and the Ollama model library on disk.
+- **Connection panel** for every external engine in the model loader (URL, API key, Test & save, reason when unreachable).
+- Admin → Backup: restore is checked (checksum, zip, database) before staging, with **Restart now** and **Cancel restore**.
+
+### Fixed
+- llama.cpp load failures now state the real cause (unsupported architecture, corrupt file, Ollama-format file, out of memory, bad flag).
+- Prompts are fitted to the model's context; context-overflow errors are explained and not retried; answers interrupted by a model
+  reload are regenerated automatically; interrupted streams are shown as interrupted.
+- The loaded model is restored after a restart (falls back to the bundled model if it cannot be loaded).
+- Offline guard: remote engines given by host name work; asyncio connections are guarded too.
+- Uploads: unsupported file types rejected, all TIFF pages OCR'd, documents without text reported, stale jobs failed at start-up,
+  natural revision order (R10 after R9), deleted documents removed from disk.
+- Backups with apostrophes in the path, CSV import of Excel/semicolon files, atomic model import (incl. split GGUF), built-in presets
+  protected, production explanation number check, Laya benchmark parameters.
+
 ### Security
 - Department and rank scoping for all data, not only documents (`backend/app/scope.py`): assets, alerts, findings, audit log, asset-master
   facts, CMMS work orders and on-call contacts. Dossier facts fail closed.

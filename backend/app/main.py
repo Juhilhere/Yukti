@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 import os
 import hashlib
 import socket
@@ -21,7 +22,7 @@ from . import admin, audit, chat, engine, laya, mrpl, production, rag, seed
 from .auth import Ctx, current, err, notify, router as auth_router, user_by_id
 from .config import CLEARANCE_LABELS, CLEARANCE_BY_LABEL, DEMO_MODE, REPORTS, VERSION, WEB_DIST
 from . import scope
-from .db import ex, init_db, j, new_id, now_iso, q, q1, uj
+from .db import ex, get_setting, init_db, j, new_id, now_iso, q, q1, set_setting, uj
 from .llm_params import DEFAULT_PREDICTION, schema, vllm_command
 from .policy import pdp
 
@@ -52,13 +53,42 @@ def _guard_gai(host, *a, **k):  # type: ignore[no-untyped-def]
     if host is not None and not _allowed(str(host)):
         _BLOCKED["count"] += 1
         raise socket.gaierror(f"Yukti offline guard blocked DNS for {host}")
-    return _orig_gai(host, *a, **k)
+    res = _orig_gai(host, *a, **k)
+    if host is not None:  # an allowed name (e.g. gpu.plant.local) may connect to the addresses it resolves to
+        for r in res:
+            try:
+                _ALLOWED_HOSTS.add(str(r[4][0]))
+            except Exception:
+                pass
+    return res
+
+
+def _guard_async_connect(orig):  # type: ignore[no-untyped-def]
+    async def sock_connect(self, sock, address):  # type: ignore[no-untyped-def]
+        host = address[0] if isinstance(address, tuple) else str(address)
+        if not _allowed(str(host)):
+            _BLOCKED["count"] += 1
+            raise ConnectionRefusedError(f"Yukti offline guard blocked egress to {host}")
+        return await orig(self, sock, address)
+    return sock_connect
 
 
 def install_guard() -> None:
     bind = os.environ.get("YUKTI_HOST", "")
     if bind:
         _ALLOWED_HOSTS.add(bind)
+    for u in (engine.DEFAULT_URLS.get("bionic"), engine.DEFAULT_URLS.get("vllm"), engine.DEFAULT_URLS.get("ollama")):
+        h = urlparse(u or "").hostname  # engine addresses configured through environment variables
+        if h:
+            _ALLOWED_HOSTS.add(h)
+    # asyncio (httpx async) connects through the event loop, not socket.connect: guard that path too
+    import asyncio.proactor_events as _pe
+    import asyncio.selector_events as _se
+    for cls in (getattr(_pe, "BaseProactorEventLoop", None), getattr(_se, "BaseSelectorEventLoop", None)):
+        if cls is not None and not getattr(cls.sock_connect, "_yukti_guard", False):
+            wrapped = _guard_async_connect(cls.sock_connect)
+            wrapped._yukti_guard = True  # type: ignore[attr-defined]
+            cls.sock_connect = wrapped
     for r in q("SELECT base_url FROM engines WHERE base_url IS NOT NULL AND base_url != ''"):
         h = urlparse(r["base_url"]).hostname
         if h:
@@ -91,6 +121,9 @@ def startup() -> None:
     if admin.apply_pending_restore():
         engine.log("Restored database and documents from staged backup.")
     init_db()
+    # ingestion jobs that were running when the server stopped will never finish: say so instead of spinning forever
+    ex("UPDATE jobs SET status='error', error='Interrupted by a server restart - upload the file again.', updated_at=? "
+       "WHERE status IN ('queued','running')", (now_iso(),))
     seed.run(ingest=False)          # accounts, departments, example assets: fast
     mrpl.ensure_departments()
     laya.get()
@@ -103,9 +136,15 @@ def startup() -> None:
     audit.write("system", "app.started", "api", {"version": VERSION})
     ai = admin.ai_settings()
     if ai.get("autoload", True) and os.environ.get("YUKTI_AUTOLOAD", "1") != "0":
-        if ai.get("default_model_id"):
-            threading.Thread(target=engine.load, args=(ai.get("default_engine") or "llamacpp", ai["default_model_id"],
-                                                        ai.get("default_load_config") or {}), daemon=True).start()
+        last = get_setting("last_loaded_model", "never")
+        if ai.get("default_model_id"):  # administrator's configured default
+            threading.Thread(target=engine.autoload, args=(ai.get("default_engine") or "llamacpp", ai["default_model_id"],
+                                                            ai.get("default_load_config") or {}), daemon=True).start()
+        elif isinstance(last, dict) and last.get("model_id"):  # the model the administrator loaded last
+            threading.Thread(target=engine.autoload, args=(last.get("engine") or "llamacpp", last["model_id"],
+                                                            last.get("load_config") or {}), daemon=True).start()
+        elif last is None:
+            engine.log("Model was unloaded by the administrator - not loading one at startup")
         else:
             threading.Thread(target=engine.autoload_default, daemon=True).start()
 
@@ -179,19 +218,41 @@ def system(ctx: Ctx = Depends(current)) -> dict[str, Any]:
 @app.get("/api/engines")
 async def engines(ctx: Ctx = Depends(current)) -> list[dict[str, Any]]:
     ctx.require("models.manage")
-    return list(await asyncio.gather(*(engine.probe(e) for e in ["llamacpp", "bionic", "vllm", "remote"])))
+    return list(await asyncio.gather(*(engine.probe(e) for e in engine.ENGINE_IDS)))
 
 
 @app.put("/api/engines/{eid}")
 async def set_engine(eid: str, body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str, Any]:
     ctx.require("models.manage")
-    if eid not in engine.ENGINE_META:
+    if eid not in engine.ENGINE_META or eid == "llamacpp":
         raise err(404, "not_found", "Unknown engine")
-    ex("INSERT OR REPLACE INTO engines(id, base_url, api_key) VALUES(?,?,?)", (eid, body.get("base_url", ""), body.get("api_key")))
-    h = urlparse(body.get("base_url", "")).hostname
+    base = str(body.get("base_url") or "").strip().rstrip("/")
+    if base and not re.match(r"^https?://", base):
+        base = "http://" + base
+    if base and (not urlparse(base).hostname or re.search(r"\s", base) or not re.match(r"^https?://[A-Za-z0-9.\-\[\]:]+(/|$)", base)):
+        raise err(422, "invalid", "Enter a server address such as http://127.0.0.1:11434 or http://gpu-server:8000/v1")
+    if eid == "ollama" and base:
+        from . import ollama as _ol
+        base = _ol.root(base)
+    prev = q1("SELECT api_key FROM engines WHERE id=?", (eid,))
+    key = body["api_key"] if "api_key" in body else (prev["api_key"] if prev else None)  # keep the saved key unless replaced
+    ex("INSERT OR REPLACE INTO engines(id, base_url, api_key) VALUES(?,?,?)", (eid, base, key or None))
+    body = {**body, "base_url": base}
+    h = urlparse(base).hostname
     if h:
         _ALLOWED_HOSTS.add(h)
     audit.write(ctx.actor, "engine.configured", f"engine:{eid}", {"base_url": body.get("base_url")})
+    return await engine.probe(eid)
+
+
+@app.delete("/api/engines/{eid}")
+async def reset_engine(eid: str, ctx: Ctx = Depends(current)) -> dict[str, Any]:
+    """Forget a saved address/API key: the engine goes back to its default address."""
+    ctx.require("models.manage")
+    if eid not in engine.ENGINE_META or eid == "llamacpp":
+        raise err(404, "not_found", "Unknown engine")
+    ex("DELETE FROM engines WHERE id=?", (eid,))
+    audit.write(ctx.actor, "engine.reset", f"engine:{eid}")
     return await engine.probe(eid)
 
 
@@ -199,8 +260,15 @@ async def set_engine(eid: str, body: dict[str, Any], ctx: Ctx = Depends(current)
 async def models(ctx: Ctx = Depends(current)) -> list[dict[str, Any]]:
     ctx.require("models.manage")
     ms = engine.scan_models()
-    for eid in ("bionic", "vllm", "remote"):
-        info = await engine.probe(eid)
+    infos = await asyncio.gather(*(engine.probe(e) for e in ("ollama", "bionic", "vllm", "remote")))
+    for eid, info in zip(("ollama", "bionic", "vllm", "remote"), infos):
+        if eid == "ollama":
+            for m in info.get("model_info") or []:
+                pb = re.match(r"([\d.]+)\s*[bB]", m.get("params") or "")
+                ms.append({"id": m["id"], "name": m["id"], "file_name": f"Ollama · {m['id']}", "path": "", "size_bytes": m["size_bytes"],
+                           "family": m.get("family") or m["id"].split(":")[0], "params_b": float(pb.group(1)) if pb else None,
+                           "quant": m.get("quant") or "?", "arch": m.get("family") or "", "source": "ollama", "engine": "ollama", "vision": False})
+            continue
         for mid in info.get("models", []) or []:
             ms.append({"id": mid, "name": mid, "file_name": "", "path": "", "size_bytes": 0, "family": mid.split("/")[-1].split("-")[0],
                        "params_b": None, "quant": "?", "arch": "", "source": "engine", "engine": eid, "vision": False})
@@ -218,7 +286,18 @@ def loaded(ctx: Ctx = Depends(current)) -> dict[str, Any]:
 @app.post("/api/models/load")
 def load_model(body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str, Any]:
     ctx.require("models.manage")
-    res = engine.load(body.get("engine", "llamacpp"), body["model_id"], body.get("load_config") or {})
+    eid = body.get("engine", "llamacpp")
+    if eid not in engine.ENGINE_META:
+        raise err(422, "invalid", f"Unknown engine '{eid}'")
+    if not str(body.get("model_id") or "").strip():
+        raise err(422, "invalid", "Choose a model to load")
+    local = engine.model_by_id(str(body["model_id"]))
+    if local and eid != "llamacpp":
+        raise err(422, "invalid", f"'{local['name']}' is a model file; it runs on the built-in llama.cpp engine, not {engine.ENGINE_META[eid][0]}.")
+    if not local and eid == "llamacpp":
+        raise err(422, "invalid", "That model file was not found. Choose a model listed under the Yukti models folder, LM Studio or the Ollama library.")
+    res = engine.load(eid, body["model_id"], body.get("load_config") or {})
+    set_setting("last_loaded_model", {"engine": eid, "model_id": body["model_id"], "load_config": body.get("load_config") or {}}, ctx.actor)
     audit.write(ctx.actor, "model.load", f"model:{body['model_id']}", {"engine": body.get("engine"), "config": body.get("load_config")})
     return res
 
@@ -227,6 +306,7 @@ def load_model(body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str, A
 def unload_model(ctx: Ctx = Depends(current)) -> dict[str, Any]:
     ctx.require("models.manage")
     engine.unload()
+    set_setting("last_loaded_model", None, ctx.actor)  # an explicit unload stays unloaded after a restart
     audit.write(ctx.actor, "model.unload", "model")
     return {"ok": True}
 
@@ -268,6 +348,9 @@ def create_preset(body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str
 
 @app.put("/api/presets/{pid}")
 def update_preset(pid: str, body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str, Any]:
+    ctx.require("ai.settings")
+    if q1("SELECT 1 FROM presets WHERE id=? AND builtin=1", (pid,)):
+        raise err(403, "builtin_preset", "Built-in presets cannot be changed. Save your changes as a new preset.")
     ex("UPDATE presets SET name=?, description=?, system_prompt=?, prediction_json=?, load_json=? WHERE id=? AND user_id=?",
        (body.get("name"), body.get("description", ""), body.get("system_prompt", ""), j(body.get("prediction", {})),
         j(body.get("load", {})), pid, ctx.user["id"]))
@@ -276,6 +359,9 @@ def update_preset(pid: str, body: dict[str, Any], ctx: Ctx = Depends(current)) -
 
 @app.delete("/api/presets/{pid}")
 def delete_preset(pid: str, ctx: Ctx = Depends(current)) -> dict[str, Any]:
+    ctx.require("ai.settings")
+    if q1("SELECT 1 FROM presets WHERE id=? AND builtin=1", (pid,)):
+        raise err(403, "builtin_preset", "Built-in presets cannot be deleted.")
     ex("DELETE FROM presets WHERE id=? AND user_id=? AND builtin=0", (pid, ctx.user["id"]))
     return {"ok": True}
 
@@ -290,8 +376,30 @@ def projects(ctx: Ctx = Depends(current)) -> list[dict[str, Any]]:
 @app.post("/api/projects")
 def create_project(body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str, Any]:
     pid = new_id()
-    ex("INSERT INTO projects(id, user_id, name, created_at) VALUES(?,?,?,?)", (pid, ctx.user["id"], body.get("name", "Project"), now_iso()))
-    return {"id": pid, "name": body.get("name", "Project"), "chat_count": 0}
+    name = str(body.get("name") or "").strip()[:80] or "New folder"
+    ex("INSERT INTO projects(id, user_id, name, created_at) VALUES(?,?,?,?)", (pid, ctx.user["id"], name, now_iso()))
+    return {"id": pid, "name": name, "chat_count": 0}
+
+
+@app.patch("/api/projects/{pid}")
+def rename_project(pid: str, body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str, Any]:
+    name = str(body.get("name") or "").strip()[:80]
+    if not name:
+        raise err(422, "invalid", "Enter a folder name")
+    if not q1("SELECT 1 FROM projects WHERE id=? AND user_id=?", (pid, ctx.user["id"])):
+        raise err(404, "not_found", "Folder not found")
+    ex("UPDATE projects SET name=? WHERE id=?", (name, pid))
+    return {"id": pid, "name": name}
+
+
+@app.delete("/api/projects/{pid}")
+def delete_project(pid: str, ctx: Ctx = Depends(current)) -> dict[str, Any]:
+    """Deletes the folder only; its chats move back to the main list."""
+    if not q1("SELECT 1 FROM projects WHERE id=? AND user_id=?", (pid, ctx.user["id"])):
+        raise err(404, "not_found", "Folder not found")
+    ex("UPDATE chats SET project_id=NULL WHERE project_id=? AND user_id=?", (pid, ctx.user["id"]))
+    ex("DELETE FROM projects WHERE id=?", (pid,))
+    return {"ok": True}
 
 
 @app.get("/api/chats")
@@ -430,9 +538,9 @@ def documents(request: Request, ctx: Ctx = Depends(current)) -> list[dict[str, A
 
 def _run_ingest(did: str, jid: str, actor: str) -> None:
     try:
-        rag.ingest(did, jid, actor)
-    except Exception:
-        pass
+        rag.ingest(did, jid, actor)  # records its own failure in the job (shown to the HOD)
+    except Exception as e:  # noqa: BLE001
+        engine.log(f"[ingest] {did}: {e!r}")
 
 
 @app.post("/api/documents")
@@ -440,6 +548,9 @@ async def upload(background: BackgroundTasks, file: UploadFile = File(...), titl
                  department: str = Form("Operations"), classification: str = Form("INTERNAL"), doc_number: str = Form(""),
                  revision: str = Form(""), ctx: Ctx = Depends(current)) -> dict[str, Any]:
     ctx.require("documents.upload")
+    ext = Path(file.filename or "").suffix.lower()
+    if ext not in rag.SUPPORTED_EXTS:
+        raise err(422, "unsupported_type", f"'{ext or 'no extension'}' files cannot be indexed. Supported: " + ", ".join(sorted(rag.SUPPORTED_EXTS)))
     data = await file.read()
     if len(data) > 50 * 2**20:
         raise err(413, "too_large", "Max 50 MB")
@@ -452,6 +563,9 @@ async def upload(background: BackgroundTasks, file: UploadFile = File(...), titl
     need = scope.RESTRICTED_UPLOAD_TYPES.get(doc_type)
     if need and need not in ctx.subject.roles:
         raise err(403, "policy_denied", f"{doc_type} documents are shared plant-wide and can be added only by the {need.replace('_', ' ')} office.")
+    same = q1("SELECT title FROM documents WHERE sha256=? AND department=?", (hashlib.sha256(data).hexdigest(), department))
+    if same:
+        raise err(409, "duplicate", f"This exact file is already in Knowledge as “{same['title']}”.")
     if doc_number and q1("SELECT 1 FROM documents WHERE doc_number=? AND department<>?", (doc_number, department)):
         raise err(409, "conflict", f"Document number {doc_number} belongs to another department.")
     did = rag.create_document({"title": title or Path(file.filename or "upload").stem, "doc_type": doc_type, "department": department,
@@ -506,7 +620,14 @@ def delete_document(did: str, ctx: Ctx = Depends(current)) -> dict[str, Any]:
         raise err(403, "policy_denied", "HODs can remove only their own department's documents.")
     for c in q("SELECT id FROM chunks WHERE document_id=?", (did,)):
         ex("DELETE FROM chunks_fts WHERE chunk_id=?", (c["id"],))
+    ex("DELETE FROM pages WHERE document_id=?", (did,))
+    ex("DELETE FROM chunks WHERE document_id=?", (did,))
     ex("DELETE FROM documents WHERE id=?", (did,))
+    try:  # the stored file goes too (removed data must not linger on disk)
+        if d.get("file_path") and not q1("SELECT 1 FROM documents WHERE file_path=?", (d["file_path"],)):
+            Path(d["file_path"]).unlink(missing_ok=True)
+    except OSError as e:
+        engine.log(f"[documents] could not delete {d.get('file_path')}: {e}")
     audit.write(ctx.actor, "document.deleted", f"document:{did}")
     return {"ok": True}
 
@@ -557,6 +678,11 @@ def create_access_request(body: dict[str, Any], ctx: Ctx = Depends(current)) -> 
             raise err(422, "invalid", f"Unknown department '{dept}'.")
     if not dept:
         raise err(422, "invalid", "department or document_id required")
+    if len(str(body.get("justification") or "").strip()) < 5:
+        raise err(422, "invalid", "Explain briefly why you need access (at least 5 characters).")
+    if q1("SELECT 1 FROM access_requests WHERE requester_id=? AND department=? AND IFNULL(document_id,'')=? AND state='PENDING'",
+          (ctx.user["id"], dept, body.get("document_id") or "")):
+        raise err(409, "duplicate", f"You already have a pending request for {dept}. Wait for the decision (see Inbox → Access requests).")
     approver = _approver_for(dept)
     if not approver or approver == ctx.user["id"]:
         approver = _escalation_user()
@@ -788,7 +914,10 @@ def prod_model(ctx: Ctx = Depends(current)) -> dict[str, Any]:
 @app.put("/api/production/model")
 def prod_model_put(body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str, Any]:
     ctx.require("production.edit")
-    m = production.save_model(body, ctx.actor)
+    try:
+        m = production.save_model(body, ctx.actor)
+    except ValueError as e:
+        raise err(422, "invalid", str(e))
     audit.write(ctx.actor, "production.model.saved", "production_model", {"complete": m["complete"], "missing": len(m["missing"])})
     return m
 
@@ -809,10 +938,16 @@ async def prod_scenario(body: dict[str, Any], ctx: Ctx = Depends(current)) -> di
             txt = await asyncio.wait_for(engine.complete_once([
                 {"role": "system", "content": "Explain these refinery planning LP results to planners in 4 short bullet points. Use ONLY the numbers given. End with: 'Planners decide.'"},
                 {"role": "user", "content": facts}]), timeout=40)
-            ok = all(n in facts for n in _re.findall(r"\d+(?:\.\d+)?", txt.replace(",", "")) if n not in ("4",))
-            explanation = txt if ok else facts + " (LLM wording withheld: it contained numbers not in the optimizer output.)"
-        except Exception:
-            pass
+            plain = facts.replace(",", "")  # compare numbers without thousands separators on both sides
+            nums = [n for n in _re.findall(r"\d+(?:\.\d+)?", txt.replace(",", "")) if n not in ("4",)]
+            if not txt.strip():
+                explanation = facts
+            elif all(n in plain for n in nums):
+                explanation = txt
+            else:
+                explanation = facts + " (AI wording withheld: it contained numbers that are not in the optimizer output.)"
+        except Exception as e:  # noqa: BLE001
+            explanation = facts + f" (AI wording unavailable: {str(e)[:160]})"
     res["explanation"] = explanation
     audit.write(ctx.actor, "production.scenario", "scenario", {"inputs": body, "margin_usd": res["margin_usd"]})
     return res
@@ -892,6 +1027,12 @@ def _audit_org_wide(ctx: Ctx) -> bool:
     return "audit.export" in ctx.perms  # Internal Audit, refinery management, administrator
 
 
+@app.get("/api/audit/events")
+def audit_events(ctx: Ctx = Depends(current)) -> list[str]:
+    ctx.require("audit.view")
+    return [r["event"] for r in q("SELECT DISTINCT event FROM audit_log ORDER BY event")]
+
+
 @app.get("/api/audit")
 def audit_list(request: Request, ctx: Ctx = Depends(current)) -> list[dict[str, Any]]:
     ctx.require("audit.view")
@@ -904,6 +1045,10 @@ def audit_list(request: Request, ctx: Ctx = Depends(current)) -> list[dict[str, 
     if not _audit_org_wide(ctx):  # an HOD sees the trail of their own department's people
         where.append("actor IN (SELECT username FROM users WHERE department=?)")
         args.append(ctx.user["department"])
+    before = request.query_params.get("before")  # paging: records older than this sequence number
+    if before and before.isdigit():
+        where.append("seq < ?")
+        args.append(int(before))
     rows = q("SELECT * FROM audit_log " + ("WHERE " + " AND ".join(where) + " " if where else "") + "ORDER BY seq DESC LIMIT ?",
              (*args, lim))
     return [{"seq": r["seq"], "at": r["at"], "actor": r["actor"], "event": r["event"], "entity": r["entity"],
@@ -1032,6 +1177,11 @@ async def security_headers(request: Request, call_next):  # type: ignore[no-unty
     return resp
 
 
+# fingerprint of this installation (the desktop app only re-attaches to a server started from its own folder)
+from .config import ROOT as _ROOT  # noqa: E402
+_INSTANCE = hashlib.sha256(str(_ROOT.resolve()).lower().encode()).hexdigest()[:12]
+
+
 @app.get("/api/health")
 def health() -> dict[str, Any]:
     eng = engine.state.status
@@ -1046,7 +1196,7 @@ def health() -> dict[str, Any]:
         stage = "Ready (AI model failed to load)"
     else:
         stage = "Ready"
-    return {"ok": True, "version": VERSION, "engine": eng, "stage": stage,
+    return {"ok": True, "version": VERSION, "engine": eng, "stage": stage, "instance": _INSTANCE,
             "progress": {"done": STARTUP["done"], "total": STARTUP["total"]} if not kr else None,
             "knowledge_ready": kr, "ready": kr and eng in ("ready", "idle", "error"),
             "error": STARTUP["error"] or (engine.state.error if eng == "error" else None)}

@@ -9,6 +9,7 @@ import json
 import os
 import random
 import subprocess
+import sys
 import threading
 import time
 
@@ -98,6 +99,9 @@ print("baseline memory MB:", mem_mb())
 sessions = [session(u, p) for u, p in USERS]
 admin = session("admin", "Admin@2026")
 
+_h = httpx.get(B + "/api/health", timeout=5).json()
+if _h.get("engine") != "ready":
+    sys.exit(f"A model must be loaded before the stress test (engine is '{_h.get('engine')}'); otherwise chats would 'pass' without an answer.")
 print("== 1. 12 concurrent chats (4 users x 3) + 4 aborted mid-stream")
 with cf.ThreadPoolExecutor(16) as ex:
     futs = [ex.submit(chat, sessions[i % 4], random.choice(QUESTIONS)) for i in range(12)]
@@ -115,7 +119,8 @@ files = [os.path.join(ROOT, "data", "corpus", f) for f in ("inspection_E-310_sca
 def upload(i: int, path: str) -> str:
     c = session("rajesh.mm", "Rajesh@2026")
     with open(path, "rb") as fh:
-        r = c.post("/api/documents", files={"file": (f"stress{i}_" + os.path.basename(path), fh.read(), "application/pdf")},
+        body = fh.read() + f"\n% stress {i} {time.time()}\n".encode()  # distinct bytes: identical files are rejected as duplicates
+        r = c.post("/api/documents", files={"file": (f"stress{i}_" + os.path.basename(path), body, "application/pdf")},
                    data={"doc_type": "manual", "classification": "INTERNAL", "title": f"Stress upload {i}"})
     if r.status_code != 200:
         problem(f"upload HTTP {r.status_code} {r.text[:200]}")

@@ -159,9 +159,20 @@ def login(body: dict[str, Any], request: Request, response: Response) -> dict[st
     password = str(body.get("password", ""))
     ip = request.client.host if request.client else "?"
     u = q1("SELECT * FROM users WHERE username=?", (username,))
+    since = (_now() - timedelta(seconds=LOCK_WINDOW_S)).isoformat(timespec="seconds")
+    until = None
     if u and u["locked_until"] and _utc(u["locked_until"]) > _now():
+        until = _utc(u["locked_until"])
+    elif not u:  # same behaviour for names that do not exist, so the lockout does not reveal which accounts exist
+        last = q1("SELECT COUNT(*) n, MAX(at) at FROM login_attempts WHERE username=? AND success=0 AND at>?", (username, since))
+        if last and last["n"] >= LOCK_THRESHOLD and last["at"]:
+            until = _utc(last["at"]) + timedelta(minutes=5)
+            until = until if until > _now() else None
+    if until:
         audit.write(username, "auth.login.locked", f"user:{username}", {"ip": ip})
-        raise err(423, "locked", f"Account locked until {u['locked_until']} after repeated failures.")
+        mins = max(1, int((until - _now()).total_seconds() // 60) + 1)
+        raise err(423, "locked", f"Too many failed sign-in attempts. Try again in {mins} minute{'s' if mins != 1 else ''}, "
+                                 "or ask the administrator to unlock the account.")
     ok = False
     try:
         ph.verify(u["password_hash"] if u else _DUMMY, password)
@@ -171,7 +182,6 @@ def login(body: dict[str, Any], request: Request, response: Response) -> dict[st
     ex("INSERT INTO login_attempts(username, ip, success, at) VALUES(?,?,?,?)", (username, ip, int(ok), now_iso()))
     if not ok:
         if u:
-            since = (_now() - timedelta(seconds=LOCK_WINDOW_S)).isoformat(timespec="seconds")
             fails = q1("SELECT COUNT(*) n FROM login_attempts WHERE username=? AND success=0 AND at>?", (username, since))["n"]
             if fails >= LOCK_THRESHOLD:
                 until = (_now() + timedelta(minutes=5)).isoformat(timespec="seconds")

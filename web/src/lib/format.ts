@@ -62,3 +62,12 @@ const ROLE_LABELS: Record<string, string> = { dept_manager: 'Head of Department 
 export function roleLabel(role: string): string {
   return ROLE_LABELS[role] ?? role;
 }
+
+/** Human label for a policy document type (values match policies/core.yaml). */
+const DOC_TYPE_LABELS: Record<string, string> = {
+  SOP: 'SOP', drawing_pid: 'P&ID', drawing_sld: 'Single-line diagram', datasheet: 'Datasheet', manual: 'Manual',
+  troubleshooting_guide: 'Troubleshooting guide', process_manual: 'Process manual', inspection_report: 'Inspection report',
+  calibration_certificate: 'Calibration certificate', shift_log: 'Shift log', work_order_export: 'Work orders (CMMS export)',
+  asset_register: 'Asset register', audit_report: 'Audit report', MSDS: 'MSDS', contact_list: 'Contact list', other: 'Other',
+};
+export const docTypeLabel = (t: string | null | undefined) => (t ? DOC_TYPE_LABELS[t] ?? t.replace(/_/g, ' ') : '—');

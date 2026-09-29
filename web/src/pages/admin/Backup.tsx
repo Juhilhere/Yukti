@@ -14,7 +14,27 @@ function BackupsCard() {
   const qc = useQueryClient();
   const list = useQuery({ queryKey: ['admin', 'backups'], queryFn: () => api.get<Backup[]>('/api/admin/backups') });
   const [restoring, setRestoring] = useState<Backup | null>(null);
-  const [restartNeeded, setRestartNeeded] = useState<string | null>(null);
+  const pending = useQuery({ queryKey: ['admin', 'restore-pending'], queryFn: () => api.get<{ pending: string | null }>('/api/admin/backups/restore-pending') });
+  const [restarting, setRestarting] = useState(false);
+  const cancel = useMutation({
+    mutationFn: () => api.del('/api/admin/backups/restore-pending'),
+    onSuccess: () => { toast.success('Restore cancelled', 'The current data stays as it is.'); void pending.refetch(); },
+    onError: (e) => toast.error('Could not cancel', errMsg(e)),
+  });
+  const restartNow = async () => {
+    setRestarting(true);
+    try {
+      await api.post('/api/admin/server/restart', {});
+      const t0 = Date.now();
+      await new Promise((r) => setTimeout(r, 3000));
+      for (;;) {  // wait for the server to come back, then reload so every component sees the restored data
+        try { const h = await fetch('/api/health', { cache: 'no-store' }); if (h.ok && (await h.json()).knowledge_ready) break; } catch { /* restarting */ }
+        if (Date.now() - t0 > 180_000) throw new Error('Yukti did not come back within 3 minutes. Start it again from the desktop app or the Start Yukti Server shortcut.');
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+      window.location.href = '/login';
+    } catch (e) { toast.error('Restart', errMsg(e)); setRestarting(false); }
+  };
   const create = useMutation({
     mutationFn: () => api.post<Backup>('/api/admin/backups', {}),
     onSuccess: (b) => { toast.success('Backup created', `${b.name} · ${fmtBytes(b.size_bytes)}`); qc.invalidateQueries({ queryKey: ['admin', 'backups'] }); },
@@ -22,7 +42,7 @@ function BackupsCard() {
   });
   const restore = useMutation({
     mutationFn: (name: string) => api.post<{ ok: boolean; restart_required: boolean }>(`/api/admin/backups/${encodeURIComponent(name)}/restore`, {}),
-    onSuccess: (r, name) => { setRestoring(null); if (r?.restart_required !== false) setRestartNeeded(name); toast.success('Backup restored', name); },
+    onSuccess: (_r, name) => { setRestoring(null); void pending.refetch(); toast.success('Backup checked and staged', `${name} replaces the current data when Yukti restarts.`); },
   });
   const [dl, setDl] = useState<string | null>(null);
   const download = async (b: Backup) => {
@@ -46,10 +66,14 @@ function BackupsCard() {
       actions={<button className="btn btn-sm btn-primary" disabled={create.isPending} onClick={() => create.mutate()}>
         {create.isPending ? <Spinner size={12} className="!text-[#1a1204]" /> : <DatabaseBackup size={12} />}Create backup
       </button>}>
-      {restartNeeded && (
-        <div className="m-3 flex items-start gap-2 rounded-md border border-amber/50 bg-amber/10 px-3 py-2 text-[12.5px] text-amber">
-          <AlertTriangle size={15} className="mt-0.5 shrink-0" />
-          <div><b>Restart required.</b> Backup <span className="font-mono">{restartNeeded}</span> was restored. Restart the Yukti server (ops/stop.ps1 then ops/start.ps1) so every component reloads the restored database and document store.</div>
+      {pending.data?.pending && (
+        <div className="m-3 flex flex-wrap items-center gap-2 rounded-md border border-amber/50 bg-amber/10 px-3 py-2 text-[12.5px] text-amber">
+          <AlertTriangle size={15} className="shrink-0" />
+          <div className="min-w-0 flex-1"><b>Restore staged:</b> <span className="font-mono">{pending.data.pending}</span> will replace the current database and documents when Yukti restarts. Changes made until then will be lost.</div>
+          <button className="btn btn-sm" disabled={cancel.isPending || restarting} onClick={() => cancel.mutate()}>Cancel restore</button>
+          <button className="btn btn-sm btn-danger" disabled={restarting} onClick={() => void restartNow()}>
+            {restarting ? <Spinner size={12} /> : <RotateCcw size={12} />}{restarting ? 'Restarting…' : 'Restart now'}
+          </button>
         </div>
       )}
       <div className="px-3 pt-2 text-[11.5px] text-muted">A backup is a zip of the database and the document store, with a SHA-256 checksum.</div>
@@ -60,12 +84,12 @@ function BackupsCard() {
         footer={<>
           <button className="btn btn-ghost" onClick={() => setRestoring(null)}>Cancel</button>
           <button className="btn btn-danger" disabled={restore.isPending} onClick={() => restoring && restore.mutate(restoring.name)}>
-            {restore.isPending ? <Spinner size={12} /> : <ArchiveRestore size={12} />}Restore
+            {restore.isPending ? <Spinner size={12} /> : <ArchiveRestore size={12} />}Check &amp; stage restore
           </button>
         </>}>
         <div className="space-y-2 text-[12.5px]">
           <p>This replaces the current database and document store with <span className="font-mono text-amber">{restoring?.name}</span> ({restoring && fmtTime(restoring.created_at)}).</p>
-          <p className="text-muted">Changes made after that backup will be lost. A server restart is required afterwards.</p>
+          <p className="text-muted">The backup is checked first (checksum, zip and database integrity). It then replaces the current data when Yukti restarts; changes made after that backup will be lost.</p>
           {restore.error ? <ErrorBox error={restore.error} /> : null}
         </div>
       </Modal>
@@ -97,7 +121,7 @@ function MaintenanceCard({ demo }: { demo: boolean }) {
   const [confirmReset, setConfirmReset] = useState(false);
   const reload = useMutation({
     mutationFn: () => api.post<{ documents_reingested: number; departments: number }>('/api/admin/mrpl/reload', {}),
-    onSuccess: (r) => toast.success('MRPL public information reloaded', `${r.documents_reingested} briefing(s) re-indexed · ${r.departments} departments`),
+    onSuccess: (r) => toast.success('MRPL public information reloaded', `${r.documents_reingested ? `${r.documents_reingested} changed briefing(s) re-indexed` : 'Briefings already up to date'} · ${r.departments} departments`),
     onError: (e) => toast.error('Reload failed', errMsg(e)),
   });
   const reset = useMutation({

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import { ArrowUpRight, Check, Clock, FileText, History, Inbox as InboxIcon, KeyRound, ShieldCheck, StickyNote, X, Eye } from 'lucide-react';
 import { Modal } from '../components/Modal';
@@ -9,13 +9,19 @@ import type { AccessRequest, Finding, Grant } from '../lib/types';
 import { useAuth } from '../lib/auth';
 import { Badge, Card, EmptyState, ErrorBox, PageHeader, ProvenanceBadges, QueryState, Spinner, StatusChip, Tabs, toneFor } from '../components/ui';
 import { toast } from '../components/Toast';
+import { AccessRequestDialog } from '../components/chat/AccessRequestDialog';
 import { countdown, cx, fmtDate, fmtTime, timeAgo } from '../lib/format';
 
 type Tab = 'findings' | 'requests' | 'grants';
 type FindingAction = 'acknowledge' | 'approve' | 'reject' | 'escalate' | 'note';
 
 export default function Inbox() {
-  const [tab, setTab] = useState<Tab>('findings');
+  // deep links from notifications: /inbox?tab=access (or requests / grants / findings)
+  const [params] = useSearchParams();
+  const want = params.get('tab');
+  const initial: Tab = want === 'access' || want === 'requests' ? 'requests' : want === 'grants' ? 'grants' : 'findings';
+  const [tab, setTab] = useState<Tab>(initial);
+  useEffect(() => { setTab(initial); }, [want]); // eslint-disable-line react-hooks/exhaustive-deps
   const findings = useQuery({ queryKey: ['findings'], queryFn: () => api.get<Finding[]>('/api/findings') });
   const ars = useQuery({ queryKey: ['access-requests'], queryFn: () => api.get<{ mine: AccessRequest[]; to_approve: AccessRequest[] }>('/api/access-requests') });
   const grants = useQuery({ queryKey: ['grants'], queryFn: () => api.get<Grant[]>('/api/grants') });
@@ -157,11 +163,14 @@ function RequestsTab({ q }: { q: UseQueryResult<{ mine: AccessRequest[]; to_appr
   const { can } = useAuth();
   const toApprove = q.data?.to_approve ?? [];
   const mine = q.data?.mine ?? [];
+  const pendingCount = toApprove.filter((a) => a.state === 'PENDING').length;
+  const [reqOpen, setReqOpen] = useState(false);
   return (
     <QueryState q={q}>
       <div className="space-y-4">
+        <AccessRequestDialog open={reqOpen} onClose={() => { setReqOpen(false); void q.refetch(); }} departments={[]} />
         {(can('access.approve') || toApprove.length > 0) && (
-          <Card title={<>To approve <span className="font-mono text-[11px] text-muted">({toApprove.length})</span></>} icon={<ShieldCheck size={14} className="text-amber" />} bodyClass="p-0">
+          <Card title={<>To approve <span className="font-mono text-[11px] text-muted">({pendingCount} pending)</span></>} icon={<ShieldCheck size={14} className="text-amber" />} bodyClass="p-0">
             {toApprove.length === 0 ? <EmptyState title="No pending requests" /> : (
               <div className="divide-y divide-border">
                 {toApprove.map((a) => <ApproveRow key={a.id} a={a} />)}
@@ -169,8 +178,9 @@ function RequestsTab({ q }: { q: UseQueryResult<{ mine: AccessRequest[]; to_appr
             )}
           </Card>
         )}
-        <Card title={<>My requests <span className="font-mono text-[11px] text-muted">({mine.length})</span></>} icon={<KeyRound size={14} className="text-cyan" />} bodyClass="p-0">
-          {mine.length === 0 ? <EmptyState title="You haven't requested access" hint="When a chat answer withholds sources by policy, use “Request access” to ask for a time-bound grant." /> : (
+        <Card title={<>My requests <span className="font-mono text-[11px] text-muted">({mine.length})</span></>} icon={<KeyRound size={14} className="text-cyan" />} bodyClass="p-0"
+          actions={<button className="btn btn-sm btn-cyan" onClick={() => setReqOpen(true)}><KeyRound size={12} />Request access</button>}>
+          {mine.length === 0 ? <EmptyState title="You haven't requested access" hint="Ask another department for time-bound access with “Request access”, or from a chat answer that withheld sources." /> : (
             <div className="divide-y divide-border">
               {mine.map((a) => (
                 <div key={a.id} className="flex items-start gap-3 px-3 py-2.5">
@@ -181,7 +191,7 @@ function RequestsTab({ q }: { q: UseQueryResult<{ mine: AccessRequest[]; to_appr
                       <Badge mono>{a.hours}h</Badge>
                     </div>
                     <div className="mt-0.5 text-[12px] text-muted">{a.justification}</div>
-                    <div className="mt-1 text-[11px] text-faint">Requested {fmtTime(a.created_at)}{a.decided_at && ` · decided ${fmtTime(a.decided_at)}`}{a.approver_name && ` by ${a.approver_name}`}</div>
+                    <div className="mt-1 text-[11px] text-faint">Requested {fmtTime(a.created_at)}{a.decided_at ? `${' · '}decided ${fmtTime(a.decided_at)}${a.approver_name ? ` by ${a.approver_name}` : ''}` : a.approver_name ? ` · awaiting ${a.approver_name}` : ''}</div>
                   </div>
                   <StatusChip status={a.state} />
                 </div>

@@ -12,7 +12,24 @@ ROOT = Path(os.environ.get("YUKTI_HOME") or (Path(sys.executable).parent if geta
                                                else Path(__file__).resolve().parents[2]))
 BACKEND = ROOT / "backend"
 DATA = ROOT / "data"
-STORE = Path(os.environ["YUKTI_STORE"]) if os.environ.get("YUKTI_STORE") else DATA / "store"  # runtime data (DB, uploads, logs)
+FROZEN = bool(getattr(sys, "frozen", False))
+_APPDATA = Path(os.environ.get("LOCALAPPDATA") or (Path.home() / "AppData" / "Local")) / "Yukti"
+
+
+def _default_store() -> Path:
+    """Runtime data (database, uploads, logs, backups).
+
+    Packaged builds keep data in %LOCALAPPDATA%\Yukti\data, outside the program folder, so that
+    - the program folder may be read-only (e.g. extracted under C:\Program Files), and
+    - replacing the folder with a newer version's zip keeps all data.
+    An existing database inside the program folder (servers set up by older versions) keeps being used."""
+    legacy = DATA / "store"
+    if not FROZEN or (legacy / "yukti.db").exists():
+        return legacy
+    return _APPDATA / "data"
+
+
+STORE = Path(os.environ["YUKTI_STORE"]) if os.environ.get("YUKTI_STORE") else _default_store()
 BLOBS = STORE / "blobs"
 REPORTS = STORE / "reports"
 CORPUS = DATA / "corpus"
@@ -20,12 +37,30 @@ WEB_DIST = ROOT / "web" / "dist"
 DB_PATH = STORE / "yukti.db"
 LOG_DIR = STORE / "logs"
 POLICY_FILE = ROOT / "backend" / "policies" / "core.yaml"
-MODELS_DIRS = [
-    ROOT / "models",
-    Path.home() / ".lmstudio" / "models",
-]
-for p in (STORE, BLOBS, REPORTS, LOG_DIR, ROOT / "models"):
+for p in (STORE, BLOBS, REPORTS, LOG_DIR):
     p.mkdir(parents=True, exist_ok=True)
+
+
+def _writable(d: Path) -> bool:
+    try:
+        d.mkdir(parents=True, exist_ok=True)
+        probe = d / ".yukti-write-test"
+        probe.write_text("ok")
+        probe.unlink()
+        return True
+    except OSError:
+        return False
+
+
+# models imported by the administrator go next to the bundled ones when possible, else to the user's app-data folder
+USER_MODELS = ROOT / "models" if _writable(ROOT / "models") else _APPDATA / "models"
+USER_MODELS.mkdir(parents=True, exist_ok=True)
+MODELS_DIRS = list(dict.fromkeys([ROOT / "models", USER_MODELS, Path.home() / ".lmstudio" / "models"]))
+
+# the pre-trained Laya router ships inside the package; copy it into a data folder that lives elsewhere
+_SHIPPED_LAYA = DATA / "store" / "laya"
+if _SHIPPED_LAYA.exists() and STORE.resolve() != (DATA / "store").resolve() and not (STORE / "laya").exists():
+    shutil.copytree(_SHIPPED_LAYA, STORE / "laya")
 
 VERSION = "0.3.0"
 # Production by default. Demonstration mode (sample accounts listed on the login page, rehearsal reset) is enabled only

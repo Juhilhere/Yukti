@@ -14,11 +14,13 @@ Contents
   backend\policies\core.yaml          access-control and company-guardrail policy
 
 Run
-  "Start Yukti Server.cmd"              — this PC only (also used by the desktop app's All-in-one mode)
-  "Start Yukti Server (Plant LAN).cmd"  — serve employee desktop clients on the plant network
-  Employees install Yukti-Setup-0.3.0.exe and connect to http://<server>:8000
+  Normally you do not start this folder yourself: Yukti.exe (one folder up) starts and stops it automatically.
+  "Start Yukti Server.cmd"              - run only the server on this PC (opens it in the browser)
+  "Start Yukti Server (Plant LAN).cmd"  - serve other PCs on the plant network; on employee PCs open Yukti.exe >
+                                          File > Switch server > Connect, and enter http://<server>:8000
 
-First start creates data\store\ (database, documents, logs, backups) and loads the default model on the GPU.
+Data (database, documents, logs, backups) is stored in %LOCALAPPDATA%\Yukti\data, not in this folder, so a newer
+version can replace the folder without losing anything. The first start loads the default model on the GPU.
 
 Demonstration mode vs production
   If a file named DEMO_MODE is present in this folder, Yukti runs in demonstration mode: the login page lists the

@@ -120,7 +120,7 @@ function ContextTab({ systemPrompt, setSystemPrompt, prediction, setPrediction, 
           <div className="flex gap-1.5">
             <button className="btn btn-sm" onClick={() => { setName(''); setDesc(''); setSaveOpen(true); }}><Save size={12} />Save as preset</button>
             <button className="btn btn-sm" disabled={!current || current.builtin || update.isPending} onClick={() => update.mutate()} title={current?.builtin ? 'Built-in presets are read-only' : ''}><Upload size={12} />Update</button>
-            <button className="btn btn-sm btn-danger" disabled={!current || current.builtin || remove.isPending} onClick={() => remove.mutate()}><Trash2 size={12} /></button>
+            <button className="btn btn-sm btn-danger" disabled={!current || current.builtin || remove.isPending} onClick={() => { if (current && window.confirm(`Delete the preset “${current.name}”?`)) remove.mutate(); }} title="Delete preset"><Trash2 size={12} /></button>
           </div>
         </div>
       </Field>

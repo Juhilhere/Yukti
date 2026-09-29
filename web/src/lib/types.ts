@@ -27,11 +27,11 @@ export type SystemInfo = {
   version: string;
 };
 
-export type EngineId = 'llamacpp' | 'bionic' | 'vllm' | 'remote';
-export type Engine = { id: EngineId; name: string; description: string; base_url: string; available: boolean; version?: string };
+export type EngineId = 'llamacpp' | 'ollama' | 'bionic' | 'vllm' | 'remote';
+export type Engine = { id: EngineId; name: string; description: string; base_url: string; available: boolean; version?: string; models?: string[]; error?: string };
 export type Model = {
   id: string; name: string; file_name: string; path: string; size_bytes: number; family: string;
-  params_b?: number; quant: string; arch?: string; source: 'lmstudio' | 'yukti' | 'engine'; vision: boolean;
+  params_b?: number; quant: string; arch?: string; source: 'lmstudio' | 'yukti' | 'engine' | 'ollama' | 'ollama-library'; engine?: EngineId; vision: boolean;
 };
 export type LoadedModel = {
   status: 'idle' | 'loading' | 'ready' | 'error';

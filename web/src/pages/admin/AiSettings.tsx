@@ -23,7 +23,7 @@ export default function AiSettings() {
   const save = useMutation({
     mutationFn: (d: AiSettingsT) => api.put<AiSettingsT>('/api/admin/ai-settings', d),
     onSuccess: (r) => {
-      toast.success('Organisation AI settings saved', 'Applied to every employee chat from now on.');
+      toast.success('Organisation AI settings saved', 'System prompt and sampling apply to new answers now. The default model is loaded at the next server start (use the model loader to switch now).');
       const next = r && typeof r === 'object' && 'prediction' in r ? r : draft;
       qc.setQueryData(['admin', 'ai-settings'], next);
       setDraft(next ? structuredClone(next) : null);
@@ -66,7 +66,12 @@ export default function AiSettings() {
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Model">
-                  <select className="input" value={draft.default_model_id ?? ''} onChange={(e) => set({ default_model_id: e.target.value || null })}>
+                  <select className="input" value={draft.default_model_id ?? ''} onChange={(e) => {
+                    const m = (models.data ?? []).find((x) => x.id === e.target.value);
+                    // the engine follows the model: model files run on built-in llama.cpp, Ollama names on Ollama, server models on their server
+                    const eng = !m ? draft.default_engine : m.source === 'ollama' ? 'ollama' : m.source === 'engine' ? (m.engine ?? draft.default_engine) : 'llamacpp';
+                    set({ default_model_id: e.target.value || null, default_engine: eng });
+                  }}>
                     <option value="">{models.isLoading ? 'Loading…' : '— None —'}</option>
                     {draft.default_model_id && !(models.data ?? []).some((m) => m.id === draft.default_model_id) && <option value={draft.default_model_id}>{draft.default_model_id} (not found)</option>}
                     {(models.data ?? []).map((m) => <option key={m.id} value={m.id}>{m.name}{m.quant ? ` · ${m.quant}` : ''}</option>)}
@@ -79,8 +84,15 @@ export default function AiSettings() {
                   </select>
                 </Field>
               </div>
+              {(() => {
+                const m = (models.data ?? []).find((x) => x.id === draft.default_model_id);
+                const need = !m ? null : m.source === 'ollama' ? 'ollama' : m.source === 'engine' ? m.engine : 'llamacpp';
+                return need && need !== draft.default_engine
+                  ? <div className="rounded-md border border-amber/40 bg-amber/10 px-3 py-1.5 text-[12px] text-amber">This model is served by {ENGINE_LABEL[need] ?? need}, not {ENGINE_LABEL[draft.default_engine] ?? draft.default_engine}; it would fail to load at start-up.</div>
+                  : null;
+              })()}
               <Toggle checked={!!draft.autoload} onChange={(v) => set({ autoload: v })}
-                label={<span>Auto-load the default model when the server starts</span>} />
+                label={<span>Load a model automatically when the server starts: the default model above, otherwise the model loaded last, otherwise the bundled model</span>} />
               {models.error ? <ErrorBox error={models.error} /> : null}
               <div>
                 <div className="label mb-1.5">Load configuration</div>

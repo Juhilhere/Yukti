@@ -58,7 +58,7 @@ function EngineRow({ e, editable }: { e: Engine; editable: boolean }) {
   useEffect(() => { setUrl(e.base_url ?? ''); }, [e.base_url]);
   const save = useMutation({
     mutationFn: () => api.put<Engine>(`/api/engines/${e.id}`, key ? { base_url: url, api_key: key } : { base_url: url }),
-    onSuccess: () => { toast.success(`${e.name} updated`); setKey(''); qc.invalidateQueries({ queryKey: qk.engines }); },
+    onSuccess: (r) => { if (r.available) toast.success(`${e.name} connected`, `${r.models?.length ?? 0} model(s)`); else toast.error(`${e.name} saved but not reachable`, r.error ?? ''); setKey(''); qc.invalidateQueries({ queryKey: qk.engines }); qc.invalidateQueries({ queryKey: qk.models }); },
     onError: (err) => toast.error('Could not update engine', (err as Error).message),
   });
   const urlEditable = editable && e.id !== 'llamacpp';
@@ -74,8 +74,8 @@ function EngineRow({ e, editable }: { e: Engine; editable: boolean }) {
       <div className="mt-1 text-[12px] text-muted">{e.description}</div>
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <input className="input flex-1 font-mono text-[12px] !py-1" style={{ minWidth: 220 }} value={url} disabled={!urlEditable}
-          onChange={(ev) => setUrl(ev.target.value)} placeholder="http://127.0.0.1:1234/v1" />
-        {urlEditable && (e.id === 'remote' || e.id === 'vllm') && (
+          onChange={(ev) => setUrl(ev.target.value)} placeholder={e.id === 'ollama' ? 'http://127.0.0.1:11434' : 'http://127.0.0.1:1234/v1'} />
+        {urlEditable && e.id !== 'ollama' && (
           <input className="input !w-44 font-mono text-[12px] !py-1" type="password" placeholder="API key (optional)" value={key} onChange={(ev) => setKey(ev.target.value)} />
         )}
         {urlEditable && (
@@ -84,6 +84,8 @@ function EngineRow({ e, editable }: { e: Engine; editable: boolean }) {
           </button>
         )}
       </div>
+      {!e.available && e.error && <div className="mt-2 text-[12px] text-amber">{e.error}</div>}
+      {e.available && !!e.models?.length && <div className="mt-2 truncate text-[11.5px] text-muted">Models: <span className="font-mono">{e.models.join(', ')}</span></div>}
     </div>
   );
 }

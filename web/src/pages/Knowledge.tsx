@@ -23,6 +23,8 @@ const DOC_TYPES: { value: string; label: string; role?: string }[] = [
   { value: 'contact_list', label: 'Contact list (management only)', role: 'plant_manager' }, { value: 'other', label: 'Other' },
 ];
 const DOC_TYPE_LABEL: Record<string, string> = Object.fromEntries(DOC_TYPES.map((d) => [d.value, d.label.replace(/ \(.*\)$/, '')]));
+// must match rag.SUPPORTED_EXTS on the server
+const ACCEPT = '.pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp,.docx,.xlsx,.xlsm,.txt,.csv,.md,.log,.json,.xml';
 const CLASSIFICATIONS = ['PUBLIC', 'INTERNAL', 'RESTRICTED', 'CONFIDENTIAL'];
 
 function useDebounced<T>(v: T, ms = 300) {
@@ -225,7 +227,7 @@ function UploadDialog({ onClose }: { onClose: () => void }) {
             ) : (
               <><div className="font-medium">Drop a file here or click to browse</div><div className="text-[11.5px] text-muted">PDF (digital or scanned), images, DOCX, XLSX, CSV — processed fully on-prem</div></>
             )}
-            <input ref={inputRef} type="file" className="hidden" onChange={(e) => pick(e.target.files?.[0])} />
+            <input ref={inputRef} type="file" className="hidden" accept={ACCEPT} onChange={(e) => pick(e.target.files?.[0])} />
           </div>
           <Field label="Title"><input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Defaults to file name" /></Field>
           <div className="grid grid-cols-3 gap-3">

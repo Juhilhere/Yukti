@@ -205,7 +205,7 @@ function AssistantMessageImpl({ m, isLast, busy, showStats, question, onRegenera
         )}
         {m.facts && m.facts.length > 0 && <FactsTable facts={m.facts} onCite={cite} />}
         {m.sources && m.sources.length > 0 && <SourcesRow msgId={m.id} sources={m.sources} />}
-        {m.denied && m.denied.count > 0 && <DeniedCard denied={m.denied} question={question} />}
+        {m.denied && m.denied.count > 0 && <DeniedCard denied={m.denied} question={question} suggest={m.route?.department} />}
         {!m.streaming && (
           <StatsFooter m={showStats ? m : { ...m, stats: null }} canRegen={isLast && !busy && !!onRegenerate} onRegen={onRegenerate} />
         )}

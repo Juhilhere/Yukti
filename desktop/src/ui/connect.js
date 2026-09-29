@@ -276,6 +276,11 @@ document.addEventListener('keydown', (e) => {
   $('manifest').value = cfg.manifestUrl || '';
   show($('back'), !!cfg.canGoBack);
   if (cfg.notice) { $('notice').textContent = cfg.notice; show($('notice'), true); }
+  if (cfg.bundled) {  // single-zip build: the server ships with the app, nothing to download
+    show($('opt-install'), false);
+    $('local-title').textContent = 'Run Yukti on this PC (included)';
+    $('local-desc').textContent = 'Uses the Yukti Server that came with this app. Everything runs offline on this PC and stops when you quit.';
+  }
   select(cfg.defaultMode || 'remote');
   await loadPlan();
   document.body.dataset.ready = '1';

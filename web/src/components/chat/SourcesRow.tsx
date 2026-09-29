@@ -43,7 +43,7 @@ export function SourcesRow({ msgId, sources }: { msgId: string; sources: Source[
   );
 }
 
-export function DeniedCard({ denied, question }: { denied: Denied; question?: string }) {
+export function DeniedCard({ denied, question, suggest }: { denied: Denied; question?: string; suggest?: string }) {
   const [open, setOpen] = useState(false);
   const t = useT();
   if (!denied || !denied.count) return null;
@@ -57,7 +57,7 @@ export function DeniedCard({ denied, question }: { denied: Denied; question?: st
         <div className="text-[11.5px] text-muted">Your clearance or department does not cover these documents. The answer above uses only what you may read.</div>
       </div>
       <button className="btn btn-sm !border-amber/50 !text-amber" onClick={() => setOpen(true)}>{t('btn.requestAccess')}</button>
-      <AccessRequestDialog open={open} onClose={() => setOpen(false)} departments={depts} context={question} />
+      <AccessRequestDialog open={open} onClose={() => setOpen(false)} departments={depts} context={question} suggest={suggest} />
     </div>
   );
 }

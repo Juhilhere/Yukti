@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Boxes, FileDown, FileText, Search, Wrench } from 'lucide-react';
 import { api, downloadFile, qs } from '../lib/api';
@@ -9,7 +9,7 @@ import { useT } from '../lib/i18n';
 import { DataTable, type Column } from '../components/DataTable';
 import { Drawer } from '../components/Modal';
 import { toast } from '../components/Toast';
-import { fmtDate } from '../lib/format';
+import { fmtDate, fmtTime } from '../lib/format';
 
 function daysLeft(i: AssetItem): number | null {
   if (typeof i.days_left === 'number' && isFinite(i.days_left)) return i.days_left;
@@ -42,7 +42,9 @@ function useDebounced<T>(v: T, ms = 300) {
 }
 
 export default function Assets() {
-  const [q, setQ] = useState('');
+  const [params] = useSearchParams();
+  const [q, setQ] = useState(params.get('q') ?? '');  // deep links from alerts: /assets?q=TR-03
+  useEffect(() => { const v = params.get('q'); if (v !== null) setQ(v); }, [params]);
   const dq = useDebounced(q);
   const [sel, setSel] = useState<string | null>(null);
   const t = useT();
@@ -107,7 +109,8 @@ function AssetDrawer({ tag, onClose }: { tag: string; onClose: () => void }) {
   const items = a?.items ?? [];
   const wos = a?.work_orders ?? [];
   const docs = a?.documents ?? [];
-  const woKeys = wos.length ? Object.keys(wos[0]).filter((k) => typeof wos[0][k] !== 'object').slice(0, 6) : [];
+  // fixed columns (not guessed from the first row, where empty fields would drop a column)
+  const woKeys = wos.length ? ['wo_no', 'type', 'opened_at', 'closed_at', 'failure_code', 'status'] : [];
 
   return (
     <Drawer open onClose={onClose} width={680}
@@ -160,7 +163,7 @@ function AssetDrawer({ tag, onClose }: { tag: string; onClose: () => void }) {
                       <tr key={i} className="border-t border-border/60">
                         {woKeys.map((k) => {
                           const v = w[k];
-                          const s = v === null || v === undefined ? '—' : String(v);
+                          const s = v === null || v === undefined || v === '' ? '—' : /_at$/.test(k) ? fmtTime(String(v)) : String(v);
                           return <td key={k} className="px-3 py-1.5">{/status|state|priority/i.test(k) ? <StatusChip status={s} /> : /no|id|ref/i.test(k) ? <span className="font-mono">{s}</span> : s}</td>;
                         })}
                       </tr>

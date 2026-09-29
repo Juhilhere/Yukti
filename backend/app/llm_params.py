@@ -11,7 +11,8 @@ L = "llamacpp"
 B = "bionic"
 V = "vllm"
 R = "remote"
-ALL = [L, B, V, R]
+O = "ollama"
+ALL = [L, O, B, V, R]
 
 KV_TYPES = [{"value": v, "label": v} for v in ["f16", "bf16", "f32", "q8_0", "q5_1", "q5_0", "iq4_nl", "q4_1", "q4_0"]]
 
@@ -25,12 +26,12 @@ def f(key: str, label: str, group: str, type_: str, default: Any, desc: str, eng
 
 LOAD: list[dict[str, Any]] = [
     # Context
-    f("ctx_size", "Context length", "Context", "int", 8192, "Tokens of context the model can attend to (KV cache size). Larger = more VRAM/RAM.", [L, V], min=512, max=131072, step=512, unit="tokens", flag="-c"),
+    f("ctx_size", "Context length", "Context", "int", 8192, "Tokens of context the model can attend to (KV cache size). Larger = more VRAM/RAM.", [L, V, O], min=512, max=131072, step=512, unit="tokens", flag="-c"),
     f("keep", "Tokens to keep on overflow", "Context", "int", 0, "Number of prompt tokens kept when the context is shifted (-1 = all).", [L], min=-1, max=8192, step=1, advanced=True, flag="--keep"),
     f("context_shift", "Context shift", "Context", "bool", False, "Discard old tokens instead of failing when the context fills during generation.", [L], advanced=True, flag="--context-shift"),
     # GPU & offload
     f("backend", "Compute backend", "GPU & Offload", "select", "auto", "Bundled llama.cpp build: auto (CUDA if an NVIDIA GPU is present, else Vulkan), CUDA 12.4 (NVIDIA) or Vulkan (AMD/Intel GPUs; CPU when GPU layers = 0).", [L], options=[{"value": "auto", "label": "Auto-detect"}, {"value": "cuda", "label": "CUDA 12.4 (NVIDIA)"}, {"value": "vulkan", "label": "Vulkan / CPU"}]),
-    f("gpu_layers", "GPU offload (layers)", "GPU & Offload", "int", 99, "Transformer layers kept in VRAM. 99 = all layers; 0 = CPU only. Partial offload trades speed for VRAM.", [L], min=0, max=99, step=1, flag="-ngl"),
+    f("gpu_layers", "GPU offload (layers)", "GPU & Offload", "int", 99, "Transformer layers kept in VRAM. 99 = all layers; 0 = CPU only. Partial offload trades speed for VRAM.", [L, O], min=0, max=99, step=1, flag="-ngl"),
     f("fit", "Auto-fit to device memory", "GPU & Offload", "select", "on", "Let llama.cpp shrink unset arguments (context, offload) so the model fits in VRAM.", [L], options=[{"value": "on", "label": "on"}, {"value": "off", "label": "off"}], flag="--fit"),
     f("main_gpu", "Main GPU index", "GPU & Offload", "int", 0, "GPU used for the model / intermediate results.", [L], min=0, max=8, step=1, advanced=True, flag="-mg"),
     f("split_mode", "Multi-GPU split mode", "GPU & Offload", "select", "layer", "How to split across GPUs: none, layer (default), row.", [L], options=[{"value": v, "label": v} for v in ["none", "layer", "row"]], advanced=True, flag="-sm"),
@@ -38,12 +39,12 @@ LOAD: list[dict[str, Any]] = [
     f("kv_offload", "Offload KV cache to GPU", "GPU & Offload", "bool", True, "Keep the KV cache in VRAM (faster). Disable to save VRAM.", [L], flag="kv_offload"),
     f("op_offload", "Offload host tensor ops", "GPU & Offload", "bool", True, "Offload host tensor operations to the device.", [L], advanced=True, flag="op_offload"),
     # CPU
-    f("threads", "CPU threads (generation)", "CPU", "int", 8, "Threads used during token generation. Best ≈ physical cores.", [L], min=1, max=32, step=1, flag="-t"),
+    f("threads", "CPU threads (generation)", "CPU", "int", 8, "Threads used during token generation. Best ≈ physical cores.", [L, O], min=1, max=32, step=1, flag="-t"),
     f("threads_batch", "CPU threads (prompt/batch)", "CPU", "int", 16, "Threads used during prompt processing.", [L], min=1, max=32, step=1, flag="-tb"),
     f("prio", "Process priority", "CPU", "select", 0, "Thread priority for the inference process.", [L], options=[{"value": v, "label": l} for v, l in [(-1, "low"), (0, "normal"), (1, "medium"), (2, "high")]], advanced=True, flag="--prio"),
     f("numa", "NUMA strategy", "CPU", "select", "", "NUMA optimisation (servers).", [L], options=[{"value": "", "label": "off"}, {"value": "distribute", "label": "distribute"}, {"value": "isolate", "label": "isolate"}, {"value": "numactl", "label": "numactl"}], advanced=True, flag="--numa"),
     # Batching
-    f("batch_size", "Evaluation batch size", "Batching", "int", 2048, "Logical max batch for prompt processing (-b). Higher = faster prefill, more memory.", [L], min=32, max=8192, step=32, flag="-b"),
+    f("batch_size", "Evaluation batch size", "Batching", "int", 2048, "Logical max batch for prompt processing (-b). Higher = faster prefill, more memory.", [L, O], min=32, max=8192, step=32, flag="-b"),
     f("ubatch_size", "Physical (micro) batch size", "Batching", "int", 512, "Physical max batch per compute step (-ub).", [L], min=32, max=4096, step=32, flag="-ub"),
     f("cont_batching", "Continuous batching", "Batching", "bool", True, "Dynamically batch concurrent requests.", [L], flag="cont_batching"),
     # Attention & KV
@@ -62,7 +63,8 @@ LOAD: list[dict[str, Any]] = [
     f("yarn_ext_factor", "YaRN extrapolation factor", "RoPE", "number", -1, "Extrapolation mix factor (-1 = default).", [L], min=-1, max=1, step=0.05, advanced=True, flag="--yarn-ext-factor"),
     f("yarn_attn_factor", "YaRN attention factor", "RoPE", "number", -1, "Scale of sqrt(t) / attention magnitude (-1 = default).", [L], min=-1, max=4, step=0.05, advanced=True, flag="--yarn-attn-factor"),
     # Memory
-    f("mmap", "Memory-map model (mmap)", "Memory", "bool", True, "Map the model file instead of reading it fully; faster load, lower RAM.", [L], flag="mmap"),
+    f("mmap", "Memory-map model (mmap)", "Memory", "bool", True, "Map the model file instead of reading it fully; faster load, lower RAM.", [L, O], flag="mmap"),
+    f("keep_alive", "Keep model loaded", "Ollama", "text", "30m", "How long Ollama keeps the model in memory after the last request (e.g. 30m, 2h, -1 = forever).", [O]),
     f("mlock", "Keep model in memory (mlock)", "Memory", "bool", False, "Lock the model in RAM so the OS never swaps it.", [L], flag="--mlock"),
     f("repack", "Weight repacking", "Memory", "bool", True, "Repack weights for faster CPU kernels.", [L], advanced=True, flag="repack"),
     f("check_tensors", "Validate tensors on load", "Memory", "bool", False, "Check tensor data for invalid values (slower load).", [L], advanced=True, flag="--check-tensors"),
@@ -110,16 +112,16 @@ LOAD: list[dict[str, Any]] = [
 PREDICTION: list[dict[str, Any]] = [
     # Sampling
     f("temperature", "Temperature", "Sampling", "number", 0.8, "Randomness. 0 = greedy/deterministic; higher = more creative.", ALL, min=0, max=2, step=0.05),
-    f("top_k", "Top-K", "Sampling", "int", 40, "Sample only from the K most likely tokens (0 = off).", [L, B, V], min=0, max=200, step=1),
+    f("top_k", "Top-K", "Sampling", "int", 40, "Sample only from the K most likely tokens (0 = off).", [L, O, B, V], min=0, max=200, step=1),
     f("top_p", "Top-P (nucleus)", "Sampling", "number", 0.95, "Sample from the smallest set whose probability ≥ P (1 = off).", ALL, min=0, max=1, step=0.01),
-    f("min_p", "Min-P", "Sampling", "number", 0.05, "Drop tokens below P × probability of the top token (0 = off).", [L, B, V], min=0, max=1, step=0.01),
+    f("min_p", "Min-P", "Sampling", "number", 0.05, "Drop tokens below P × probability of the top token (0 = off).", [L, O, B, V], min=0, max=1, step=0.01),
     f("typical_p", "Typical-P", "Sampling", "number", 1.0, "Locally typical sampling (1 = off).", [L, V], min=0, max=1, step=0.01, advanced=True),
     f("top_n_sigma", "Top-nσ", "Sampling", "number", -1, "Keep tokens within n standard deviations of the max logit (-1 = off).", [L], min=-1, max=5, step=0.1, advanced=True),
     f("dynatemp_range", "Dynamic temperature range", "Sampling", "number", 0, "Entropy-based temperature range (0 = off).", [L], min=0, max=2, step=0.05, advanced=True),
     f("dynatemp_exponent", "Dynamic temperature exponent", "Sampling", "number", 1, "Exponent for dynamic temperature.", [L], min=0, max=4, step=0.1, advanced=True),
     f("samplers", "Sampler order", "Sampling", "text", "", "Semicolon list, e.g. penalties;dry;top_n_sigma;top_k;typ_p;top_p;min_p;xtc;temperature.", [L], advanced=True),
     # Penalties
-    f("repeat_penalty", "Repeat penalty", "Penalties", "number", 1.0, "Penalise repeated tokens (1 = off).", [L, B, V], min=0.5, max=2, step=0.01),
+    f("repeat_penalty", "Repeat penalty", "Penalties", "number", 1.0, "Penalise repeated tokens (1 = off).", [L, O, B, V], min=0.5, max=2, step=0.01),
     f("repeat_last_n", "Repeat window", "Penalties", "int", 64, "Tokens considered for repeat penalty (0 off, -1 = context).", [L], min=-1, max=4096, step=1),
     f("presence_penalty", "Presence penalty", "Penalties", "number", 0.0, "Penalise tokens that already appeared (topic novelty).", ALL, min=-2, max=2, step=0.05),
     f("frequency_penalty", "Frequency penalty", "Penalties", "number", 0.0, "Penalise tokens by how often they appeared.", ALL, min=-2, max=2, step=0.05),
@@ -144,7 +146,7 @@ PREDICTION: list[dict[str, Any]] = [
     f("ignore_eos", "Ignore EOS", "Output", "bool", False, "Keep generating past the end-of-sequence token.", [L], advanced=True),
     f("min_tokens", "Min tokens", "Output", "int", 0, "Minimum tokens before EOS is allowed.", [V], min=0, max=4096, step=1, advanced=True),
     # Reasoning
-    f("enable_thinking", "Enable thinking", "Reasoning", "select", "auto", "Ask reasoning models to think before answering (chat_template_kwargs.enable_thinking).", [L, B, V], options=[{"value": "auto", "label": "model default"}, {"value": "on", "label": "on"}, {"value": "off", "label": "off"}]),
+    f("enable_thinking", "Enable thinking", "Reasoning", "select", "auto", "Ask reasoning models to think before answering (chat_template_kwargs.enable_thinking).", [L, O, B, V], options=[{"value": "auto", "label": "model default"}, {"value": "on", "label": "on"}, {"value": "off", "label": "off"}]),
     f("reasoning_effort", "Reasoning effort", "Reasoning", "select", "", "For models that support it (e.g. gpt-oss): low / medium / high.", ALL, options=[{"value": "", "label": "default"}, {"value": "low", "label": "low"}, {"value": "medium", "label": "medium"}, {"value": "high", "label": "high"}]),
     # Structured
     f("json_schema", "Structured output (JSON Schema)", "Structured Output", "json", "", "Constrain output to this JSON schema (response_format).", ALL, advanced=True),
@@ -296,7 +298,7 @@ def request_body(pred: dict[str, Any], engine: str) -> dict[str, Any]:
         body["seed"] = int(p["seed"])
     if p.get("reasoning_effort"):
         body["reasoning_effort"] = p["reasoning_effort"]
-    if p.get("enable_thinking") in ("on", "off"):
+    if p.get("enable_thinking") in ("on", "off") and engine in ("llamacpp", "vllm"):  # llama.cpp / vLLM extension
         body["chat_template_kwargs"] = {"enable_thinking": p["enable_thinking"] == "on"}
     if p.get("json_schema"):
         try:

@@ -3,6 +3,19 @@
 Administrators run the platform: users, models, AI settings, health, backups and policy. **Administrators do not add documents.** That is done by the
 Head of Department of each department. Installation is covered in [DEPLOYMENT.md](DEPLOYMENT.md).
 
+## Model engines
+
+Admin → Models (or **Ctrl+L**) lists every model Yukti can use, grouped by where it comes from:
+
+| Engine | Use it for | Notes |
+|---|---|---|
+| **llama.cpp (built-in)** | GGUF files in the Yukti models folder or the LM Studio library | Fully managed: context, GPU layers, KV cache… |
+| **Ollama** | Models already downloaded with `ollama pull` | Yukti uses Ollama's native API so the context length you choose is applied (Ollama's OpenAI endpoint would silently cut long prompts). Newer Ollama models (e.g. Gemma 3) only load through Ollama. |
+| **Bionic / LM Studio**, **vLLM**, **Custom server** | A model server that is already running | Enter its address under **Connection** and press **Test & save**; the reason is shown if it cannot connect (wrong URL, missing `/v1`, API key, no models). |
+
+Only addresses saved there are allowed through Yukti's offline guard. The model you load is loaded again automatically after a restart
+(or the default model set in **AI settings**); if that fails, Yukti falls back to the bundled model.
+
 ## First steps after installation
 
 1. Make sure there is **no `DEMO_MODE` file** in the install folder (and `YUKTI_TIER` is not `demo`) before the first start, so no passwords are shown and every seeded account must change its password.

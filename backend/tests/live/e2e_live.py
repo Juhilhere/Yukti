@@ -79,7 +79,8 @@ r = a.post("/api/admin/users", json={"username": "test.user", "display_name": "T
 check("create user", r.status_code == 200, r.text)
 temp = r.json().get("temp_password", "")
 uid = r.json().get("user", {}).get("id")
-check("duplicate user rejected", a.post("/api/admin/users", json={"username": "test.user", "department": "Process Engineering"}).status_code == 409)
+check("duplicate user rejected", a.post("/api/admin/users", json={"username": "test.user", "display_name": "Dup", "department": "Process Engineering"}).status_code == 409)
+check("user without display name rejected", a.post("/api/admin/users", json={"username": "x.noname", "department": "Process Engineering"}).status_code == 422)
 check("unknown department rejected", a.post("/api/admin/users", json={"username": "x.y", "department": "Nope"}).status_code == 422)
 t = session("test.user", temp)
 check("new user login", t.last_login.status_code == 200)
@@ -195,6 +196,8 @@ print("== data is added only by HODs, for their own department")
 import os  # noqa: E402
 
 pdf = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "data", "corpus", "A2_troubleshooting_guide.pdf"), "rb").read()
+check("identical file rejected as duplicate", session("rajesh.mm", "Rajesh@2026").post("/api/documents", files={"file": ("dup.pdf", pdf, "application/pdf")}).status_code == 409)
+pdf += b"\n% e2e " + str(time.time()).encode() + b"\n"  # a distinct file for the upload tests
 check("employee cannot upload", ravi.post("/api/documents", files={"file": ("t.pdf", pdf, "application/pdf")}).status_code == 403)
 check("admin cannot upload", a.post("/api/documents", files={"file": ("t.pdf", pdf, "application/pdf")}).status_code == 403)
 raj = session("rajesh.mm", "Rajesh@2026")

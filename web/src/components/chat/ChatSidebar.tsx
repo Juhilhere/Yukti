@@ -20,6 +20,8 @@ export function ChatSidebar({ activeId, onNew }: { activeId?: string; onNew: () 
   const [renaming, setRenaming] = useState<{ id: string; title: string } | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [newProj, setNewProj] = useState<string | null>(null);
+  const [editProj, setEditProj] = useState<{ id: string; name: string } | null>(null);
+  const [delProj, setDelProj] = useState<{ id: string; name: string } | null>(null);
   const [confirmDel, setConfirmDel] = useState<ChatSummary | null>(null);
   const menuRef = useClickOutside<HTMLDivElement>(!!menu, () => setMenu(null));
 
@@ -37,6 +39,16 @@ export function ChatSidebar({ activeId, onNew }: { activeId?: string; onNew: () 
     mutationFn: (id: string) => api.del(`/api/chats/${id}`),
     onSuccess: (_d, id) => { invalidate(); if (id === activeId) nav('/chat'); toast.success('Chat deleted'); },
     onError: (e) => toast.error('Delete failed', errMsg(e)),
+  });
+  const renameProj = useMutation({
+    mutationFn: (p: { id: string; name: string }) => api.patch(`/api/projects/${p.id}`, { name: p.name }),
+    onSuccess: () => { invalidate(); setEditProj(null); },
+    onError: (e) => toast.error('Could not rename folder', errMsg(e)),
+  });
+  const deleteProj = useMutation({
+    mutationFn: (id: string) => api.del(`/api/projects/${id}`),
+    onSuccess: () => { invalidate(); setDelProj(null); toast.success('Folder deleted', 'Its chats moved to the main list.'); },
+    onError: (e) => toast.error('Could not delete folder', errMsg(e)),
   });
   const createProj = useMutation({
     mutationFn: (name: string) => api.post<Project>('/api/projects', { name }),
@@ -106,14 +118,18 @@ export function ChatSidebar({ activeId, onNew }: { activeId?: string; onNew: () 
           if (q && items.length === 0) return null;
           const isC = collapsed[p.id];
           return (
-            <div key={p.id} className="mb-1">
-              <button className="flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left text-[12px] text-muted hover:text-text"
-                onClick={() => setCollapsed((s) => ({ ...s, [p.id]: !s[p.id] }))}>
-                {isC ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
-                <Folder size={12} className="text-amber/80" />
-                <span className="flex-1 truncate font-medium">{p.name}</span>
-                <span className="font-mono text-[10px] text-faint">{items.length || p.chat_count || 0}</span>
-              </button>
+            <div key={p.id} className="group/folder mb-1">
+              <div className="flex items-center">
+                <button className="flex min-w-0 flex-1 items-center gap-1.5 rounded-md px-2 py-1 text-left text-[12px] text-muted hover:text-text"
+                  onClick={() => setCollapsed((s) => ({ ...s, [p.id]: !s[p.id] }))}>
+                  {isC ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
+                  <Folder size={12} className="text-amber/80" />
+                  <span className="flex-1 truncate font-medium">{p.name}</span>
+                  <span className="font-mono text-[10px] text-faint">{items.length || p.chat_count || 0}</span>
+                </button>
+                <button className="btn btn-icon !h-6 !w-6 opacity-0 group-hover/folder:opacity-100" title="Rename folder" onClick={() => setEditProj({ id: p.id, name: p.name })}><Pencil size={11} /></button>
+                <button className="btn btn-icon !h-6 !w-6 opacity-0 group-hover/folder:opacity-100" title="Delete folder" onClick={() => setDelProj({ id: p.id, name: p.name })}><Trash2 size={11} /></button>
+              </div>
               {!isC && items.map((c) => row(c, true))}
               {!isC && items.length === 0 && <div className="ml-8 py-1 text-[11px] text-faint">Empty</div>}
             </div>
@@ -153,6 +169,21 @@ export function ChatSidebar({ activeId, onNew }: { activeId?: string; onNew: () 
         </>}>
         <input autoFocus className="input" placeholder="e.g. CDU-1 turnaround" value={newProj ?? ''} onChange={(e) => setNewProj(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && newProj?.trim()) createProj.mutate(newProj.trim()); }} />
+      </Modal>
+      <Modal open={!!editProj} onClose={() => setEditProj(null)} title="Rename folder" width={380}
+        footer={<>
+          <button className="btn btn-ghost" onClick={() => setEditProj(null)}>Cancel</button>
+          <button className="btn btn-primary" disabled={!editProj?.name.trim() || renameProj.isPending} onClick={() => editProj && renameProj.mutate({ id: editProj.id, name: editProj.name.trim() })}>Rename</button>
+        </>}>
+        <input autoFocus className="input" value={editProj?.name ?? ''} onChange={(e) => setEditProj((x) => (x ? { ...x, name: e.target.value } : x))}
+          onKeyDown={(e) => { if (e.key === 'Enter' && editProj?.name.trim()) renameProj.mutate({ id: editProj.id, name: editProj.name.trim() }); }} />
+      </Modal>
+      <Modal open={!!delProj} onClose={() => setDelProj(null)} title="Delete folder?" width={400}
+        footer={<>
+          <button className="btn btn-ghost" onClick={() => setDelProj(null)}>Cancel</button>
+          <button className="btn btn-danger" disabled={deleteProj.isPending} onClick={() => delProj && deleteProj.mutate(delProj.id)}>Delete folder</button>
+        </>}>
+        <p className="text-muted">The folder “{delProj?.name}” is removed. Its chats are kept and move to the main list.</p>
       </Modal>
       <Modal open={!!confirmDel} onClose={() => setConfirmDel(null)} title="Delete chat?" width={400}
         footer={<>
