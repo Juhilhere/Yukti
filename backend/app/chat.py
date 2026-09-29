@@ -125,13 +125,15 @@ async def run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | No
             if pub:
                 groups: dict[str, list[dict[str, Any]]] = {}
                 for r in pub:
-                    key = " ".join(re.findall(r"[a-z]+", re.sub(r"\(.*?\)", "", r["label"].lower()))[:3])
+                    drop = {"refinery", "nelson", "nameplate", "crude", "as", "in", "of", "the", "by", "cited", "total", "approx", "mrpl"}
+                    words = [w for w in re.findall(r"[a-z]+", re.sub(r"\(.*?\)", "", r["label"].lower())) if w not in drop]
+                    key = " ".join(words[:2])
                     groups.setdefault(key, []).append(r)
                 pf = []
                 for key, rs in groups.items():
                     cands = [{"value": x["value"], "source_label": (x["source_title"] or x["source_url"])[:90], "source_id": x["source_url"],
                               "revision": x["period"], "effective": x["period"], "status": "PUBLIC", "recommended": False} for x in rs]
-                    nums = {m.group(0) for x in rs for m in [re.search(r"\d+(?:\.\d+)?", x["value"])] if m}
+                    nums = {round(float(m.group(0)), 3) for x in rs for m in [re.search(r"\d+(?:\.\d+)?", x["value"].replace(",", ""))] if m}
                     r0 = rs[0]
                     conflicting = len(rs) > 1 and len(nums) > 1 and not key.startswith(("news", "financials", "timeline", "crude throughput", "department"))
                     pf.append({"slot": "MRPL public", "attribute": r0["label"],
