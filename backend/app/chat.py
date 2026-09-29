@@ -83,7 +83,7 @@ async def run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | No
     if gd.allowed and cat in ("process_chemistry", "hazmat_handling", "formulation_confidential"):
         decision = "review" if route["urgency"] >= 0.8 else "allow"
     guard = {"category": cat, "decision": decision, "rule_ids": gd.matched, "reason": gd.reason,
-             "model": "yukti-domain (Heretic) + CG" if cat in ("process_chemistry", "hazmat_handling", "formulation_confidential") else "base"}
+             "model": "base model + Company Guardrails (Heretic domain model: planned)" if cat in ("process_chemistry", "hazmat_handling", "formulation_confidential") else "base"}
     meta["guard"] = guard
     yield _sse("guard", guard)
     audit.write(ctx.actor, "chat.guard", f"chat:{chat_id}", {"category": cat, "decision": decision, "rules": gd.matched})
