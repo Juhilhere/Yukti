@@ -1,0 +1,7 @@
+data/store/
+models/
+**/node_modules/
+web/dist/
+backend/.venv/
+__pycache__/
+*.pyc

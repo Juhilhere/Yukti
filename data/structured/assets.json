@@ -1,0 +1,1747 @@
+[
+  {
+    "tag": "A2",
+    "name": "Crude charge booster pump A2",
+    "unit": "CDU-1",
+    "class": "pump",
+    "vendor": "Kirlo Pumps Ltd",
+    "model": "KPL-OH2-150x315",
+    "serial": "KI200588778",
+    "location": "CDU-1 pump house, bay 10",
+    "owner_department": "Mechanical",
+    "criticality": "A",
+    "status": "IN_SERVICE",
+    "specs": {
+      "aliases": [
+        "A2",
+        "01-A2A",
+        "Pump A2"
+      ],
+      "rated_flow_m3h": 180,
+      "rated_head_m": 95,
+      "npshr_m": 3.2,
+      "seal": "API 682 Plan 11",
+      "driver": "M-A2",
+      "standby": "A2B",
+      "suction_valve": "XV-2041",
+      "discharge_valve": "XV-2043"
+    },
+    "items": [
+      {
+        "type": "warranty",
+        "ref_no": "WAR-CDU1-1001",
+        "issued_on": "2025-12-08",
+        "expires_on": "2028-12-07"
+      },
+      {
+        "type": "AMC",
+        "ref_no": "AMC-CDU1-1002",
+        "issued_on": "2027-01-17",
+        "expires_on": "2028-01-17"
+      },
+      {
+        "type": "inspection",
+        "ref_no": "INS-CDU1-1003",
+        "issued_on": "2027-06-22",
+        "expires_on": "2028-06-21"
+      }
+    ]
+  },
+  {
+    "tag": "A2B",
+    "name": "Crude charge booster pump A2B (standby)",
+    "unit": "CDU-1",
+    "class": "pump",
+    "vendor": "Kirlo Pumps Ltd",
+    "model": "KPL-OH2-150x315",
+    "serial": "KI201241448",
+    "location": "CDU-1 pump house, bay 1",
+    "owner_department": "Mechanical",
+    "criticality": "C",
+    "status": "IN_SERVICE",
+    "specs": {
+      "aliases": [
+        "A2B",
+        "01-A2B",
+        "Pump A2B"
+      ],
+      "rated_flow_m3h": 180,
+      "rated_head_m": 95,
+      "driver": "M-A2B",
+      "duty": "standby for A2"
+    },
+    "items": [
+      {
+        "type": "warranty",
+        "ref_no": "WAR-CDU1-1004",
+        "issued_on": "2025-12-08",
+        "expires_on": "2028-12-07"
+      },
+      {
+        "type": "AMC",
+        "ref_no": "AMC-CDU1-1005",
+        "issued_on": "2026-02-03",
+        "expires_on": "2027-02-03"
+      },
+      {
+        "type": "inspection",
+        "ref_no": "INS-CDU1-1006",
+        "issued_on": "2026-03-06",
+        "expires_on": "2027-03-06"
+      }
+    ]
+  },
+  {
+    "tag": "M-A2",
+    "name": "Drive motor for pump A2",
+    "unit": "CDU-1",
+    "class": "motor",
+    "vendor": "Bharat Motors",
+    "model": "BM-TEFC-225M-2",
+    "serial": "BH201211505",
+    "location": "CDU-1 pump house, bay 11",
+    "owner_department": "Electrical",
+    "criticality": "A",
+    "status": "IN_SERVICE",
+    "specs": {
+      "rated_kw": 55,
+      "voltage_v": 415,
+      "fla_a": 78,
+      "ip": "IP55",
+      "poles": 2,
+      "feeder": "MCC-2-F07",
+      "note": "Asset master value; datasheet DS-CDU-A2 rev1 states 45 kW"
+    },
+    "items": [
+      {
+        "type": "inspection",
+        "ref_no": "INS-CDU1-1007",
+        "issued_on": "2027-03-30",
+        "expires_on": "2028-03-29"
+      },
+      {
+        "type": "warranty",
+        "ref_no": "WAR-CDU1-1008",
+        "issued_on": "2024-04-17",
+        "expires_on": "2027-04-17"
+      }
+    ]
+  },
+  {
+    "tag": "M-A2B",
+    "name": "Drive motor for pump A2B",
+    "unit": "CDU-1",
+    "class": "motor",
+    "vendor": "Bharat Motors",
+    "model": "BM-TEFC-225M-2",
+    "serial": "BH200959328",
+    "location": "CDU-1 pump house, bay 12",
+    "owner_department": "Electrical",
+    "criticality": "B",
+    "status": "IN_SERVICE",
+    "specs": {
+      "rated_kw": 45,
+      "voltage_v": 415,
+      "fla_a": 78,
+      "ip": "IP55",
+      "feeder": null
+    },
+    "items": [
+      {
+        "type": "inspection",
+        "ref_no": "INS-CDU1-1009",
+        "issued_on": "2027-04-22",
+        "expires_on": "2028-04-21"
+      }
+    ]
+  },
+  {
+    "tag": "P-101",
+    "name": "Crude charge pump",
+    "unit": "CDU-1",
+    "class": "pump",
+    "vendor": "Kaveri Pumps Pvt Ltd",
+    "model": "KAV-448B",
+    "serial": "KA201548288",
+    "location": "CDU-1 pump house, bay 5",
+    "owner_department": "Mechanical",
+    "criticality": "C",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "warranty",
+        "ref_no": "WAR-CDU1-1010",
+        "issued_on": "2025-02-11",
+        "expires_on": "2028-02-11"
+      },
+      {
+        "type": "AMC",
+        "ref_no": "AMC-CDU1-1011",
+        "issued_on": "2025-10-25",
+        "expires_on": "2026-10-25"
+      },
+      {
+        "type": "inspection",
+        "ref_no": "INS-CDU1-1012",
+        "issued_on": "2026-04-06",
+        "expires_on": "2027-04-06"
+      }
+    ]
+  },
+  {
+    "tag": "P-102",
+    "name": "Atmospheric residue pump",
+    "unit": "CDU-1",
+    "class": "pump",
+    "vendor": "Kaveri Pumps Pvt Ltd",
+    "model": "KAV-820E",
+    "serial": "KA202058345",
+    "location": "CDU-1 pump house, bay 6",
+    "owner_department": "Mechanical",
+    "criticality": "A",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "warranty",
+        "ref_no": "WAR-CDU1-1013",
+        "issued_on": "2025-02-11",
+        "expires_on": "2028-02-11"
+      },
+      {
+        "type": "AMC",
+        "ref_no": "AMC-CDU1-1014",
+        "issued_on": "2027-01-19",
+        "expires_on": "2028-01-19"
+      },
+      {
+        "type": "inspection",
+        "ref_no": "INS-CDU1-1015",
+        "issued_on": "2026-02-13",
+        "expires_on": "2027-02-13"
+      }
+    ]
+  },
+  {
+    "tag": "E-101",
+    "name": "Crude preheat exchanger",
+    "unit": "CDU-1",
+    "class": "exchanger",
+    "vendor": "Thermex Fabricators (Vadodara)",
+    "model": "THE-699H",
+    "serial": "TH201176369",
+    "location": "CDU-1 pump house, bay 10",
+    "owner_department": "Mechanical",
+    "criticality": "A",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "inspection",
+        "ref_no": "INS-CDU1-1016",
+        "issued_on": "2027-03-30",
+        "expires_on": "2028-03-29"
+      },
+      {
+        "type": "certificate",
+        "ref_no": "CER-CDU1-1017",
+        "issued_on": "2025-12-25",
+        "expires_on": "2027-12-25"
+      }
+    ]
+  },
+  {
+    "tag": "E-102",
+    "name": "Kerosene / crude exchanger",
+    "unit": "CDU-1",
+    "class": "exchanger",
+    "vendor": "Thermex Fabricators (Vadodara)",
+    "model": "THE-964G",
+    "serial": "TH201377233",
+    "location": "CDU-1 pump house, bay 9",
+    "owner_department": "Mechanical",
+    "criticality": "C",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "inspection",
+        "ref_no": "INS-CDU1-1018",
+        "issued_on": "2025-12-08",
+        "expires_on": "2026-12-08"
+      },
+      {
+        "type": "certificate",
+        "ref_no": "CER-CDU1-1019",
+        "issued_on": "2026-06-25",
+        "expires_on": "2028-06-24"
+      }
+    ]
+  },
+  {
+    "tag": "E-310",
+    "name": "Crude / diesel pumparound exchanger",
+    "unit": "CDU-1",
+    "class": "exchanger",
+    "vendor": "Godavari Heat Transfer",
+    "model": "GOD-884C",
+    "serial": "GO202078579",
+    "location": "CDU-1 pump house, bay 11",
+    "owner_department": "Mechanical",
+    "criticality": "A",
+    "status": "IN_SERVICE",
+    "specs": {
+      "shell_min_thk_mm": 6.5,
+      "shell_nominal_thk_mm": 10.0
+    },
+    "items": [
+      {
+        "type": "inspection",
+        "ref_no": "INS-CDU1-1020",
+        "issued_on": "2025-10-20",
+        "expires_on": "2026-10-20"
+      },
+      {
+        "type": "certificate",
+        "ref_no": "CER-CDU1-1021",
+        "issued_on": "2025-02-26",
+        "expires_on": "2027-02-26"
+      }
+    ]
+  },
+  {
+    "tag": "V-101",
+    "name": "Desalter",
+    "unit": "CDU-1",
+    "class": "vessel",
+    "vendor": "Coromandel Process Equipment",
+    "model": "COR-581C",
+    "serial": "CO201340005",
+    "location": "CDU-1 pump house, bay 2",
+    "owner_department": "Mechanical",
+    "criticality": "A",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "certificate",
+        "ref_no": "CER-CDU1-1022",
+        "issued_on": "2024-10-22",
+        "expires_on": "2026-10-22"
+      },
+      {
+        "type": "inspection",
+        "ref_no": "INS-CDU1-1023",
+        "issued_on": "2027-08-16",
+        "expires_on": "2028-08-15"
+      }
+    ]
+  },
+  {
+    "tag": "V-102",
+    "name": "Overhead reflux drum",
+    "unit": "CDU-1",
+    "class": "vessel",
+    "vendor": "Coromandel Process Equipment",
+    "model": "COR-790H",
+    "serial": "CO200683373",
+    "location": "CDU-1 pump house, bay 7",
+    "owner_department": "Mechanical",
+    "criticality": "C",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "certificate",
+        "ref_no": "CER-CDU1-1024",
+        "issued_on": "2025-09-24",
+        "expires_on": "2027-09-24"
+      },
+      {
+        "type": "inspection",
+        "ref_no": "INS-CDU1-1025",
+        "issued_on": "2027-05-28",
+        "expires_on": "2028-05-27"
+      }
+    ]
+  },
+  {
+    "tag": "PSV-118",
+    "name": "PSV on A2 discharge / E-101 inlet",
+    "unit": "CDU-1",
+    "class": "psv",
+    "vendor": "Nilgiri Safety Valves",
+    "model": "NIL-924G",
+    "serial": "NI201136546",
+    "location": "CDU-1 pump house, bay 5",
+    "owner_department": "Instrumentation",
+    "criticality": "A",
+    "status": "IN_SERVICE",
+    "specs": {
+      "set_pressure_barg": 18.5,
+      "size": "1.5D2"
+    },
+    "items": [
+      {
+        "type": "calibration",
+        "ref_no": "CAL-CDU1-1026",
+        "issued_on": "2025-10-04",
+        "expires_on": "2026-10-04"
+      },
+      {
+        "type": "certificate",
+        "ref_no": "CER-CDU1-1027",
+        "issued_on": "2025-08-15",
+        "expires_on": "2027-08-15"
+      }
+    ]
+  },
+  {
+    "tag": "PSV-119",
+    "name": "PSV on overhead reflux drum V-102",
+    "unit": "CDU-1",
+    "class": "psv",
+    "vendor": "Deccan Valves",
+    "model": "DEC-133C",
+    "serial": "DE201278536",
+    "location": "CDU-1 pump house, bay 8",
+    "owner_department": "Instrumentation",
+    "criticality": "C",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "calibration",
+        "ref_no": "CAL-CDU1-1028",
+        "issued_on": "2026-11-16",
+        "expires_on": "2027-11-16"
+      },
+      {
+        "type": "certificate",
+        "ref_no": "CER-CDU1-1029",
+        "issued_on": "2025-06-05",
+        "expires_on": "2027-06-05"
+      }
+    ]
+  },
+  {
+    "tag": "XV-2041",
+    "name": "A2 suction isolation valve",
+    "unit": "CDU-1",
+    "class": "valve",
+    "vendor": "Malabar Controls",
+    "model": "MAL-809H",
+    "serial": "MA201475163",
+    "location": "CDU-1 pump house, bay 7",
+    "owner_department": "Instrumentation",
+    "criticality": "C",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "calibration",
+        "ref_no": "CAL-CDU1-1030",
+        "issued_on": "2027-06-07",
+        "expires_on": "2028-06-06"
+      }
+    ]
+  },
+  {
+    "tag": "XV-2042",
+    "name": "A2 discharge isolation valve (old, replaced 2025)",
+    "unit": "CDU-1",
+    "class": "valve",
+    "vendor": "Deccan Valves",
+    "model": "DEC-951E",
+    "serial": "DE201222894",
+    "location": "CDU-1 pump house, bay 8",
+    "owner_department": "Instrumentation",
+    "criticality": "B",
+    "status": "DECOMMISSIONED",
+    "specs": {},
+    "items": [
+      {
+        "type": "calibration",
+        "ref_no": "CAL-CDU1-1031",
+        "issued_on": "2027-04-24",
+        "expires_on": "2028-04-23"
+      }
+    ]
+  },
+  {
+    "tag": "XV-2043",
+    "name": "A2 discharge isolation valve",
+    "unit": "CDU-1",
+    "class": "valve",
+    "vendor": "Malabar Controls",
+    "model": "MAL-563C",
+    "serial": "MA202472802",
+    "location": "CDU-1 pump house, bay 2",
+    "owner_department": "Instrumentation",
+    "criticality": "C",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "calibration",
+        "ref_no": "CAL-CDU1-1032",
+        "issued_on": "2026-08-12",
+        "expires_on": "2027-08-12"
+      }
+    ]
+  },
+  {
+    "tag": "MCC-2",
+    "name": "415 V MCC-2 (CDU-1 substation)",
+    "unit": "CDU-1",
+    "class": "mcc",
+    "vendor": "Narmada Electricals",
+    "model": "NAR-479B",
+    "serial": "NA202163911",
+    "location": "CDU-1 pump house, bay 3",
+    "owner_department": "Electrical",
+    "criticality": "B",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "inspection",
+        "ref_no": "INS-CDU1-1033",
+        "issued_on": "2027-02-16",
+        "expires_on": "2028-02-16"
+      }
+    ]
+  },
+  {
+    "tag": "FE-221",
+    "name": "Fire extinguisher (DCP 9 kg) FE-221",
+    "unit": "CDU-1",
+    "class": "extinguisher",
+    "vendor": "Agnishaman Safety Pvt Ltd",
+    "model": "AGN-194A",
+    "serial": "AG201681642",
+    "location": "CDU-1 pump house, bay 2",
+    "owner_department": "HSE",
+    "criticality": "C",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "inspection",
+        "ref_no": "INS-CDU1-1034",
+        "issued_on": "2025-10-01",
+        "expires_on": "2026-10-01"
+      },
+      {
+        "type": "certificate",
+        "ref_no": "CER-CDU1-1035",
+        "issued_on": "2026-07-30",
+        "expires_on": "2028-07-29"
+      }
+    ]
+  },
+  {
+    "tag": "FE-222",
+    "name": "Fire extinguisher (DCP 9 kg) FE-222",
+    "unit": "CDU-1",
+    "class": "extinguisher",
+    "vendor": "Agnishaman Safety Pvt Ltd",
+    "model": "AGN-353B",
+    "serial": "AG199981624",
+    "location": "CDU-1 pump house, bay 5",
+    "owner_department": "HSE",
+    "criticality": "C",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "inspection",
+        "ref_no": "INS-CDU1-1036",
+        "issued_on": "2027-08-25",
+        "expires_on": "2028-08-24"
+      },
+      {
+        "type": "certificate",
+        "ref_no": "CER-CDU1-1037",
+        "issued_on": "2025-11-13",
+        "expires_on": "2027-11-13"
+      }
+    ]
+  },
+  {
+    "tag": "P-201",
+    "name": "Vacuum residue pump",
+    "unit": "VDU-1",
+    "class": "pump",
+    "vendor": "Kirlo Pumps Ltd",
+    "model": "KIR-105F",
+    "serial": "KI201674485",
+    "location": "VDU-1 structure, bay 12",
+    "owner_department": "Mechanical",
+    "criticality": "C",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "AMC",
+        "ref_no": "AMC-VDU1-1038",
+        "issued_on": "2027-05-25",
+        "expires_on": "2028-05-24"
+      },
+      {
+        "type": "inspection",
+        "ref_no": "INS-VDU1-1039",
+        "issued_on": "2026-06-29",
+        "expires_on": "2027-06-29"
+      }
+    ]
+  },
+  {
+    "tag": "P-202",
+    "name": "LVGO pump",
+    "unit": "VDU-1",
+    "class": "pump",
+    "vendor": "Sahyadri Flow Systems",
+    "model": "SAH-702C",
+    "serial": "SA202076154",
+    "location": "VDU-1 structure, bay 5",
+    "owner_department": "Mechanical",
+    "criticality": "C",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "AMC",
+        "ref_no": "AMC-VDU1-1040",
+        "issued_on": "2027-01-14",
+        "expires_on": "2028-01-14"
+      },
+      {
+        "type": "inspection",
+        "ref_no": "INS-VDU1-1041",
+        "issued_on": "2026-04-25",
+        "expires_on": "2027-04-25"
+      }
+    ]
+  },
+  {
+    "tag": "M-P201",
+    "name": "Drive motor for P-201",
+    "unit": "VDU-1",
+    "class": "motor",
+    "vendor": "Bharat Motors",
+    "model": "BHA-902E",
+    "serial": "BH201161171",
+    "location": "VDU-1 structure, bay 3",
+    "owner_department": "Electrical",
+    "criticality": "C",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "inspection",
+        "ref_no": "INS-VDU1-1042",
+        "issued_on": "2027-04-29",
+        "expires_on": "2028-04-28"
+      }
+    ]
+  },
+  {
+    "tag": "E-201",
+    "name": "VGO / crude exchanger",
+    "unit": "VDU-1",
+    "class": "exchanger",
+    "vendor": "Thermex Fabricators (Vadodara)",
+    "model": "THE-114B",
+    "serial": "TH200016733",
+    "location": "VDU-1 structure, bay 6",
+    "owner_department": "Mechanical",
+    "criticality": "C",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "inspection",
+        "ref_no": "INS-VDU1-1043",
+        "issued_on": "2026-11-09",
+        "expires_on": "2027-11-09"
+      },
+      {
+        "type": "certificate",
+        "ref_no": "CER-VDU1-1044",
+        "issued_on": "2024-12-09",
+        "expires_on": "2026-12-09"
+      }
+    ]
+  },
+  {
+    "tag": "E-202",
+    "name": "Vacuum residue cooler",
+    "unit": "VDU-1",
+    "class": "exchanger",
+    "vendor": "Godavari Heat Transfer",
+    "model": "GOD-622H",
+    "serial": "GO201949802",
+    "location": "VDU-1 structure, bay 8",
+    "owner_department": "Mechanical",
+    "criticality": "B",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "inspection",
+        "ref_no": "INS-VDU1-1045",
+        "issued_on": "2026-10-12",
+        "expires_on": "2027-10-12"
+      },
+      {
+        "type": "certificate",
+        "ref_no": "CER-VDU1-1046",
+        "issued_on": "2025-03-17",
+        "expires_on": "2027-03-17"
+      }
+    ]
+  },
+  {
+    "tag": "V-201",
+    "name": "Vacuum column overhead drum",
+    "unit": "VDU-1",
+    "class": "vessel",
+    "vendor": "Coromandel Process Equipment",
+    "model": "COR-577C",
+    "serial": "CO201678106",
+    "location": "VDU-1 structure, bay 4",
+    "owner_department": "Mechanical",
+    "criticality": "B",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "certificate",
+        "ref_no": "CER-VDU1-1047",
+        "issued_on": "2026-01-31",
+        "expires_on": "2028-01-31"
+      },
+      {
+        "type": "inspection",
+        "ref_no": "INS-VDU1-1048",
+        "issued_on": "2027-08-13",
+        "expires_on": "2028-08-12"
+      }
+    ]
+  },
+  {
+    "tag": "PSV-205",
+    "name": "Pressure safety valve PSV-205",
+    "unit": "VDU-1",
+    "class": "psv",
+    "vendor": "Nilgiri Safety Valves",
+    "model": "NIL-569D",
+    "serial": "NI201562318",
+    "location": "VDU-1 structure, bay 1",
+    "owner_department": "Instrumentation",
+    "criticality": "A",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "calibration",
+        "ref_no": "CAL-VDU1-1049",
+        "issued_on": "2025-10-14",
+        "expires_on": "2026-10-14"
+      },
+      {
+        "type": "certificate",
+        "ref_no": "CER-VDU1-1050",
+        "issued_on": "2025-06-01",
+        "expires_on": "2027-06-01"
+      }
+    ]
+  },
+  {
+    "tag": "FE-223",
+    "name": "Fire extinguisher (DCP 9 kg) FE-223",
+    "unit": "VDU-1",
+    "class": "extinguisher",
+    "vendor": "Agnishaman Safety Pvt Ltd",
+    "model": "AGN-146A",
+    "serial": "AG202293997",
+    "location": "VDU-1 structure, bay 4",
+    "owner_department": "HSE",
+    "criticality": "C",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "inspection",
+        "ref_no": "INS-VDU1-1051",
+        "issued_on": "2027-03-23",
+        "expires_on": "2028-03-22"
+      },
+      {
+        "type": "certificate",
+        "ref_no": "CER-VDU1-1052",
+        "issued_on": "2024-12-03",
+        "expires_on": "2026-12-03"
+      }
+    ]
+  },
+  {
+    "tag": "P-301",
+    "name": "HP feed pump",
+    "unit": "HCU",
+    "class": "pump",
+    "vendor": "Kirlo Pumps Ltd",
+    "model": "KIR-761D",
+    "serial": "KI200231022",
+    "location": "HCU plot, bay 11",
+    "owner_department": "Mechanical",
+    "criticality": "C",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "AMC",
+        "ref_no": "AMC-HCU-1053",
+        "issued_on": "2026-12-17",
+        "expires_on": "2027-12-17"
+      },
+      {
+        "type": "inspection",
+        "ref_no": "INS-HCU-1054",
+        "issued_on": "2026-08-19",
+        "expires_on": "2027-08-19"
+      }
+    ]
+  },
+  {
+    "tag": "P-302",
+    "name": "Wash water pump",
+    "unit": "HCU",
+    "class": "pump",
+    "vendor": "Sahyadri Flow Systems",
+    "model": "SAH-645G",
+    "serial": "SA201049965",
+    "location": "HCU plot, bay 3",
+    "owner_department": "Mechanical",
+    "criticality": "A",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "warranty",
+        "ref_no": "WAR-HCU-1055",
+        "issued_on": "2024-04-17",
+        "expires_on": "2027-04-17"
+      },
+      {
+        "type": "AMC",
+        "ref_no": "AMC-HCU-1056",
+        "issued_on": "2026-05-10",
+        "expires_on": "2027-05-10"
+      },
+      {
+        "type": "inspection",
+        "ref_no": "INS-HCU-1057",
+        "issued_on": "2026-08-09",
+        "expires_on": "2027-08-09"
+      }
+    ]
+  },
+  {
+    "tag": "K-301",
+    "name": "Recycle gas compressor",
+    "unit": "HCU",
+    "class": "compressor",
+    "vendor": "Aravali Compressors Ltd",
+    "model": "ARA-609G",
+    "serial": "AR200771302",
+    "location": "HCU plot, bay 3",
+    "owner_department": "Mechanical",
+    "criticality": "A",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "AMC",
+        "ref_no": "AMC-HCU-1058",
+        "issued_on": "2026-10-12",
+        "expires_on": "2027-10-12"
+      },
+      {
+        "type": "inspection",
+        "ref_no": "INS-HCU-1059",
+        "issued_on": "2027-04-28",
+        "expires_on": "2028-04-27"
+      }
+    ]
+  },
+  {
+    "tag": "E-301",
+    "name": "Feed / effluent exchanger",
+    "unit": "HCU",
+    "class": "exchanger",
+    "vendor": "Thermex Fabricators (Vadodara)",
+    "model": "THE-555B",
+    "serial": "TH202378773",
+    "location": "HCU plot, bay 5",
+    "owner_department": "Mechanical",
+    "criticality": "C",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "inspection",
+        "ref_no": "INS-HCU-1060",
+        "issued_on": "2026-02-17",
+        "expires_on": "2027-02-17"
+      },
+      {
+        "type": "certificate",
+        "ref_no": "CER-HCU-1061",
+        "issued_on": "2025-06-20",
+        "expires_on": "2027-06-20"
+      }
+    ]
+  },
+  {
+    "tag": "V-301",
+    "name": "HP separator",
+    "unit": "HCU",
+    "class": "vessel",
+    "vendor": "Thermex Fabricators (Vadodara)",
+    "model": "THE-105B",
+    "serial": "TH201294630",
+    "location": "HCU plot, bay 6",
+    "owner_department": "Mechanical",
+    "criticality": "A",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "certificate",
+        "ref_no": "CER-HCU-1062",
+        "issued_on": "2026-01-04",
+        "expires_on": "2028-01-04"
+      },
+      {
+        "type": "inspection",
+        "ref_no": "INS-HCU-1063",
+        "issued_on": "2027-05-25",
+        "expires_on": "2028-05-24"
+      }
+    ]
+  },
+  {
+    "tag": "V-302",
+    "name": "LP separator",
+    "unit": "HCU",
+    "class": "vessel",
+    "vendor": "Thermex Fabricators (Vadodara)",
+    "model": "THE-127F",
+    "serial": "TH200983662",
+    "location": "HCU plot, bay 11",
+    "owner_department": "Mechanical",
+    "criticality": "B",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "certificate",
+        "ref_no": "CER-HCU-1064",
+        "issued_on": "2026-06-22",
+        "expires_on": "2028-06-21"
+      },
+      {
+        "type": "inspection",
+        "ref_no": "INS-HCU-1065",
+        "issued_on": "2027-05-18",
+        "expires_on": "2028-05-17"
+      }
+    ]
+  },
+  {
+    "tag": "PSV-310",
+    "name": "Pressure safety valve PSV-310",
+    "unit": "HCU",
+    "class": "psv",
+    "vendor": "Deccan Valves",
+    "model": "DEC-212E",
+    "serial": "DE202284454",
+    "location": "HCU plot, bay 12",
+    "owner_department": "Instrumentation",
+    "criticality": "C",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "calibration",
+        "ref_no": "CAL-HCU-1066",
+        "issued_on": "2025-10-27",
+        "expires_on": "2026-10-27"
+      },
+      {
+        "type": "certificate",
+        "ref_no": "CER-HCU-1067",
+        "issued_on": "2025-06-20",
+        "expires_on": "2027-06-20"
+      }
+    ]
+  },
+  {
+    "tag": "FE-224",
+    "name": "Fire extinguisher (DCP 9 kg) FE-224",
+    "unit": "HCU",
+    "class": "extinguisher",
+    "vendor": "Agnishaman Safety Pvt Ltd",
+    "model": "AGN-676E",
+    "serial": "AG200223298",
+    "location": "HCU plot, bay 5",
+    "owner_department": "HSE",
+    "criticality": "C",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "inspection",
+        "ref_no": "INS-HCU-1068",
+        "issued_on": "2025-10-16",
+        "expires_on": "2026-10-16"
+      },
+      {
+        "type": "certificate",
+        "ref_no": "CER-HCU-1069",
+        "issued_on": "2025-02-19",
+        "expires_on": "2027-02-19"
+      }
+    ]
+  },
+  {
+    "tag": "P-401",
+    "name": "Naphtha feed pump",
+    "unit": "NHT-CCR",
+    "class": "pump",
+    "vendor": "Sahyadri Flow Systems",
+    "model": "SAH-275B",
+    "serial": "SA202256694",
+    "location": "NHT-CCR plot, bay 12",
+    "owner_department": "Mechanical",
+    "criticality": "A",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "AMC",
+        "ref_no": "AMC-NHTCCR-1070",
+        "issued_on": "2027-08-20",
+        "expires_on": "2028-08-19"
+      },
+      {
+        "type": "inspection",
+        "ref_no": "INS-NHTCCR-1071",
+        "issued_on": "2026-03-01",
+        "expires_on": "2027-03-01"
+      }
+    ]
+  },
+  {
+    "tag": "K-401",
+    "name": "Net gas compressor",
+    "unit": "NHT-CCR",
+    "class": "compressor",
+    "vendor": "Aravali Compressors Ltd",
+    "model": "ARA-383B",
+    "serial": "AR200751235",
+    "location": "NHT-CCR plot, bay 3",
+    "owner_department": "Mechanical",
+    "criticality": "A",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "AMC",
+        "ref_no": "AMC-NHTCCR-1072",
+        "issued_on": "2025-10-10",
+        "expires_on": "2026-10-10"
+      },
+      {
+        "type": "inspection",
+        "ref_no": "INS-NHTCCR-1073",
+        "issued_on": "2026-08-07",
+        "expires_on": "2027-08-07"
+      }
+    ]
+  },
+  {
+    "tag": "E-401",
+    "name": "Combined feed exchanger",
+    "unit": "NHT-CCR",
+    "class": "exchanger",
+    "vendor": "Thermex Fabricators (Vadodara)",
+    "model": "THE-164A",
+    "serial": "TH202243691",
+    "location": "NHT-CCR plot, bay 7",
+    "owner_department": "Mechanical",
+    "criticality": "C",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "inspection",
+        "ref_no": "INS-NHTCCR-1074",
+        "issued_on": "2025-11-28",
+        "expires_on": "2026-11-28"
+      },
+      {
+        "type": "certificate",
+        "ref_no": "CER-NHTCCR-1075",
+        "issued_on": "2025-01-10",
+        "expires_on": "2027-01-10"
+      }
+    ]
+  },
+  {
+    "tag": "V-401",
+    "name": "Stripper overhead drum",
+    "unit": "NHT-CCR",
+    "class": "vessel",
+    "vendor": "Thermex Fabricators (Vadodara)",
+    "model": "THE-340A",
+    "serial": "TH200122303",
+    "location": "NHT-CCR plot, bay 11",
+    "owner_department": "Mechanical",
+    "criticality": "B",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "certificate",
+        "ref_no": "CER-NHTCCR-1076",
+        "issued_on": "2026-06-10",
+        "expires_on": "2028-06-09"
+      },
+      {
+        "type": "inspection",
+        "ref_no": "INS-NHTCCR-1077",
+        "issued_on": "2027-06-26",
+        "expires_on": "2028-06-25"
+      }
+    ]
+  },
+  {
+    "tag": "PSV-402",
+    "name": "Pressure safety valve PSV-402",
+    "unit": "NHT-CCR",
+    "class": "psv",
+    "vendor": "Nilgiri Safety Valves",
+    "model": "NIL-422H",
+    "serial": "NI201895815",
+    "location": "NHT-CCR plot, bay 12",
+    "owner_department": "Instrumentation",
+    "criticality": "C",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "calibration",
+        "ref_no": "CAL-NHTCCR-1078",
+        "issued_on": "2025-09-20",
+        "expires_on": "2026-09-20"
+      },
+      {
+        "type": "certificate",
+        "ref_no": "CER-NHTCCR-1079",
+        "issued_on": "2026-08-04",
+        "expires_on": "2028-08-03"
+      }
+    ]
+  },
+  {
+    "tag": "FE-225",
+    "name": "Fire extinguisher (DCP 9 kg) FE-225",
+    "unit": "NHT-CCR",
+    "class": "extinguisher",
+    "vendor": "Agnishaman Safety Pvt Ltd",
+    "model": "AGN-513F",
+    "serial": "AG200487864",
+    "location": "NHT-CCR plot, bay 8",
+    "owner_department": "HSE",
+    "criticality": "C",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "inspection",
+        "ref_no": "INS-NHTCCR-1080",
+        "issued_on": "2027-01-23",
+        "expires_on": "2028-01-23"
+      },
+      {
+        "type": "certificate",
+        "ref_no": "CER-NHTCCR-1081",
+        "issued_on": "2025-03-15",
+        "expires_on": "2027-03-15"
+      }
+    ]
+  },
+  {
+    "tag": "P-501",
+    "name": "Lean amine pump",
+    "unit": "SRU",
+    "class": "pump",
+    "vendor": "Kaveri Pumps Pvt Ltd",
+    "model": "KAV-483E",
+    "serial": "KA200756703",
+    "location": "SRU / amine area, bay 1",
+    "owner_department": "Mechanical",
+    "criticality": "C",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "warranty",
+        "ref_no": "WAR-SRU-1082",
+        "issued_on": "2025-02-11",
+        "expires_on": "2028-02-11"
+      },
+      {
+        "type": "AMC",
+        "ref_no": "AMC-SRU-1083",
+        "issued_on": "2025-12-07",
+        "expires_on": "2026-12-07"
+      },
+      {
+        "type": "inspection",
+        "ref_no": "INS-SRU-1084",
+        "issued_on": "2026-08-28",
+        "expires_on": "2027-08-28"
+      }
+    ]
+  },
+  {
+    "tag": "E-501",
+    "name": "Lean / rich amine exchanger",
+    "unit": "SRU",
+    "class": "exchanger",
+    "vendor": "Thermex Fabricators (Vadodara)",
+    "model": "THE-396B",
+    "serial": "TH202264609",
+    "location": "SRU / amine area, bay 6",
+    "owner_department": "Mechanical",
+    "criticality": "B",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "inspection",
+        "ref_no": "INS-SRU-1085",
+        "issued_on": "2027-07-05",
+        "expires_on": "2028-07-04"
+      },
+      {
+        "type": "certificate",
+        "ref_no": "CER-SRU-1086",
+        "issued_on": "2024-12-03",
+        "expires_on": "2026-12-03"
+      }
+    ]
+  },
+  {
+    "tag": "V-501",
+    "name": "Amine regenerator",
+    "unit": "SRU",
+    "class": "vessel",
+    "vendor": "Coromandel Process Equipment",
+    "model": "COR-302A",
+    "serial": "CO200391129",
+    "location": "SRU / amine area, bay 2",
+    "owner_department": "Mechanical",
+    "criticality": "A",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "certificate",
+        "ref_no": "CER-SRU-1087",
+        "issued_on": "2025-03-14",
+        "expires_on": "2027-03-14"
+      },
+      {
+        "type": "inspection",
+        "ref_no": "INS-SRU-1088",
+        "issued_on": "2025-12-21",
+        "expires_on": "2026-12-21"
+      }
+    ]
+  },
+  {
+    "tag": "V-502",
+    "name": "Amine flash drum",
+    "unit": "SRU",
+    "class": "vessel",
+    "vendor": "Thermex Fabricators (Vadodara)",
+    "model": "THE-635F",
+    "serial": "TH201895956",
+    "location": "SRU / amine area, bay 5",
+    "owner_department": "Mechanical",
+    "criticality": "C",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "certificate",
+        "ref_no": "CER-SRU-1089",
+        "issued_on": "2024-12-12",
+        "expires_on": "2026-12-12"
+      },
+      {
+        "type": "inspection",
+        "ref_no": "INS-SRU-1090",
+        "issued_on": "2027-01-21",
+        "expires_on": "2028-01-21"
+      }
+    ]
+  },
+  {
+    "tag": "PSV-501",
+    "name": "Pressure safety valve PSV-501",
+    "unit": "SRU",
+    "class": "psv",
+    "vendor": "Deccan Valves",
+    "model": "DEC-464G",
+    "serial": "DE201041366",
+    "location": "SRU / amine area, bay 7",
+    "owner_department": "Instrumentation",
+    "criticality": "C",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "calibration",
+        "ref_no": "CAL-SRU-1091",
+        "issued_on": "2026-06-25",
+        "expires_on": "2027-06-25"
+      },
+      {
+        "type": "certificate",
+        "ref_no": "CER-SRU-1092",
+        "issued_on": "2025-03-21",
+        "expires_on": "2027-03-21"
+      }
+    ]
+  },
+  {
+    "tag": "FE-226",
+    "name": "Fire extinguisher (DCP 9 kg) FE-226",
+    "unit": "SRU",
+    "class": "extinguisher",
+    "vendor": "Agnishaman Safety Pvt Ltd",
+    "model": "AGN-655A",
+    "serial": "AG201982731",
+    "location": "SRU / amine area, bay 7",
+    "owner_department": "HSE",
+    "criticality": "C",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "inspection",
+        "ref_no": "INS-SRU-1093",
+        "issued_on": "2025-09-12",
+        "expires_on": "2026-09-12"
+      },
+      {
+        "type": "certificate",
+        "ref_no": "CER-SRU-1094",
+        "issued_on": "2025-08-01",
+        "expires_on": "2027-08-01"
+      }
+    ]
+  },
+  {
+    "tag": "B-01",
+    "name": "Steam boiler B-01 (60 TPH)",
+    "unit": "UTIL",
+    "class": "boiler",
+    "vendor": "Ganga Boilers & Engineering",
+    "model": "GAN-333A",
+    "serial": "GA200680929",
+    "location": "Utilities block, bay 8",
+    "owner_department": "Utilities",
+    "criticality": "A",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "license",
+        "ref_no": "LIC-UTIL-1095",
+        "issued_on": "2027-01-14",
+        "expires_on": "2028-01-14"
+      },
+      {
+        "type": "inspection",
+        "ref_no": "INS-UTIL-1096",
+        "issued_on": "2026-08-10",
+        "expires_on": "2027-08-10"
+      },
+      {
+        "type": "certificate",
+        "ref_no": "CER-UTIL-1097",
+        "issued_on": "2025-10-01",
+        "expires_on": "2027-10-01"
+      }
+    ]
+  },
+  {
+    "tag": "B-02",
+    "name": "Steam boiler B-02 (60 TPH, FO/FG fired)",
+    "unit": "UTIL",
+    "class": "boiler",
+    "vendor": "Ganga Boilers & Engineering",
+    "model": "GAN-741B",
+    "serial": "GA202433501",
+    "location": "Utilities block, bay 9",
+    "owner_department": "Utilities",
+    "criticality": "A",
+    "status": "IN_SERVICE",
+    "specs": {
+      "capacity_tph": 60,
+      "fuel": "Fuel oil / fuel gas",
+      "design_efficiency_pct": 86
+    },
+    "items": [
+      {
+        "type": "license",
+        "ref_no": "LIC-UTIL-1098",
+        "issued_on": "2025-10-05",
+        "expires_on": "2026-10-05"
+      },
+      {
+        "type": "inspection",
+        "ref_no": "INS-UTIL-1099",
+        "issued_on": "2025-12-21",
+        "expires_on": "2026-12-21"
+      },
+      {
+        "type": "certificate",
+        "ref_no": "CER-UTIL-1100",
+        "issued_on": "2026-04-23",
+        "expires_on": "2028-04-22"
+      }
+    ]
+  },
+  {
+    "tag": "TR-03",
+    "name": "6.6/0.433 kV 1600 kVA transformer feeding MCC-2",
+    "unit": "UTIL",
+    "class": "transformer",
+    "vendor": "Vindhya Transformers Ltd",
+    "model": "VIN-448F",
+    "serial": "VI199996228",
+    "location": "Utilities block, bay 1",
+    "owner_department": "Electrical",
+    "criticality": "A",
+    "status": "IN_SERVICE",
+    "specs": {
+      "rating_kva": 1600,
+      "ratio": "6.6/0.433 kV"
+    },
+    "items": [
+      {
+        "type": "certificate",
+        "ref_no": "CER-UTIL-1101",
+        "issued_on": "2024-10-03",
+        "expires_on": "2026-10-03"
+      },
+      {
+        "type": "inspection",
+        "ref_no": "INS-UTIL-1102",
+        "issued_on": "2027-08-17",
+        "expires_on": "2028-08-16"
+      },
+      {
+        "type": "AMC",
+        "ref_no": "AMC-UTIL-1103",
+        "issued_on": "2026-07-19",
+        "expires_on": "2027-07-19"
+      }
+    ]
+  },
+  {
+    "tag": "TR-04",
+    "name": "6.6/0.433 kV 1600 kVA transformer",
+    "unit": "UTIL",
+    "class": "transformer",
+    "vendor": "Vindhya Transformers Ltd",
+    "model": "VIN-159D",
+    "serial": "VI200262307",
+    "location": "Utilities block, bay 12",
+    "owner_department": "Electrical",
+    "criticality": "C",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "certificate",
+        "ref_no": "CER-UTIL-1104",
+        "issued_on": "2024-10-28",
+        "expires_on": "2026-10-28"
+      },
+      {
+        "type": "inspection",
+        "ref_no": "INS-UTIL-1105",
+        "issued_on": "2026-11-16",
+        "expires_on": "2027-11-16"
+      },
+      {
+        "type": "AMC",
+        "ref_no": "AMC-UTIL-1106",
+        "issued_on": "2026-07-09",
+        "expires_on": "2027-07-09"
+      }
+    ]
+  },
+  {
+    "tag": "TR-05",
+    "name": "33/6.6 kV 10 MVA transformer",
+    "unit": "UTIL",
+    "class": "transformer",
+    "vendor": "Vindhya Transformers Ltd",
+    "model": "VIN-451D",
+    "serial": "VI200970197",
+    "location": "Utilities block, bay 11",
+    "owner_department": "Electrical",
+    "criticality": "B",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "certificate",
+        "ref_no": "CER-UTIL-1107",
+        "issued_on": "2026-02-24",
+        "expires_on": "2028-02-24"
+      },
+      {
+        "type": "inspection",
+        "ref_no": "INS-UTIL-1108",
+        "issued_on": "2027-05-28",
+        "expires_on": "2028-05-27"
+      },
+      {
+        "type": "AMC",
+        "ref_no": "AMC-UTIL-1109",
+        "issued_on": "2027-03-13",
+        "expires_on": "2028-03-12"
+      }
+    ]
+  },
+  {
+    "tag": "K-601",
+    "name": "Plant / instrument air compressor",
+    "unit": "UTIL",
+    "class": "compressor",
+    "vendor": "Aravali Compressors Ltd",
+    "model": "ARA-292C",
+    "serial": "AR200273551",
+    "location": "Utilities block, bay 1",
+    "owner_department": "Mechanical",
+    "criticality": "C",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "AMC",
+        "ref_no": "AMC-UTIL-1110",
+        "issued_on": "2026-11-10",
+        "expires_on": "2027-11-10"
+      },
+      {
+        "type": "inspection",
+        "ref_no": "INS-UTIL-1111",
+        "issued_on": "2027-05-02",
+        "expires_on": "2028-05-01"
+      }
+    ]
+  },
+  {
+    "tag": "P-601",
+    "name": "Cooling water pump",
+    "unit": "UTIL",
+    "class": "pump",
+    "vendor": "Kaveri Pumps Pvt Ltd",
+    "model": "KAV-518A",
+    "serial": "KA200049195",
+    "location": "Utilities block, bay 6",
+    "owner_department": "Mechanical",
+    "criticality": "B",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "warranty",
+        "ref_no": "WAR-UTIL-1112",
+        "issued_on": "2025-12-08",
+        "expires_on": "2028-12-07"
+      },
+      {
+        "type": "AMC",
+        "ref_no": "AMC-UTIL-1113",
+        "issued_on": "2026-08-11",
+        "expires_on": "2027-08-11"
+      },
+      {
+        "type": "inspection",
+        "ref_no": "INS-UTIL-1114",
+        "issued_on": "2026-04-03",
+        "expires_on": "2027-04-03"
+      }
+    ]
+  },
+  {
+    "tag": "P-602",
+    "name": "Boiler feed water pump",
+    "unit": "UTIL",
+    "class": "pump",
+    "vendor": "Kaveri Pumps Pvt Ltd",
+    "model": "KAV-857B",
+    "serial": "KA201538458",
+    "location": "Utilities block, bay 12",
+    "owner_department": "Mechanical",
+    "criticality": "A",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "warranty",
+        "ref_no": "WAR-UTIL-1115",
+        "issued_on": "2025-12-08",
+        "expires_on": "2028-12-07"
+      },
+      {
+        "type": "AMC",
+        "ref_no": "AMC-UTIL-1116",
+        "issued_on": "2026-09-23",
+        "expires_on": "2027-09-23"
+      },
+      {
+        "type": "inspection",
+        "ref_no": "INS-UTIL-1117",
+        "issued_on": "2027-06-22",
+        "expires_on": "2028-06-21"
+      }
+    ]
+  },
+  {
+    "tag": "E-601",
+    "name": "BFW preheater",
+    "unit": "UTIL",
+    "class": "exchanger",
+    "vendor": "Godavari Heat Transfer",
+    "model": "GOD-502G",
+    "serial": "GO201494416",
+    "location": "Utilities block, bay 11",
+    "owner_department": "Mechanical",
+    "criticality": "C",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "inspection",
+        "ref_no": "INS-UTIL-1118",
+        "issued_on": "2026-04-23",
+        "expires_on": "2027-04-23"
+      },
+      {
+        "type": "certificate",
+        "ref_no": "CER-UTIL-1119",
+        "issued_on": "2026-04-17",
+        "expires_on": "2028-04-16"
+      }
+    ]
+  },
+  {
+    "tag": "V-601",
+    "name": "Deaerator",
+    "unit": "UTIL",
+    "class": "vessel",
+    "vendor": "Thermex Fabricators (Vadodara)",
+    "model": "THE-187C",
+    "serial": "TH200881760",
+    "location": "Utilities block, bay 5",
+    "owner_department": "Mechanical",
+    "criticality": "C",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "certificate",
+        "ref_no": "CER-UTIL-1120",
+        "issued_on": "2025-09-26",
+        "expires_on": "2027-09-26"
+      },
+      {
+        "type": "inspection",
+        "ref_no": "INS-UTIL-1121",
+        "issued_on": "2025-12-25",
+        "expires_on": "2026-12-25"
+      }
+    ]
+  },
+  {
+    "tag": "PSV-601",
+    "name": "Pressure safety valve PSV-601",
+    "unit": "UTIL",
+    "class": "psv",
+    "vendor": "Deccan Valves",
+    "model": "DEC-266E",
+    "serial": "DE201547431",
+    "location": "Utilities block, bay 6",
+    "owner_department": "Instrumentation",
+    "criticality": "B",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "calibration",
+        "ref_no": "CAL-UTIL-1122",
+        "issued_on": "2026-03-30",
+        "expires_on": "2027-03-30"
+      },
+      {
+        "type": "certificate",
+        "ref_no": "CER-UTIL-1123",
+        "issued_on": "2025-12-15",
+        "expires_on": "2027-12-15"
+      }
+    ]
+  },
+  {
+    "tag": "FE-227",
+    "name": "Fire extinguisher (DCP 9 kg) FE-227",
+    "unit": "UTIL",
+    "class": "extinguisher",
+    "vendor": "Agnishaman Safety Pvt Ltd",
+    "model": "AGN-864A",
+    "serial": "AG201872916",
+    "location": "Utilities block, bay 7",
+    "owner_department": "HSE",
+    "criticality": "C",
+    "status": "IN_SERVICE",
+    "specs": {},
+    "items": [
+      {
+        "type": "inspection",
+        "ref_no": "INS-UTIL-1124",
+        "issued_on": "2026-11-12",
+        "expires_on": "2027-11-12"
+      },
+      {
+        "type": "certificate",
+        "ref_no": "CER-UTIL-1125",
+        "issued_on": "2026-05-17",
+        "expires_on": "2028-05-16"
+      }
+    ]
+  }
+]

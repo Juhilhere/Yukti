@@ -1,0 +1,302 @@
+[
+  {
+    "name": "Ravi Easwaran",
+    "user_id": "ravi.e",
+    "dept": "Electrical",
+    "role": "Senior Electrician (Shift)",
+    "ext": "4100",
+    "mobile": "+91-9951112968",
+    "on_call": true,
+    "on_call_window": "2026-09-28 20:00 to 2026-09-29 08:00"
+  },
+  {
+    "name": "Deepa Menon",
+    "user_id": "deepa.m",
+    "dept": "Electrical",
+    "role": "Electrical Engineer",
+    "ext": "4107",
+    "mobile": "+91-9286647223",
+    "on_call": true,
+    "on_call_window": "2026-09-28 20:00 to 2026-09-29 08:00"
+  },
+  {
+    "name": "Sanjay Kulkarni",
+    "user_id": "sanjay.k",
+    "dept": "Mechanical",
+    "role": "Maintenance Engineer - Rotating",
+    "ext": "4114",
+    "mobile": "+91-9115927467",
+    "on_call": true,
+    "on_call_window": "2026-09-28 20:00 to 2026-09-29 08:00"
+  },
+  {
+    "name": "Anil Pai",
+    "user_id": "anil.p",
+    "dept": "Mechanical",
+    "role": "Mechanical Technician",
+    "ext": "4121",
+    "mobile": "+91-9666371900",
+    "on_call": false,
+    "on_call_window": null
+  },
+  {
+    "name": "Meera Shetty",
+    "user_id": "meera.s",
+    "dept": "Mechanical",
+    "role": "Vibration Analyst",
+    "ext": "4128",
+    "mobile": "+91-9884626540",
+    "on_call": false,
+    "on_call_window": null
+  },
+  {
+    "name": "Joseph D'Souza",
+    "user_id": "joseph.d",
+    "dept": "Instrumentation",
+    "role": "Instrument Engineer",
+    "ext": "4135",
+    "mobile": "+91-9867771892",
+    "on_call": true,
+    "on_call_window": "2026-09-28 20:00 to 2026-09-29 08:00"
+  },
+  {
+    "name": "Vinay Naik",
+    "user_id": "vinay.n",
+    "dept": "Instrumentation",
+    "role": "Instrument Technician",
+    "ext": "4142",
+    "mobile": "+91-9244015531",
+    "on_call": false,
+    "on_call_window": null
+  },
+  {
+    "name": "Kavya Hegde",
+    "user_id": "kavya.h",
+    "dept": "Operations",
+    "role": "Shift In-charge CDU-1 (Night)",
+    "ext": "4149",
+    "mobile": "+91-9856103954",
+    "on_call": true,
+    "on_call_window": "2026-09-28 20:00 to 2026-09-29 08:00"
+  },
+  {
+    "name": "Prakash Rao",
+    "user_id": "prakash.r",
+    "dept": "Operations",
+    "role": "Panel Operator CDU-1",
+    "ext": "4156",
+    "mobile": "+91-9874106120",
+    "on_call": true,
+    "on_call_window": "2026-09-28 20:00 to 2026-09-29 08:00"
+  },
+  {
+    "name": "Tejas Bhat",
+    "user_id": "tejas.b",
+    "dept": "Operations",
+    "role": "Field Operator CDU-1",
+    "ext": "4163",
+    "mobile": "+91-9432993349",
+    "on_call": false,
+    "on_call_window": null
+  },
+  {
+    "name": "Nisha Kamath",
+    "user_id": "nisha.k",
+    "dept": "HSE",
+    "role": "Safety Officer",
+    "ext": "4170",
+    "mobile": "+91-9265723227",
+    "on_call": true,
+    "on_call_window": "2026-09-28 20:00 to 2026-09-29 08:00"
+  },
+  {
+    "name": "Arjun Nair",
+    "user_id": "arjun.n",
+    "dept": "HSE",
+    "role": "Fire Officer",
+    "ext": "4177",
+    "mobile": "+91-9777895734",
+    "on_call": false,
+    "on_call_window": null
+  },
+  {
+    "name": "Farhan Qureshi",
+    "user_id": "farhan.q",
+    "dept": "Utilities",
+    "role": "Boiler Engineer",
+    "ext": "4184",
+    "mobile": "+91-9266170902",
+    "on_call": true,
+    "on_call_window": "2026-09-28 20:00 to 2026-09-29 08:00"
+  },
+  {
+    "name": "Lakshmi Iyer",
+    "user_id": "lakshmi.i",
+    "dept": "Utilities",
+    "role": "Utilities Manager",
+    "ext": "4191",
+    "mobile": "+91-9129002743",
+    "on_call": false,
+    "on_call_window": null
+  },
+  {
+    "name": "Rajesh Gupta",
+    "user_id": "rajesh.g",
+    "dept": "Management",
+    "role": "Plant Manager",
+    "ext": "4198",
+    "mobile": "+91-9902157167",
+    "on_call": false,
+    "on_call_window": null
+  },
+  {
+    "name": "Sunita Verma",
+    "user_id": "sunita.v",
+    "dept": "Management",
+    "role": "Head - Technical Services",
+    "ext": "4205",
+    "mobile": "+91-9415770648",
+    "on_call": false,
+    "on_call_window": null
+  },
+  {
+    "name": "Harish Reddy",
+    "user_id": "harish.r",
+    "dept": "Finance",
+    "role": "Internal Audit Lead",
+    "ext": "4212",
+    "mobile": "+91-9246067082",
+    "on_call": false,
+    "on_call_window": null
+  },
+  {
+    "name": "Pooja Sharma",
+    "user_id": "pooja.s",
+    "dept": "Finance",
+    "role": "Cost Accountant",
+    "ext": "4219",
+    "mobile": "+91-9533231875",
+    "on_call": false,
+    "on_call_window": null
+  },
+  {
+    "name": "Mahesh Patil",
+    "user_id": "mahesh.p",
+    "dept": "Electrical",
+    "role": "Head - Electrical",
+    "ext": "4226",
+    "mobile": "+91-9275167902",
+    "on_call": false,
+    "on_call_window": null
+  },
+  {
+    "name": "Ganesh Poojary",
+    "user_id": "ganesh.p",
+    "dept": "Electrical",
+    "role": "Electrician",
+    "ext": "4233",
+    "mobile": "+91-9660022033",
+    "on_call": false,
+    "on_call_window": null
+  },
+  {
+    "name": "Irfan Shaikh",
+    "user_id": "irfan.s",
+    "dept": "Mechanical",
+    "role": "Head - Mechanical",
+    "ext": "4240",
+    "mobile": "+91-9340167909",
+    "on_call": false,
+    "on_call_window": null
+  },
+  {
+    "name": "Rekha Pillai",
+    "user_id": "rekha.p",
+    "dept": "Instrumentation",
+    "role": "Head - Instrumentation",
+    "ext": "4247",
+    "mobile": "+91-9601520720",
+    "on_call": false,
+    "on_call_window": null
+  },
+  {
+    "name": "Vikram Singh",
+    "user_id": "vikram.s",
+    "dept": "Operations",
+    "role": "Production Manager",
+    "ext": "4254",
+    "mobile": "+91-9843272523",
+    "on_call": false,
+    "on_call_window": null
+  },
+  {
+    "name": "Ashwin Kamat",
+    "user_id": "ashwin.k",
+    "dept": "Operations",
+    "role": "Shift In-charge VDU/HCU",
+    "ext": "4261",
+    "mobile": "+91-9127106896",
+    "on_call": true,
+    "on_call_window": "2026-09-28 20:00 to 2026-09-29 08:00"
+  },
+  {
+    "name": "Divya Rao",
+    "user_id": "divya.r",
+    "dept": "Operations",
+    "role": "Process Engineer - Amine/SRU",
+    "ext": "4268",
+    "mobile": "+91-9942044320",
+    "on_call": false,
+    "on_call_window": null
+  },
+  {
+    "name": "Suresh Babu",
+    "user_id": "suresh.b",
+    "dept": "HSE",
+    "role": "Head - HSE",
+    "ext": "4275",
+    "mobile": "+91-9833046922",
+    "on_call": false,
+    "on_call_window": null
+  },
+  {
+    "name": "Neha Joshi",
+    "user_id": "neha.j",
+    "dept": "Management",
+    "role": "IT / Digital Lead",
+    "ext": "4282",
+    "mobile": "+91-9956141701",
+    "on_call": false,
+    "on_call_window": null
+  },
+  {
+    "name": "Karthik Subramanian",
+    "user_id": "karthik.s",
+    "dept": "Utilities",
+    "role": "Power Plant Engineer",
+    "ext": "4289",
+    "mobile": "+91-9737712401",
+    "on_call": false,
+    "on_call_window": null
+  },
+  {
+    "name": "Rohan Desai",
+    "user_id": "rohan.d",
+    "dept": "Mechanical",
+    "role": "Inspection Engineer (Static)",
+    "ext": "4296",
+    "mobile": "+91-9780451759",
+    "on_call": false,
+    "on_call_window": null
+  },
+  {
+    "name": "Fatima Sayed",
+    "user_id": "fatima.s",
+    "dept": "Operations",
+    "role": "Planner - Maintenance",
+    "ext": "4303",
+    "mobile": "+91-9850781063",
+    "on_call": false,
+    "on_call_window": null
+  }
+]

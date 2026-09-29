@@ -1,0 +1,39 @@
+{
+  "file": "inspection_E-310_scan.pdf",
+  "page": 1,
+  "lines": [
+    "Yukti Refinery – CDU-1   |   Inspection & Corrosion Section",
+    "ULTRASONIC THICKNESS SURVEY — E-310 shell",
+    "Report No: UT-E310-2026-07     Date of survey: 2026-09-18",
+    "Equipment: E-310 Crude / diesel pumparound exchanger, shell side (CS, SA-516 Gr.70)",
+    "Nominal thickness: 10.0 mm     Minimum required thickness: 6.5 mm",
+    "Instrument: UT gauge DM-5E (cal. 2026-08-02), probe 5 MHz dual element",
+    "TML | Location | Prev. 2023 (mm) | Current (mm) | Remark",
+    "TML-01 | Shell top, inlet end | 9.4 | 9.1 | OK",
+    "TML-02 | Shell bottom, inlet end | 8.7 | 8.2 | OK",
+    "TML-03 | Shell top, mid | 9.2 | 9.0 | OK",
+    "TML-04 | Shell bottom, mid | 7.9 | 7.1 | Monitor",
+    "TML-05 | Shell bottom, outlet end | 7.3 | 6.1 | BELOW MIN",
+    "TML-06 | Shell top, outlet end | 9.0 | 8.8 | OK",
+    "TML-07 | Inlet nozzle N1 | 8.5 | 8.3 | OK",
+    "TML-08 | Outlet nozzle N2 | 8.1 | 7.6 | OK",
+    "Finding: TML-05 (shell bottom, outlet end) measured 6.1 mm, BELOW minimum required 6.5 mm.",
+    "Corrosion rate TML-05: 0.40 mm/yr (short term). Remaining life: nil. Fitness-for-service required.",
+    "Recommendation: Take E-310 out of service at next opportunity; repair / replace shell course;",
+    "raise CM work order; notify Operations (CDU-1) and Mechanical Head.",
+    "Inspector: Rohan Desai (ASNT UT Level II, Cert. No. UT-II-4471)",
+    "Reviewed by: Irfan Shaikh, Head - Mechanical",
+    "Signature: ______________________",
+    "SYNTHETIC – SIH DEMO  |  Fictional data – not MRPL",
+    "[stamp] APPROVED"
+  ],
+  "text": "Yukti Refinery – CDU-1   |   Inspection & Corrosion Section\nULTRASONIC THICKNESS SURVEY — E-310 shell\nReport No: UT-E310-2026-07     Date of survey: 2026-09-18\nEquipment: E-310 Crude / diesel pumparound exchanger, shell side (CS, SA-516 Gr.70)\nNominal thickness: 10.0 mm     Minimum required thickness: 6.5 mm\nInstrument: UT gauge DM-5E (cal. 2026-08-02), probe 5 MHz dual element\nTML | Location | Prev. 2023 (mm) | Current (mm) | Remark\nTML-01 | Shell top, inlet end | 9.4 | 9.1 | OK\nTML-02 | Shell bottom, inlet end | 8.7 | 8.2 | OK\nTML-03 | Shell top, mid | 9.2 | 9.0 | OK\nTML-04 | Shell bottom, mid | 7.9 | 7.1 | Monitor\nTML-05 | Shell bottom, outlet end | 7.3 | 6.1 | BELOW MIN\nTML-06 | Shell top, outlet end | 9.0 | 8.8 | OK\nTML-07 | Inlet nozzle N1 | 8.5 | 8.3 | OK\nTML-08 | Outlet nozzle N2 | 8.1 | 7.6 | OK\nFinding: TML-05 (shell bottom, outlet end) measured 6.1 mm, BELOW minimum required 6.5 mm.\nCorrosion rate TML-05: 0.40 mm/yr (short term). Remaining life: nil. Fitness-for-service required.\nRecommendation: Take E-310 out of service at next opportunity; repair / replace shell course;\nraise CM work order; notify Operations (CDU-1) and Mechanical Head.\nInspector: Rohan Desai (ASNT UT Level II, Cert. No. UT-II-4471)\nReviewed by: Irfan Shaikh, Head - Mechanical\nSignature: ______________________\nSYNTHETIC – SIH DEMO  |  Fictional data – not MRPL\n[stamp] APPROVED",
+  "key_facts": {
+    "tml_below_min": "TML-05",
+    "measured_mm": 6.1,
+    "min_required_mm": 6.5,
+    "inspector": "Rohan Desai",
+    "stamp": "APPROVED",
+    "survey_date": "2026-09-18"
+  }
+}

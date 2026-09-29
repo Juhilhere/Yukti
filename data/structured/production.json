@@ -1,0 +1,920 @@
+{
+  "refinery": "Yukti Refinery (synthetic)",
+  "capacity_mmtpa": 15,
+  "units": "kt/month",
+  "products": [
+    "Diesel",
+    "Petrol",
+    "ATF",
+    "LPG",
+    "Naphtha",
+    "Polypropylene",
+    "Paraxylene",
+    "Benzene",
+    "Sulphur",
+    "Petcoke",
+    "Fuel Oil"
+  ],
+  "months": [
+    {
+      "month": "2023-10",
+      "crude_processed_kt": 1235.1,
+      "demand_kt": {
+        "Diesel": 481.2,
+        "Petrol": 206.9,
+        "ATF": 106.6,
+        "LPG": 66.0,
+        "Naphtha": 86.9,
+        "Polypropylene": 31.0,
+        "Paraxylene": 37.8,
+        "Benzene": 12.4,
+        "Sulphur": 18.6,
+        "Petcoke": 63.6,
+        "Fuel Oil": 76.0
+      },
+      "prices": {
+        "brent_usd_bbl": 87.61,
+        "diesel_crack_usd_bbl": 17.83,
+        "petrol_crack_usd_bbl": 8.64,
+        "atf_crack_usd_bbl": 16.58,
+        "pp_margin_usd_t": 301.9,
+        "px_margin_usd_t": 423.7
+      }
+    },
+    {
+      "month": "2023-11",
+      "crude_processed_kt": 1248.8,
+      "demand_kt": {
+        "Diesel": 471.3,
+        "Petrol": 214.0,
+        "ATF": 107.2,
+        "LPG": 66.5,
+        "Naphtha": 88.6,
+        "Polypropylene": 32.3,
+        "Paraxylene": 39.9,
+        "Benzene": 12.5,
+        "Sulphur": 19.7,
+        "Petcoke": 61.6,
+        "Fuel Oil": 73.5
+      },
+      "prices": {
+        "brent_usd_bbl": 83.9,
+        "diesel_crack_usd_bbl": 22.7,
+        "petrol_crack_usd_bbl": 9.25,
+        "atf_crack_usd_bbl": 20.3,
+        "pp_margin_usd_t": 300.2,
+        "px_margin_usd_t": 426.4
+      }
+    },
+    {
+      "month": "2023-12",
+      "crude_processed_kt": 1242.7,
+      "demand_kt": {
+        "Diesel": 495.5,
+        "Petrol": 221.1,
+        "ATF": 108.9,
+        "LPG": 68.0,
+        "Naphtha": 88.6,
+        "Polypropylene": 31.6,
+        "Paraxylene": 40.1,
+        "Benzene": 13.0,
+        "Sulphur": 19.6,
+        "Petcoke": 67.8,
+        "Fuel Oil": 70.5
+      },
+      "prices": {
+        "brent_usd_bbl": 91.38,
+        "diesel_crack_usd_bbl": 27.77,
+        "petrol_crack_usd_bbl": 10.83,
+        "atf_crack_usd_bbl": 20.24,
+        "pp_margin_usd_t": 312.3,
+        "px_margin_usd_t": 432.1
+      }
+    },
+    {
+      "month": "2024-01",
+      "crude_processed_kt": 1245.4,
+      "demand_kt": {
+        "Diesel": 514.1,
+        "Petrol": 220.5,
+        "ATF": 106.7,
+        "LPG": 69.2,
+        "Naphtha": 89.2,
+        "Polypropylene": 31.6,
+        "Paraxylene": 37.9,
+        "Benzene": 12.6,
+        "Sulphur": 18.7,
+        "Petcoke": 63.1,
+        "Fuel Oil": 73.8
+      },
+      "prices": {
+        "brent_usd_bbl": 89.4,
+        "diesel_crack_usd_bbl": 22.51,
+        "petrol_crack_usd_bbl": 7.67,
+        "atf_crack_usd_bbl": 18.85,
+        "pp_margin_usd_t": 297.8,
+        "px_margin_usd_t": 386.4
+      }
+    },
+    {
+      "month": "2024-02",
+      "crude_processed_kt": 1297.4,
+      "demand_kt": {
+        "Diesel": 516.6,
+        "Petrol": 233.6,
+        "ATF": 105.2,
+        "LPG": 65.1,
+        "Naphtha": 88.8,
+        "Polypropylene": 33.4,
+        "Paraxylene": 38.7,
+        "Benzene": 13.4,
+        "Sulphur": 19.0,
+        "Petcoke": 64.5,
+        "Fuel Oil": 73.0
+      },
+      "prices": {
+        "brent_usd_bbl": 90.32,
+        "diesel_crack_usd_bbl": 19.0,
+        "petrol_crack_usd_bbl": 10.0,
+        "atf_crack_usd_bbl": 17.21,
+        "pp_margin_usd_t": 321.6,
+        "px_margin_usd_t": 416.2
+      }
+    },
+    {
+      "month": "2024-03",
+      "crude_processed_kt": 1267.3,
+      "demand_kt": {
+        "Diesel": 502.4,
+        "Petrol": 221.9,
+        "ATF": 98.0,
+        "LPG": 63.1,
+        "Naphtha": 93.9,
+        "Polypropylene": 31.8,
+        "Paraxylene": 38.8,
+        "Benzene": 12.4,
+        "Sulphur": 18.6,
+        "Petcoke": 60.7,
+        "Fuel Oil": 73.5
+      },
+      "prices": {
+        "brent_usd_bbl": 92.96,
+        "diesel_crack_usd_bbl": 19.29,
+        "petrol_crack_usd_bbl": 14.59,
+        "atf_crack_usd_bbl": 16.3,
+        "pp_margin_usd_t": 342.9,
+        "px_margin_usd_t": 406.6
+      }
+    },
+    {
+      "month": "2024-04",
+      "crude_processed_kt": 1266.7,
+      "demand_kt": {
+        "Diesel": 540.6,
+        "Petrol": 231.5,
+        "ATF": 92.8,
+        "LPG": 60.6,
+        "Naphtha": 86.8,
+        "Polypropylene": 31.7,
+        "Paraxylene": 39.6,
+        "Benzene": 12.2,
+        "Sulphur": 19.3,
+        "Petcoke": 64.5,
+        "Fuel Oil": 76.4
+      },
+      "prices": {
+        "brent_usd_bbl": 96.11,
+        "diesel_crack_usd_bbl": 17.08,
+        "petrol_crack_usd_bbl": 12.58,
+        "atf_crack_usd_bbl": 16.06,
+        "pp_margin_usd_t": 361.7,
+        "px_margin_usd_t": 421.8
+      }
+    },
+    {
+      "month": "2024-05",
+      "crude_processed_kt": 1262.8,
+      "demand_kt": {
+        "Diesel": 538.0,
+        "Petrol": 236.4,
+        "ATF": 93.9,
+        "LPG": 55.7,
+        "Naphtha": 84.5,
+        "Polypropylene": 32.0,
+        "Paraxylene": 36.2,
+        "Benzene": 12.3,
+        "Sulphur": 19.6,
+        "Petcoke": 63.4,
+        "Fuel Oil": 81.0
+      },
+      "prices": {
+        "brent_usd_bbl": 92.94,
+        "diesel_crack_usd_bbl": 11.08,
+        "petrol_crack_usd_bbl": 16.27,
+        "atf_crack_usd_bbl": 11.28,
+        "pp_margin_usd_t": 351.2,
+        "px_margin_usd_t": 385.1
+      }
+    },
+    {
+      "month": "2024-06",
+      "crude_processed_kt": 1242.1,
+      "demand_kt": {
+        "Diesel": 524.6,
+        "Petrol": 246.6,
+        "ATF": 97.2,
+        "LPG": 58.0,
+        "Naphtha": 86.5,
+        "Polypropylene": 30.2,
+        "Paraxylene": 37.0,
+        "Benzene": 12.3,
+        "Sulphur": 18.1,
+        "Petcoke": 62.8,
+        "Fuel Oil": 76.2
+      },
+      "prices": {
+        "brent_usd_bbl": 91.38,
+        "diesel_crack_usd_bbl": 10.03,
+        "petrol_crack_usd_bbl": 14.34,
+        "atf_crack_usd_bbl": 14.11,
+        "pp_margin_usd_t": 362.4,
+        "px_margin_usd_t": 444.7
+      }
+    },
+    {
+      "month": "2024-07",
+      "crude_processed_kt": 1279.0,
+      "demand_kt": {
+        "Diesel": 481.4,
+        "Petrol": 250.3,
+        "ATF": 94.7,
+        "LPG": 60.0,
+        "Naphtha": 87.4,
+        "Polypropylene": 30.3,
+        "Paraxylene": 38.5,
+        "Benzene": 12.4,
+        "Sulphur": 18.7,
+        "Petcoke": 60.3,
+        "Fuel Oil": 82.2
+      },
+      "prices": {
+        "brent_usd_bbl": 88.6,
+        "diesel_crack_usd_bbl": 10.44,
+        "petrol_crack_usd_bbl": 14.64,
+        "atf_crack_usd_bbl": 12.76,
+        "pp_margin_usd_t": 349.8,
+        "px_margin_usd_t": 411.6
+      }
+    },
+    {
+      "month": "2024-08",
+      "crude_processed_kt": 1284.0,
+      "demand_kt": {
+        "Diesel": 492.0,
+        "Petrol": 236.8,
+        "ATF": 97.6,
+        "LPG": 61.9,
+        "Naphtha": 88.7,
+        "Polypropylene": 31.8,
+        "Paraxylene": 37.2,
+        "Benzene": 11.2,
+        "Sulphur": 18.7,
+        "Petcoke": 61.8,
+        "Fuel Oil": 78.5
+      },
+      "prices": {
+        "brent_usd_bbl": 90.73,
+        "diesel_crack_usd_bbl": 15.07,
+        "petrol_crack_usd_bbl": 11.31,
+        "atf_crack_usd_bbl": 12.27,
+        "pp_margin_usd_t": 317.2,
+        "px_margin_usd_t": 364.5
+      }
+    },
+    {
+      "month": "2024-09",
+      "crude_processed_kt": 1265.2,
+      "demand_kt": {
+        "Diesel": 483.2,
+        "Petrol": 227.5,
+        "ATF": 103.8,
+        "LPG": 63.4,
+        "Naphtha": 87.7,
+        "Polypropylene": 31.8,
+        "Paraxylene": 38.8,
+        "Benzene": 12.3,
+        "Sulphur": 19.1,
+        "Petcoke": 63.4,
+        "Fuel Oil": 78.1
+      },
+      "prices": {
+        "brent_usd_bbl": 89.11,
+        "diesel_crack_usd_bbl": 16.74,
+        "petrol_crack_usd_bbl": 10.8,
+        "atf_crack_usd_bbl": 14.39,
+        "pp_margin_usd_t": 343.6,
+        "px_margin_usd_t": 348.6
+      }
+    },
+    {
+      "month": "2024-10",
+      "crude_processed_kt": 1252.5,
+      "demand_kt": {
+        "Diesel": 478.0,
+        "Petrol": 215.0,
+        "ATF": 103.2,
+        "LPG": 63.4,
+        "Naphtha": 87.4,
+        "Polypropylene": 31.7,
+        "Paraxylene": 38.1,
+        "Benzene": 12.8,
+        "Sulphur": 18.9,
+        "Petcoke": 62.3,
+        "Fuel Oil": 74.8
+      },
+      "prices": {
+        "brent_usd_bbl": 85.51,
+        "diesel_crack_usd_bbl": 17.61,
+        "petrol_crack_usd_bbl": 8.08,
+        "atf_crack_usd_bbl": 19.93,
+        "pp_margin_usd_t": 367.7,
+        "px_margin_usd_t": 376.1
+      }
+    },
+    {
+      "month": "2024-11",
+      "crude_processed_kt": 1305.7,
+      "demand_kt": {
+        "Diesel": 480.3,
+        "Petrol": 226.8,
+        "ATF": 110.7,
+        "LPG": 68.7,
+        "Naphtha": 95.1,
+        "Polypropylene": 34.8,
+        "Paraxylene": 40.3,
+        "Benzene": 13.1,
+        "Sulphur": 18.8,
+        "Petcoke": 62.7,
+        "Fuel Oil": 75.6
+      },
+      "prices": {
+        "brent_usd_bbl": 85.08,
+        "diesel_crack_usd_bbl": 17.34,
+        "petrol_crack_usd_bbl": 7.81,
+        "atf_crack_usd_bbl": 19.14,
+        "pp_margin_usd_t": 349.3,
+        "px_margin_usd_t": 329.2
+      }
+    },
+    {
+      "month": "2024-12",
+      "crude_processed_kt": 1262.4,
+      "demand_kt": {
+        "Diesel": 508.8,
+        "Petrol": 225.8,
+        "ATF": 106.5,
+        "LPG": 70.1,
+        "Naphtha": 96.3,
+        "Polypropylene": 33.9,
+        "Paraxylene": 38.4,
+        "Benzene": 13.1,
+        "Sulphur": 18.7,
+        "Petcoke": 62.3,
+        "Fuel Oil": 74.2
+      },
+      "prices": {
+        "brent_usd_bbl": 85.12,
+        "diesel_crack_usd_bbl": 20.09,
+        "petrol_crack_usd_bbl": 5.27,
+        "atf_crack_usd_bbl": 17.1,
+        "pp_margin_usd_t": 326.6,
+        "px_margin_usd_t": 326.3
+      }
+    },
+    {
+      "month": "2025-01",
+      "crude_processed_kt": 1281.9,
+      "demand_kt": {
+        "Diesel": 542.0,
+        "Petrol": 226.8,
+        "ATF": 110.4,
+        "LPG": 67.8,
+        "Naphtha": 90.7,
+        "Polypropylene": 33.2,
+        "Paraxylene": 41.0,
+        "Benzene": 12.8,
+        "Sulphur": 20.2,
+        "Petcoke": 68.0,
+        "Fuel Oil": 72.7
+      },
+      "prices": {
+        "brent_usd_bbl": 85.68,
+        "diesel_crack_usd_bbl": 19.18,
+        "petrol_crack_usd_bbl": 13.04,
+        "atf_crack_usd_bbl": 20.07,
+        "pp_margin_usd_t": 319.1,
+        "px_margin_usd_t": 321.4
+      }
+    },
+    {
+      "month": "2025-02",
+      "crude_processed_kt": 1278.6,
+      "demand_kt": {
+        "Diesel": 523.4,
+        "Petrol": 235.7,
+        "ATF": 104.6,
+        "LPG": 67.1,
+        "Naphtha": 90.0,
+        "Polypropylene": 34.1,
+        "Paraxylene": 39.9,
+        "Benzene": 13.2,
+        "Sulphur": 21.1,
+        "Petcoke": 66.7,
+        "Fuel Oil": 73.7
+      },
+      "prices": {
+        "brent_usd_bbl": 85.61,
+        "diesel_crack_usd_bbl": 19.39,
+        "petrol_crack_usd_bbl": 12.63,
+        "atf_crack_usd_bbl": 19.9,
+        "pp_margin_usd_t": 309.0,
+        "px_margin_usd_t": 357.5
+      }
+    },
+    {
+      "month": "2025-03",
+      "crude_processed_kt": 1269.1,
+      "demand_kt": {
+        "Diesel": 512.4,
+        "Petrol": 235.3,
+        "ATF": 101.5,
+        "LPG": 63.4,
+        "Naphtha": 92.1,
+        "Polypropylene": 32.3,
+        "Paraxylene": 39.6,
+        "Benzene": 13.0,
+        "Sulphur": 19.1,
+        "Petcoke": 63.3,
+        "Fuel Oil": 74.8
+      },
+      "prices": {
+        "brent_usd_bbl": 88.03,
+        "diesel_crack_usd_bbl": 18.79,
+        "petrol_crack_usd_bbl": 11.37,
+        "atf_crack_usd_bbl": 15.79,
+        "pp_margin_usd_t": 305.6,
+        "px_margin_usd_t": 298.8
+      }
+    },
+    {
+      "month": "2025-04",
+      "crude_processed_kt": 1266.1,
+      "demand_kt": {
+        "Diesel": 530.3,
+        "Petrol": 236.7,
+        "ATF": 100.9,
+        "LPG": 60.5,
+        "Naphtha": 93.0,
+        "Polypropylene": 32.2,
+        "Paraxylene": 39.6,
+        "Benzene": 12.9,
+        "Sulphur": 18.6,
+        "Petcoke": 61.9,
+        "Fuel Oil": 75.8
+      },
+      "prices": {
+        "brent_usd_bbl": 89.82,
+        "diesel_crack_usd_bbl": 16.85,
+        "petrol_crack_usd_bbl": 12.61,
+        "atf_crack_usd_bbl": 10.15,
+        "pp_margin_usd_t": 284.4,
+        "px_margin_usd_t": 318.3
+      }
+    },
+    {
+      "month": "2025-05",
+      "crude_processed_kt": 1282.2,
+      "demand_kt": {
+        "Diesel": 530.3,
+        "Petrol": 243.1,
+        "ATF": 98.7,
+        "LPG": 60.8,
+        "Naphtha": 87.9,
+        "Polypropylene": 30.4,
+        "Paraxylene": 39.7,
+        "Benzene": 12.3,
+        "Sulphur": 19.6,
+        "Petcoke": 65.7,
+        "Fuel Oil": 80.2
+      },
+      "prices": {
+        "brent_usd_bbl": 92.33,
+        "diesel_crack_usd_bbl": 19.72,
+        "petrol_crack_usd_bbl": 12.35,
+        "atf_crack_usd_bbl": 13.78,
+        "pp_margin_usd_t": 290.3,
+        "px_margin_usd_t": 285.8
+      }
+    },
+    {
+      "month": "2025-06",
+      "crude_processed_kt": 1313.5,
+      "demand_kt": {
+        "Diesel": 505.1,
+        "Petrol": 240.0,
+        "ATF": 99.4,
+        "LPG": 60.5,
+        "Naphtha": 86.0,
+        "Polypropylene": 31.5,
+        "Paraxylene": 38.8,
+        "Benzene": 12.0,
+        "Sulphur": 18.4,
+        "Petcoke": 61.1,
+        "Fuel Oil": 79.3
+      },
+      "prices": {
+        "brent_usd_bbl": 91.71,
+        "diesel_crack_usd_bbl": 18.22,
+        "petrol_crack_usd_bbl": 14.96,
+        "atf_crack_usd_bbl": 13.03,
+        "pp_margin_usd_t": 275.2,
+        "px_margin_usd_t": 332.8
+      }
+    },
+    {
+      "month": "2025-07",
+      "crude_processed_kt": 1284.5,
+      "demand_kt": {
+        "Diesel": 511.4,
+        "Petrol": 249.9,
+        "ATF": 97.3,
+        "LPG": 56.3,
+        "Naphtha": 87.1,
+        "Polypropylene": 32.0,
+        "Paraxylene": 38.6,
+        "Benzene": 12.3,
+        "Sulphur": 18.6,
+        "Petcoke": 63.1,
+        "Fuel Oil": 82.1
+      },
+      "prices": {
+        "brent_usd_bbl": 95.5,
+        "diesel_crack_usd_bbl": 9.67,
+        "petrol_crack_usd_bbl": 10.03,
+        "atf_crack_usd_bbl": 15.59,
+        "pp_margin_usd_t": 287.3,
+        "px_margin_usd_t": 333.0
+      }
+    },
+    {
+      "month": "2025-08",
+      "crude_processed_kt": 1272.0,
+      "demand_kt": {
+        "Diesel": 485.7,
+        "Petrol": 238.6,
+        "ATF": 99.9,
+        "LPG": 59.3,
+        "Naphtha": 85.1,
+        "Polypropylene": 32.2,
+        "Paraxylene": 39.1,
+        "Benzene": 13.0,
+        "Sulphur": 18.9,
+        "Petcoke": 63.3,
+        "Fuel Oil": 83.8
+      },
+      "prices": {
+        "brent_usd_bbl": 92.97,
+        "diesel_crack_usd_bbl": 12.62,
+        "petrol_crack_usd_bbl": 10.19,
+        "atf_crack_usd_bbl": 14.36,
+        "pp_margin_usd_t": 312.4,
+        "px_margin_usd_t": 308.0
+      }
+    },
+    {
+      "month": "2025-09",
+      "crude_processed_kt": 1303.8,
+      "demand_kt": {
+        "Diesel": 482.9,
+        "Petrol": 236.0,
+        "ATF": 107.6,
+        "LPG": 65.2,
+        "Naphtha": 90.3,
+        "Polypropylene": 32.0,
+        "Paraxylene": 40.5,
+        "Benzene": 13.0,
+        "Sulphur": 18.7,
+        "Petcoke": 64.1,
+        "Fuel Oil": 77.0
+      },
+      "prices": {
+        "brent_usd_bbl": 93.05,
+        "diesel_crack_usd_bbl": 13.66,
+        "petrol_crack_usd_bbl": 10.58,
+        "atf_crack_usd_bbl": 20.45,
+        "pp_margin_usd_t": 299.7,
+        "px_margin_usd_t": 339.8
+      }
+    },
+    {
+      "month": "2025-10",
+      "crude_processed_kt": 1262.7,
+      "demand_kt": {
+        "Diesel": 497.4,
+        "Petrol": 237.1,
+        "ATF": 108.9,
+        "LPG": 67.2,
+        "Naphtha": 86.3,
+        "Polypropylene": 32.4,
+        "Paraxylene": 37.9,
+        "Benzene": 13.5,
+        "Sulphur": 19.5,
+        "Petcoke": 65.5,
+        "Fuel Oil": 76.9
+      },
+      "prices": {
+        "brent_usd_bbl": 88.47,
+        "diesel_crack_usd_bbl": 18.35,
+        "petrol_crack_usd_bbl": 7.45,
+        "atf_crack_usd_bbl": 16.05,
+        "pp_margin_usd_t": 271.3,
+        "px_margin_usd_t": 330.1
+      }
+    },
+    {
+      "month": "2025-11",
+      "crude_processed_kt": 1277.8,
+      "demand_kt": {
+        "Diesel": 493.0,
+        "Petrol": 223.8,
+        "ATF": 111.8,
+        "LPG": 71.0,
+        "Naphtha": 87.9,
+        "Polypropylene": 33.1,
+        "Paraxylene": 40.3,
+        "Benzene": 13.0,
+        "Sulphur": 19.3,
+        "Petcoke": 68.6,
+        "Fuel Oil": 76.2
+      },
+      "prices": {
+        "brent_usd_bbl": 85.31,
+        "diesel_crack_usd_bbl": 16.24,
+        "petrol_crack_usd_bbl": 7.74,
+        "atf_crack_usd_bbl": 20.82,
+        "pp_margin_usd_t": 275.5,
+        "px_margin_usd_t": 276.1
+      }
+    },
+    {
+      "month": "2025-12",
+      "crude_processed_kt": 1256.0,
+      "demand_kt": {
+        "Diesel": 517.8,
+        "Petrol": 237.5,
+        "ATF": 113.3,
+        "LPG": 70.0,
+        "Naphtha": 95.2,
+        "Polypropylene": 35.2,
+        "Paraxylene": 40.3,
+        "Benzene": 13.4,
+        "Sulphur": 19.4,
+        "Petcoke": 64.4,
+        "Fuel Oil": 75.2
+      },
+      "prices": {
+        "brent_usd_bbl": 80.84,
+        "diesel_crack_usd_bbl": 21.8,
+        "petrol_crack_usd_bbl": 8.87,
+        "atf_crack_usd_bbl": 20.29,
+        "pp_margin_usd_t": 251.7,
+        "px_margin_usd_t": 351.0
+      }
+    },
+    {
+      "month": "2026-01",
+      "crude_processed_kt": 1281.3,
+      "demand_kt": {
+        "Diesel": 549.5,
+        "Petrol": 231.0,
+        "ATF": 109.2,
+        "LPG": 69.9,
+        "Naphtha": 91.2,
+        "Polypropylene": 33.2,
+        "Paraxylene": 42.2,
+        "Benzene": 13.5,
+        "Sulphur": 18.4,
+        "Petcoke": 65.0,
+        "Fuel Oil": 71.6
+      },
+      "prices": {
+        "brent_usd_bbl": 82.58,
+        "diesel_crack_usd_bbl": 24.95,
+        "petrol_crack_usd_bbl": 12.59,
+        "atf_crack_usd_bbl": 19.66,
+        "pp_margin_usd_t": 257.2,
+        "px_margin_usd_t": 321.2
+      }
+    },
+    {
+      "month": "2026-02",
+      "crude_processed_kt": 1266.6,
+      "demand_kt": {
+        "Diesel": 546.5,
+        "Petrol": 248.4,
+        "ATF": 104.9,
+        "LPG": 68.3,
+        "Naphtha": 95.1,
+        "Polypropylene": 34.6,
+        "Paraxylene": 44.5,
+        "Benzene": 13.5,
+        "Sulphur": 19.9,
+        "Petcoke": 67.4,
+        "Fuel Oil": 73.3
+      },
+      "prices": {
+        "brent_usd_bbl": 79.08,
+        "diesel_crack_usd_bbl": 22.31,
+        "petrol_crack_usd_bbl": 12.73,
+        "atf_crack_usd_bbl": 17.15,
+        "pp_margin_usd_t": 303.3,
+        "px_margin_usd_t": 348.3
+      }
+    },
+    {
+      "month": "2026-03",
+      "crude_processed_kt": 1317.7,
+      "demand_kt": {
+        "Diesel": 547.0,
+        "Petrol": 249.4,
+        "ATF": 109.3,
+        "LPG": 62.6,
+        "Naphtha": 91.6,
+        "Polypropylene": 35.6,
+        "Paraxylene": 40.9,
+        "Benzene": 13.6,
+        "Sulphur": 20.2,
+        "Petcoke": 62.7,
+        "Fuel Oil": 77.1
+      },
+      "prices": {
+        "brent_usd_bbl": 75.61,
+        "diesel_crack_usd_bbl": 20.52,
+        "petrol_crack_usd_bbl": 11.88,
+        "atf_crack_usd_bbl": 16.03,
+        "pp_margin_usd_t": 290.0,
+        "px_margin_usd_t": 372.1
+      }
+    },
+    {
+      "month": "2026-04",
+      "crude_processed_kt": 1278.8,
+      "demand_kt": {
+        "Diesel": 522.9,
+        "Petrol": 243.9,
+        "ATF": 106.7,
+        "LPG": 64.9,
+        "Naphtha": 91.3,
+        "Polypropylene": 34.3,
+        "Paraxylene": 41.3,
+        "Benzene": 12.5,
+        "Sulphur": 18.5,
+        "Petcoke": 64.8,
+        "Fuel Oil": 74.1
+      },
+      "prices": {
+        "brent_usd_bbl": 74.6,
+        "diesel_crack_usd_bbl": 15.04,
+        "petrol_crack_usd_bbl": 12.66,
+        "atf_crack_usd_bbl": 13.37,
+        "pp_margin_usd_t": 309.2,
+        "px_margin_usd_t": 358.0
+      }
+    },
+    {
+      "month": "2026-05",
+      "crude_processed_kt": 1266.6,
+      "demand_kt": {
+        "Diesel": 533.0,
+        "Petrol": 270.8,
+        "ATF": 103.4,
+        "LPG": 57.5,
+        "Naphtha": 89.7,
+        "Polypropylene": 35.3,
+        "Paraxylene": 40.0,
+        "Benzene": 13.2,
+        "Sulphur": 19.7,
+        "Petcoke": 65.8,
+        "Fuel Oil": 82.0
+      },
+      "prices": {
+        "brent_usd_bbl": 75.25,
+        "diesel_crack_usd_bbl": 15.63,
+        "petrol_crack_usd_bbl": 13.58,
+        "atf_crack_usd_bbl": 13.58,
+        "pp_margin_usd_t": 315.2,
+        "px_margin_usd_t": 350.0
+      }
+    },
+    {
+      "month": "2026-06",
+      "crude_processed_kt": 1284.6,
+      "demand_kt": {
+        "Diesel": 519.5,
+        "Petrol": 252.1,
+        "ATF": 100.7,
+        "LPG": 61.0,
+        "Naphtha": 88.4,
+        "Polypropylene": 32.6,
+        "Paraxylene": 38.2,
+        "Benzene": 12.4,
+        "Sulphur": 19.1,
+        "Petcoke": 63.5,
+        "Fuel Oil": 77.2
+      },
+      "prices": {
+        "brent_usd_bbl": 77.82,
+        "diesel_crack_usd_bbl": 13.13,
+        "petrol_crack_usd_bbl": 12.25,
+        "atf_crack_usd_bbl": 14.67,
+        "pp_margin_usd_t": 337.9,
+        "px_margin_usd_t": 371.3
+      }
+    },
+    {
+      "month": "2026-07",
+      "crude_processed_kt": 1284.4,
+      "demand_kt": {
+        "Diesel": 492.1,
+        "Petrol": 253.5,
+        "ATF": 104.9,
+        "LPG": 59.9,
+        "Naphtha": 91.5,
+        "Polypropylene": 33.6,
+        "Paraxylene": 39.3,
+        "Benzene": 12.9,
+        "Sulphur": 18.2,
+        "Petcoke": 62.7,
+        "Fuel Oil": 82.5
+      },
+      "prices": {
+        "brent_usd_bbl": 77.59,
+        "diesel_crack_usd_bbl": 18.1,
+        "petrol_crack_usd_bbl": 12.97,
+        "atf_crack_usd_bbl": 13.95,
+        "pp_margin_usd_t": 295.9,
+        "px_margin_usd_t": 390.7
+      }
+    },
+    {
+      "month": "2026-08",
+      "crude_processed_kt": 1277.3,
+      "demand_kt": {
+        "Diesel": 528.0,
+        "Petrol": 241.6,
+        "ATF": 105.6,
+        "LPG": 64.5,
+        "Naphtha": 90.3,
+        "Polypropylene": 31.9,
+        "Paraxylene": 40.3,
+        "Benzene": 12.9,
+        "Sulphur": 19.0,
+        "Petcoke": 64.2,
+        "Fuel Oil": 81.8
+      },
+      "prices": {
+        "brent_usd_bbl": 73.23,
+        "diesel_crack_usd_bbl": 13.41,
+        "petrol_crack_usd_bbl": 11.03,
+        "atf_crack_usd_bbl": 13.62,
+        "pp_margin_usd_t": 340.5,
+        "px_margin_usd_t": 425.8
+      }
+    },
+    {
+      "month": "2026-09",
+      "crude_processed_kt": 1299.1,
+      "demand_kt": {
+        "Diesel": 491.2,
+        "Petrol": 248.0,
+        "ATF": 109.1,
+        "LPG": 65.8,
+        "Naphtha": 88.2,
+        "Polypropylene": 33.3,
+        "Paraxylene": 41.2,
+        "Benzene": 13.1,
+        "Sulphur": 19.2,
+        "Petcoke": 64.3,
+        "Fuel Oil": 80.6
+      },
+      "prices": {
+        "brent_usd_bbl": 70.21,
+        "diesel_crack_usd_bbl": 15.63,
+        "petrol_crack_usd_bbl": 8.73,
+        "atf_crack_usd_bbl": 13.92,
+        "pp_margin_usd_t": 339.3,
+        "px_margin_usd_t": 401.4
+      }
+    }
+  ]
+}

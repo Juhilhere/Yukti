@@ -1,0 +1,92 @@
+# Yukti ABAC policy — deny-overrides, default deny. Evaluated by host code only (never by the LLM).
+version: 1
+rules:
+  # ---------- hard floors ----------
+  - id: R-NO-CONTROL-WRITE
+    effect: deny
+    resources: [tool]
+    when: "resource.tool_class == 'control_write'"
+    reason: "Yukti is advisory only: no DCS/SCADA writes exist."
+  - id: G-OFF-DOMAIN-HARM
+    effect: deny
+    resources: [guard]
+    when: "resource.category == 'off_domain_harm'"
+    reason: "Company guardrail: requests outside plant operations that could enable harm are always refused."
+  - id: G-CONTROL-CHANGE
+    effect: deny
+    resources: [guard]
+    when: "resource.category == 'control_system_change'"
+    reason: "Company guardrail: Yukti never changes setpoints or control logic; raise an MOC via operations."
+
+  # ---------- documents: denials ----------
+  - id: R-CLEARANCE-CEIL
+    effect: deny
+    resources: [document]
+    when: "resource.classification > subject.clearance and not grant_covers(subject, resource, action)"
+    reason: "Document classification is above your clearance."
+  - id: R-FINANCE-COMMERCIAL
+    effect: deny
+    resources: [document]
+    when: "resource.department == 'Finance' and subject.department not in ['Finance', 'Management', 'Audit'] and not grant_covers(subject, resource, action)"
+    reason: "Finance records are restricted to Finance, Management and Audit."
+
+  # ---------- documents: allows ----------
+  - id: R-PUBLIC
+    effect: allow
+    resources: [document]
+    actions: [read, search, cite]
+    when: "resource.classification == 0"
+  - id: R-OWN-DEPT
+    effect: allow
+    resources: [document]
+    actions: [read, search, cite]
+    when: "resource.department == subject.department"
+  - id: R-ASSET-SCOPE
+    effect: allow
+    resources: [document]
+    actions: [read, search, cite]
+    when: "resource.doc_type in ['SOP', 'drawing_pid', 'drawing_sld', 'datasheet', 'inspection_report', 'calibration_certificate', 'manual', 'work_order_export', 'asset_register', 'shift_log', 'MSDS', 'troubleshooting_guide'] and tags_match(resource.units, subject.asset_scopes)"
+  - id: R-HSE-SAFETY
+    effect: allow
+    resources: [document]
+    actions: [read, search, cite]
+    when: "'hse' in subject.roles and resource.doc_type in ['SOP', 'MSDS', 'drawing_pid', 'inspection_report', 'manual', 'shift_log', 'process_manual']"
+  - id: R-CONTACTS-ALL
+    effect: allow
+    resources: [document]
+    actions: [read, search, cite]
+    when: "resource.doc_type == 'contact_list' and subject.clearance >= 1"
+  - id: R-MSDS-ALL
+    effect: allow
+    resources: [document]
+    actions: [read, search, cite]
+    when: "resource.doc_type == 'MSDS'"
+  - id: R-MANAGERS
+    effect: allow
+    resources: [document]
+    actions: [read, search, cite]
+    when: "('plant_manager' in subject.roles or 'admin' in subject.roles or 'auditor' in subject.roles)"
+  - id: R-GRANT
+    effect: allow
+    resources: [document]
+    when: "grant_covers(subject, resource, action)"
+
+  # ---------- company guardrails (domain model) ----------
+  - id: G-CONTRACTOR-CHEM
+    effect: deny
+    resources: [guard]
+    when: "resource.category in ['process_chemistry', 'hazmat_handling', 'formulation_confidential'] and 'contractor' in subject.roles"
+    reason: "Company guardrail: contractors may not receive process-chemistry details; request access via HSE."
+  - id: G-FORMULATION
+    effect: deny
+    resources: [guard]
+    when: "resource.category == 'formulation_confidential' and subject.clearance < 3"
+    reason: "Company guardrail: proprietary formulations need CONFIDENTIAL clearance or a time-bound grant."
+  - id: G-PROCESS-CHEM
+    effect: allow
+    resources: [guard]
+    when: "resource.category in ['process_chemistry', 'hazmat_handling', 'formulation_confidential'] and len(set(subject.roles) & {'engineer', 'hse', 'process', 'operations', 'lab', 'plant_manager', 'admin', 'dept_manager'}) > 0"
+  - id: G-GENERAL
+    effect: allow
+    resources: [guard]
+    when: "resource.category in ['general', 'safety_procedure', 'asset_info', 'commercial_confidential', 'personal_data']"

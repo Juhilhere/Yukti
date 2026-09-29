@@ -1,0 +1,296 @@
+{
+  "asset": "A2",
+  "aliases": [
+    "A2",
+    "01-A2A",
+    "Pump A2"
+  ],
+  "reference_time": "2026-09-29T02:15:00",
+  "facts": [
+    {
+      "slot": "ratings",
+      "attribute": "motor_rated_kw",
+      "value": 45,
+      "unit": "kW",
+      "source_file": "A2_datasheet_rev1.pdf",
+      "doc_number": "DS-CDU-A2",
+      "revision": "1",
+      "effective_date": "2019-06-15",
+      "page": 1
+    },
+    {
+      "slot": "ratings",
+      "attribute": "motor_rated_kw",
+      "value": 55,
+      "unit": "kW",
+      "source_file": "structured/assets.json",
+      "doc_number": "ASSET-MASTER:M-A2",
+      "revision": null,
+      "effective_date": "2026-09-28",
+      "page": null
+    },
+    {
+      "slot": "ratings",
+      "attribute": "rated_flow",
+      "value": 180,
+      "unit": "m3/h",
+      "source_file": "A2_datasheet_rev1.pdf",
+      "doc_number": "DS-CDU-A2",
+      "revision": "1",
+      "effective_date": "2019-06-15",
+      "page": 1
+    },
+    {
+      "slot": "ratings",
+      "attribute": "rated_head",
+      "value": 95,
+      "unit": "m",
+      "source_file": "A2_datasheet_rev1.pdf",
+      "doc_number": "DS-CDU-A2",
+      "revision": "1",
+      "effective_date": "2019-06-15",
+      "page": 1
+    },
+    {
+      "slot": "ratings",
+      "attribute": "npshr",
+      "value": 3.2,
+      "unit": "m",
+      "source_file": "A2_datasheet_rev1.pdf",
+      "doc_number": "DS-CDU-A2",
+      "revision": "1",
+      "effective_date": "2019-06-15",
+      "page": 1
+    },
+    {
+      "slot": "ratings",
+      "attribute": "motor_fla",
+      "value": 78,
+      "unit": "A",
+      "source_file": "A2_datasheet_rev1.pdf",
+      "doc_number": "DS-CDU-A2",
+      "revision": "1",
+      "effective_date": "2019-06-15",
+      "page": 1
+    },
+    {
+      "slot": "ratings",
+      "attribute": "motor_voltage",
+      "value": 415,
+      "unit": "V",
+      "source_file": "A2_datasheet_rev1.pdf",
+      "doc_number": "DS-CDU-A2",
+      "revision": "1",
+      "effective_date": "2019-06-15",
+      "page": 1
+    },
+    {
+      "slot": "ratings",
+      "attribute": "enclosure",
+      "value": "IP55",
+      "unit": null,
+      "source_file": "A2_datasheet_rev1.pdf",
+      "doc_number": "DS-CDU-A2",
+      "revision": "1",
+      "effective_date": "2019-06-15",
+      "page": 1
+    },
+    {
+      "slot": "ratings",
+      "attribute": "seal_plan",
+      "value": "API 682 Plan 11",
+      "unit": null,
+      "source_file": "A2_datasheet_rev1.pdf",
+      "doc_number": "DS-CDU-A2",
+      "revision": "1",
+      "effective_date": "2019-06-15",
+      "page": 1
+    },
+    {
+      "slot": "wiring",
+      "attribute": "feeder",
+      "value": "MCC-2-F07",
+      "unit": null,
+      "source_file": "SLD-MCC-2_revC.pdf",
+      "doc_number": "SLD-MCC-2",
+      "revision": "C",
+      "effective_date": "2025-06-30",
+      "page": 1
+    },
+    {
+      "slot": "wiring",
+      "attribute": "cable",
+      "value": "C-2F07-01 3.5C x 35 sq mm",
+      "unit": null,
+      "source_file": "SLD-MCC-2_revC.pdf",
+      "doc_number": "SLD-MCC-2",
+      "revision": "C",
+      "effective_date": "2025-06-30",
+      "page": 1
+    },
+    {
+      "slot": "wiring",
+      "attribute": "overload_setting",
+      "value": 42,
+      "unit": "A",
+      "source_file": "SLD-MCC-2_revB.pdf",
+      "doc_number": "SLD-MCC-2",
+      "revision": "B",
+      "effective_date": "2021-05-18",
+      "page": 1
+    },
+    {
+      "slot": "wiring",
+      "attribute": "overload_setting",
+      "value": 45,
+      "unit": "A",
+      "source_file": "SLD-MCC-2_revC.pdf",
+      "doc_number": "SLD-MCC-2",
+      "revision": "C",
+      "effective_date": "2025-06-30",
+      "page": 1
+    },
+    {
+      "slot": "isolation",
+      "attribute": "discharge_valve",
+      "value": "XV-2042",
+      "unit": null,
+      "source_file": "SOP-EL-014_rev2.docx",
+      "doc_number": "SOP-EL-014",
+      "revision": "2",
+      "effective_date": "2023-04-10",
+      "page": 1
+    },
+    {
+      "slot": "isolation",
+      "attribute": "discharge_valve",
+      "value": "XV-2042",
+      "unit": null,
+      "source_file": "PID-CDU-03_revB.pdf",
+      "doc_number": "PID-CDU-03",
+      "revision": "B",
+      "effective_date": "2022-08-05",
+      "page": 1
+    },
+    {
+      "slot": "isolation",
+      "attribute": "discharge_valve",
+      "value": "XV-2043",
+      "unit": null,
+      "source_file": "SOP-EL-014_rev3.docx",
+      "doc_number": "SOP-EL-014",
+      "revision": "3",
+      "effective_date": "2025-11-02",
+      "page": 1
+    },
+    {
+      "slot": "isolation",
+      "attribute": "discharge_valve",
+      "value": "XV-2043",
+      "unit": null,
+      "source_file": "PID-CDU-03_revC.pdf",
+      "doc_number": "PID-CDU-03",
+      "revision": "C",
+      "effective_date": "2025-10-20",
+      "page": 1
+    },
+    {
+      "slot": "isolation",
+      "attribute": "suction_valve",
+      "value": "XV-2041",
+      "unit": null,
+      "source_file": "PID-CDU-03_revC.pdf",
+      "doc_number": "PID-CDU-03",
+      "revision": "C",
+      "effective_date": "2025-10-20",
+      "page": 1
+    },
+    {
+      "slot": "isolation",
+      "attribute": "electrical_isolation_point",
+      "value": "MCC-2-F07",
+      "unit": null,
+      "source_file": "SOP-EL-014_rev3.docx",
+      "doc_number": "SOP-EL-014",
+      "revision": "3",
+      "effective_date": "2025-11-02",
+      "page": 1
+    },
+    {
+      "slot": "procedure",
+      "attribute": "current_isolation_sop",
+      "value": "SOP-EL-014 Rev 3",
+      "unit": null,
+      "source_file": "SOP-EL-014_rev3.docx",
+      "doc_number": "SOP-EL-014",
+      "revision": "3",
+      "effective_date": "2025-11-02",
+      "page": 1
+    },
+    {
+      "slot": "procedure",
+      "attribute": "superseded_isolation_sop",
+      "value": "SOP-EL-014 Rev 2",
+      "unit": null,
+      "source_file": "SOP-EL-014_rev2.docx",
+      "doc_number": "SOP-EL-014",
+      "revision": "2",
+      "effective_date": "2023-04-10",
+      "page": 1
+    },
+    {
+      "slot": "procedure",
+      "attribute": "troubleshooting_guide",
+      "value": "TG-A2 Rev 2",
+      "unit": null,
+      "source_file": "A2_troubleshooting_guide.pdf",
+      "doc_number": "TG-A2",
+      "revision": "2",
+      "effective_date": "2024-09-01",
+      "page": 1
+    },
+    {
+      "slot": "wiring",
+      "attribute": "standby_A2B_wiring_diagram",
+      "value": null,
+      "unit": null,
+      "source_file": null,
+      "doc_number": null,
+      "revision": null,
+      "effective_date": null,
+      "page": null
+    }
+  ],
+  "conflicts": [
+    {
+      "attribute": "motor_rated_kw",
+      "values": [
+        45,
+        55
+      ],
+      "resolution_hint": "Datasheet DS-CDU-A2 (45 kW) vs asset master (55 kW); verify nameplate"
+    },
+    {
+      "attribute": "overload_setting",
+      "values": [
+        42,
+        45
+      ],
+      "resolution_hint": "SLD-MCC-2 Rev C (45 A) is current; Rev B superseded"
+    },
+    {
+      "attribute": "discharge_valve",
+      "values": [
+        "XV-2042",
+        "XV-2043"
+      ],
+      "resolution_hint": "Rev C P&ID / SOP Rev 3 current -> XV-2043"
+    }
+  ],
+  "missing": [
+    {
+      "attribute": "standby_A2B_wiring_diagram",
+      "note": "No SLD / wiring diagram exists for A2B (M-A2B feeder unknown)"
+    }
+  ]
+}

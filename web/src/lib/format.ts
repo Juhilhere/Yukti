@@ -1,0 +1,58 @@
+export function fmtBytes(n?: number | null): string {
+  if (n === undefined || n === null || isNaN(n)) return '—';
+  const u = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let i = 0; let v = n;
+  while (v >= 1024 && i < u.length - 1) { v /= 1024; i++; }
+  return `${v.toFixed(v >= 100 || i === 0 ? 0 : 1)} ${u[i]}`;
+}
+export function fmtMB(mb?: number | null): string {
+  if (mb === undefined || mb === null || isNaN(mb)) return '—';
+  return mb >= 1024 ? `${(mb / 1024).toFixed(1)} GB` : `${Math.round(mb)} MB`;
+}
+export function fmtTime(iso?: string | null): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleString(undefined, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+export function fmtDate(iso?: string | null): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' });
+}
+export function timeAgo(iso?: string | null): string {
+  if (!iso) return '';
+  const t = new Date(iso).getTime();
+  if (isNaN(t)) return '';
+  const s = Math.round((Date.now() - t) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
+}
+export function fmtDuration(sec: number): string {
+  if (!isFinite(sec) || sec < 0) return '—';
+  const h = Math.floor(sec / 3600); const m = Math.floor((sec % 3600) / 60); const s = Math.floor(sec % 60);
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+export function countdown(iso: string, now = Date.now()): string {
+  const ms = new Date(iso).getTime() - now;
+  if (isNaN(ms)) return '—';
+  if (ms <= 0) return 'expired';
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600); const m = Math.floor((s % 3600) / 60); const ss = s % 60;
+  return `${h > 0 ? `${h}:` : ''}${String(m).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
+}
+export function num(v: unknown, digits = 1): string {
+  if (typeof v !== 'number' || !isFinite(v)) return '—';
+  return v.toLocaleString(undefined, { maximumFractionDigits: digits });
+}
+export function estimateTokens(text: string): number {
+  return Math.ceil((text || '').length / 4);
+}
+export function cx(...c: (string | false | null | undefined)[]): string {
+  return c.filter(Boolean).join(' ');
+}
