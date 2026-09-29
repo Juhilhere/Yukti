@@ -29,7 +29,8 @@
       "build/icon.png",
       "build/icon.ico",
       "build/tray.png",
-      "package.json"
+      "package.json",
+      "distribution.json"
     ],
     "publish": null,
     "win": {

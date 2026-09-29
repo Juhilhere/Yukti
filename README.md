@@ -31,6 +31,8 @@ Employee PCs (Yukti desktop app, Electron)  ──HTTP (plant LAN)──▶  Yuk
 | Desktop installer | `cd desktop && npm run dist` → `desktop\dist\Yukti-Setup-<version>.exe` |
 | Web UI build | `cd web && npm install && npm run build` (served by the server from `web\dist`) |
 | Backend deps | `cd backend && uv sync` (Python 3.12) |
+| **Website release (one-click install)** | `opselease-site.ps1 -SiteUrl https://<your-site>/yukti/` → upload `E:\yukti-build\publish\` to that URL |
+| Test the website locally | `python ops\serve_site.py E:\yukti-build\publish --port 9000` |
 | End-to-end API test | `cd backend && uv run python ..\docs\e2e_v2.py` (68 checks) |
 
 First start seeds the database (employees, MRPL public data, example documents incl. OCR, ~30 s).
@@ -39,6 +41,16 @@ Reset: stop, delete `data\store\`, start. Rehearsal reset (revoke grants, reopen
 **Inference engine:** `E:\tools\llama-cuda\llama-server.exe` (official llama.cpp CUDA 12.4 build, set `YUKTI_LLAMA_CUDA` to change),
 falling back to `llama-server` on PATH (Vulkan). Models: any `.gguf` in `models\` or the Bionic/LM Studio models folder;
 admins import new models from disk/USB in **Admin → Models**.
+
+## One-click install from your website
+1. `opsuild-release.ps1` builds the self-contained server package; `opselease-site.ps1 -SiteUrl …` bakes the site address into the
+   desktop app and produces `index.html`, `Yukti-Setup-<ver>.exe`, `manifest.json` and `files\*.partNN`.
+2. Upload the folder. Users click **Download Yukti**, run the installer, and on first start choose **Install Yukti on this PC**:
+   the app downloads only what the PC needs (CUDA runtime only when an NVIDIA GPU is present), resumes interrupted downloads,
+   verifies every part and component with SHA-256, installs to `%LOCALAPPDATA%\Yukti\Server`, starts the server and opens Yukti.
+   Re-running later updates only changed components; nothing is re-downloaded otherwise. No admin rights are needed.
+3. Plant deployments can instead run the server on one GPU machine (`Start Yukti Server (Plant LAN).cmd`) and have employees choose
+   **Connect to our plant Yukti server**.
 
 ## Roles
 | Role | Can |

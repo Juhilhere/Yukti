@@ -13,7 +13,14 @@ const ROOT = path.join(__dirname, '..');
 const ICON_PNG = path.join(ROOT, 'build', 'icon.png');
 const TRAY_PNG = path.join(ROOT, 'build', 'tray.png');
 const LOCAL_URL = 'http://127.0.0.1:8000';
-const DEFAULTS = { mode: null, serverUrl: LOCAL_URL, installRoot: 'C:\\Yukti-Server', bounds: null };
+const installer = require('./installer');
+// Download source for "Install Yukti on this PC": set at build time in distribution.json (the publisher's website).
+function distribution() {
+  try { return JSON.parse(fs.readFileSync(path.join(ROOT, 'distribution.json'), 'utf8')); } catch { return {}; }
+}
+const DEFAULT_DEST = path.join(process.env.LOCALAPPDATA || require('os').homedir(), 'Yukti', 'Server');
+let installAbort = null;
+const DEFAULTS = { mode: null, serverUrl: LOCAL_URL, installRoot: DEFAULT_DEST, manifestUrl: null, bounds: null };
 const READY_TIMEOUT_MS = 180000;
 
 app.setAppUserModelId('in.uniminds.yukti');
@@ -187,8 +194,8 @@ function winIcon() { return nativeImage.createFromPath(ICON_PNG); }
 function showConnect() {
   if (connectWin && !connectWin.isDestroyed()) return connectWin.focus();
   connectWin = new BrowserWindow({
-    width: 620, height: 620, resizable: false, minimizable: false, maximizable: false, title: 'Connect to Yukti',
-    icon: winIcon(), show: false, autoHideMenuBar: true, backgroundColor: '#0b1220',
+    width: 680, height: 820, resizable: true, minimizable: true, maximizable: false, title: 'Set up Yukti',
+    icon: winIcon(), show: false, autoHideMenuBar: true, backgroundColor: '#0e0e10',
     parent: mainWin && !mainWin.isDestroyed() ? mainWin : undefined, modal: !!(mainWin && !mainWin.isDestroyed()),
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true },
   });
@@ -206,7 +213,7 @@ function showSplash() {
   if (splashWin && !splashWin.isDestroyed()) return;
   splashWin = new BrowserWindow({
     width: 640, height: 440, resizable: true, frame: true, title: 'Starting Yukti', icon: winIcon(), show: false,
-    autoHideMenuBar: true, backgroundColor: '#0b1220',
+    autoHideMenuBar: true, backgroundColor: '#0e0e10',
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true },
   });
   splashWin.setMenu(null);
@@ -227,7 +234,7 @@ function openMain(base) {
     mainWin = new BrowserWindow({
       width: Math.max(1200, b.width || 1440), height: Math.max(760, b.height || 900),
       x: b.x, y: b.y, minWidth: 1200, minHeight: 760, title: 'Yukti', icon: winIcon(), show: false,
-      backgroundColor: '#0b1220', autoHideMenuBar: false,
+      backgroundColor: '#0e0e10', autoHideMenuBar: false,
       webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true, spellcheck: false, devTools: DEBUG },
     });
     if (b.maximized) mainWin.maximize();
@@ -334,7 +341,7 @@ function about() {
 function buildMenu() {
   const tpl = [
     { label: 'File', submenu: [
-      { label: 'Switch server…', accelerator: 'CmdOrCtrl+Shift+S', click: () => showConnect() },
+      { label: 'Switch server / Install or update…', accelerator: 'CmdOrCtrl+Shift+S', click: () => showConnect() },
       { label: 'Reload', accelerator: 'CmdOrCtrl+R', click: () => mainWin && mainWin.webContents.reload() },
       { type: 'separator' },
       { label: 'Quit', accelerator: 'CmdOrCtrl+Q', click: () => quitApp() },
@@ -414,6 +421,48 @@ ipcMain.handle('yukti:connect', async (_e, req) => {
   }
   return { ok: false, error: 'Unknown mode' };
 });
+ipcMain.handle('yukti:installInfo', async () => {
+  const manifestUrl = config.manifestUrl || distribution().manifestUrl || '';
+  const dest = config.mode === 'local' && config.installRoot ? config.installRoot : DEFAULT_DEST;
+  const installed = await installer.installedVersion(dest);
+  const out = { manifestUrl, dest, installed };
+  if (manifestUrl) {
+    try {
+      const m = await installer.fetchManifest(manifestUrl);
+      const nvidia = await installer.hasNvidiaGpu();
+      out.latest = m.version;
+      out.size = m.artifacts.filter((a) => !(a.requires === 'nvidia' && !nvidia)).reduce((t, a) => t + a.size, 0);
+      out.updateAvailable = !!installed && installed.version !== m.version;
+    } catch (e) { out.error = e.message; }
+  }
+  return out;
+});
+ipcMain.handle('yukti:install', async (_e, req) => {
+  const manifestUrl = String(req.manifestUrl || '').trim();
+  const dest = String(req.dest || '').trim() || DEFAULT_DEST;
+  if (!/^https?:\/\//i.test(manifestUrl)) return { ok: false, error: "Enter the download source (the manifest.json URL from your organisation's Yukti page)." };
+  installAbort = new AbortController();
+  const send = (p) => {
+    if (!connectWin || connectWin.isDestroyed()) return;
+    connectWin.webContents.send('install:progress', p);
+    if (p.pct !== undefined) connectWin.setProgressBar(p.pct / 100);
+  };
+  try {
+    if (server && !server.exited) await stopLocalServer();   // updating a running install
+    const r = await installer.install({ manifestUrl, dest, signal: installAbort.signal, onProgress: send });
+    config.mode = 'local'; config.installRoot = r.dest; config.serverUrl = LOCAL_URL; config.manifestUrl = manifestUrl; saveConfig();
+    const cw = connectWin; connectWin = null;
+    if (cw && !cw.isDestroyed()) cw.setProgressBar(-1);
+    if (mainWin && !mainWin.isDestroyed()) mainWin.hide();
+    bootLocal();
+    if (cw && !cw.isDestroyed()) cw.destroy();
+    return { ok: true };
+  } catch (e) {
+    if (connectWin && !connectWin.isDestroyed()) connectWin.setProgressBar(-1);
+    return { ok: false, error: e.message };
+  } finally { installAbort = null; }
+});
+ipcMain.handle('yukti:cancelInstall', () => { if (installAbort) installAbort.abort(); return true; });
 ipcMain.handle('yukti:splashAction', async (_e, action) => {
   if (action === 'settings') {
     await stopLocalServer();

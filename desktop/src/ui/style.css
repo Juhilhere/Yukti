@@ -26,3 +26,11 @@ details { border:1px solid var(--line); border-radius:8px; background:var(--pane
 summary { cursor:pointer; padding:8px 12px; color:var(--muted); }
 pre#log { margin:0; padding:8px 12px; height:190px; overflow:auto; font: 11.5px/1.35 Consolas, monospace; color:#b8c7de; white-space:pre-wrap; word-break:break-all; border-top:1px solid var(--line); }
 .hidden { display:none !important; }
+
+/* setup / install */
+.lbl { color: #9a9aa3; font-size: 12px; align-self: center; min-width: 88px; }
+.state { color: #22d3ee; font-size: 12px; margin-top: 8px; }
+details { margin-top: 8px; font-size: 12px; color: #9a9aa3; }
+details .row { margin-top: 6px; }
+.bar { height: 8px; background: #2a2a2e; border-radius: 6px; margin-top: 10px; overflow: hidden; }
+.bar > div { height: 100%; width: 0; background: #f5a524; transition: width .25s; }
