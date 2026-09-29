@@ -1,0 +1,1642 @@
+{
+ "retrieved_on": "2026-09-29",
+ "topic": "refinery",
+ "facts": [
+  {
+   "key": "nameplate_capacity",
+   "label": "Refinery nameplate crude capacity",
+   "value": 15.0,
+   "unit": "MMTPA",
+   "period": "current (Oct 2025)",
+   "source_url": "https://www.icra.in/Rating/GetRationalReportFilePdf?id=138332",
+   "source_title": "ICRA rationale - MRPL ratings reaffirmed (14 Oct 2025)",
+   "confidence": "high"
+  },
+  {
+   "key": "nameplate_capacity_bpd",
+   "label": "Nameplate capacity in barrels/day (approx., media)",
+   "value": 300000,
+   "unit": "bpd",
+   "period": "2025",
+   "source_url": "https://www.marketscreener.com/news/india-s-mrpl-seeks-cheaper-oil-amid-us-pressure-hopes-to-keep-buying-russian-ce7d5adfd181f121",
+   "source_title": "Reuters via MarketScreener - MRPL seeks cheaper oil (Oct 2025)",
+   "confidence": "medium"
+  },
+  {
+   "key": "ec_capacity_existing",
+   "label": "Existing capacity per MoEFCC EC at 8000 h/yr (13.6 Ph I+II + 3.0 Ph III)",
+   "value": 16.6,
+   "unit": "MMTPA",
+   "period": "Jan 2023",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/10.%20EC%20for%20Cap%20Ex%2016.6%20to%2018.2%20MMTPA%20(9.1.2023).pdf",
+   "source_title": "MoEFCC EC EC23A018KA154992 (09.01.2023) - Capacity expansion 16.6 to 18.2 MMTPA",
+   "confidence": "high"
+  },
+  {
+   "key": "ec_capacity_expanded",
+   "label": "Permitted capacity at 8760 h/yr (no revamps/new units)",
+   "value": 18.2,
+   "unit": "MMTPA",
+   "period": "EC 09-01-2023",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/10.%20EC%20for%20Cap%20Ex%2016.6%20to%2018.2%20MMTPA%20(9.1.2023).pdf",
+   "source_title": "MoEFCC EC EC23A018KA154992 (09.01.2023) - Capacity expansion 16.6 to 18.2 MMTPA",
+   "confidence": "high"
+  },
+  {
+   "key": "cto_capacity",
+   "label": "Consent to Operate capacity",
+   "value": 18.2,
+   "unit": "MMTPA",
+   "period": "FY2024-25",
+   "source_url": "https://mrpl.co.in/sites/default/files/Sustainability_Report/MRPL_Sustainability_report_FY_2024-25.pdf",
+   "source_title": "MRPL Sustainability Report FY2024-25",
+   "confidence": "high"
+  },
+  {
+   "key": "nci_care",
+   "label": "Nelson Complexity Index as cited by CareEdge",
+   "value": 11.67,
+   "unit": "index",
+   "period": "Jun 2025",
+   "source_url": "https://www.careratings.com/upload/CompanyFiles/PR/202506120619_Mangalore_Refinery_and_Petrochemicals_Limited.pdf",
+   "source_title": "CareEdge Ratings press release on MRPL (23 Jun 2025)",
+   "confidence": "medium"
+  },
+  {
+   "key": "nci_cht",
+   "label": "Refinery Complexity Index (NCI) in CHT/MoPNG PSU table, based on OGJ WW Refining & Complexity survey 2025",
+   "value": 9.46,
+   "unit": "index",
+   "period": "2025",
+   "source_url": "https://cht.gov.in/refinery-complexity-index",
+   "source_title": "Centre for High Technology (MoPNG) - Refinery Complexity Index table",
+   "confidence": "high"
+  },
+  {
+   "key": "nci_other",
+   "label": "Other NCI values quoted by blogs/market sites (not traced to primary source)",
+   "value": "10.6 / 11.3",
+   "unit": "index",
+   "period": "various",
+   "source_url": "https://cht.gov.in/refinery-complexity-index",
+   "source_title": "Centre for High Technology (MoPNG) - Refinery Complexity Index table",
+   "confidence": "low"
+  },
+  {
+   "key": "phase1",
+   "label": "Phase I commissioned (initial capacity)",
+   "value": 3.69,
+   "unit": "MMTPA",
+   "period": "1996",
+   "source_url": "https://mrpl.co.in/en/Content/History",
+   "source_title": "MRPL website - History",
+   "confidence": "high"
+  },
+  {
+   "key": "phase2",
+   "label": "Phase II (EC Aug 1996 for 6 MTPA addition incl. 67.5 MW CPP); capacity 9.69 MMTPA",
+   "value": 9.69,
+   "unit": "MMTPA",
+   "period": "1999",
+   "source_url": "https://mrpl.co.in/sites/default/files/Sustainability_Report/MRPL_Sustainability_report_FY_2024-25.pdf",
+   "source_title": "MRPL Sustainability Report FY2024-25",
+   "confidence": "high"
+  },
+  {
+   "key": "nameplate_11_82",
+   "label": "Nameplate re-rated 9.69 -> 11.82 MMTPA using design margins",
+   "value": 11.82,
+   "unit": "MMTPA",
+   "period": "pre-Phase III (date not stated on page)",
+   "source_url": "https://mrpl.co.in/en/CurrentUpdate/24",
+   "source_title": "MRPL Current Update - nameplate raised to 11.82 MMTPA",
+   "confidence": "medium"
+  },
+  {
+   "key": "expansion_13_6",
+   "label": "EC for expansion 12.5 -> 13.6 MMTPA (CDU-1 revamp 3.69->4.8; GOHDS 1.35->1.74; 7 new tanks; Rs 250 cr)",
+   "value": 13.6,
+   "unit": "MMTPA",
+   "period": "EC 23-12-2009",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/4.%20EC%20for%20Diesel%20Quality%20(23.12.2009).pdf",
+   "source_title": "MoEF EC J-11011/8/2009-IA II(I) (23.12.2009) - Diesel Quality Improvement & expansion to 13.6 MMTPA (scanned)",
+   "confidence": "high"
+  },
+  {
+   "key": "phase3",
+   "label": "Phase III expansion completed; capacity 15 MMTPA",
+   "value": 15.0,
+   "unit": "MMTPA",
+   "period": "2014",
+   "source_url": "https://mrpl.co.in/sites/default/files/Sustainability_Report/MRPL_Sustainability_report_FY_2024-25.pdf",
+   "source_title": "MRPL Sustainability Report FY2024-25",
+   "confidence": "high"
+  },
+  {
+   "key": "phase3_icra",
+   "label": "ICRA: capacity enhanced to 15 from 11.82 MMTPA with commissioning of Phase-III",
+   "value": "Mar 2012",
+   "unit": "date",
+   "period": "",
+   "source_url": "https://www.icra.in/Rating/GetRationalReportFilePdf?id=138332",
+   "source_title": "ICRA rationale - MRPL ratings reaffirmed (14 Oct 2025)",
+   "confidence": "medium"
+  },
+  {
+   "key": "incorporated",
+   "label": "Date of incorporation",
+   "value": "7 March 1988",
+   "unit": "date",
+   "period": "",
+   "source_url": "https://mrpl.co.in/en/Content/Company_Information",
+   "source_title": "MRPL website - Company Information",
+   "confidence": "high"
+  },
+  {
+   "key": "ongc_acquisition",
+   "label": "ONGC acquired A.V. Birla stake; Rs 600 cr equity infused",
+   "value": "28 March 2003",
+   "unit": "date",
+   "period": "",
+   "source_url": "https://mrpl.co.in/en/Content/History",
+   "source_title": "MRPL website - History",
+   "confidence": "high"
+  },
+  {
+   "key": "location",
+   "label": "Registered office/refinery address",
+   "value": "Mudapadav, Kuthethoor P.O., Via Katipalla, Mangaluru 575030, Dakshina Kannada, Karnataka",
+   "unit": "text",
+   "period": "",
+   "source_url": "https://mrpl.co.in/en/Content/Company_Information",
+   "source_title": "MRPL website - Company Information",
+   "confidence": "high"
+  },
+  {
+   "key": "ec_location",
+   "label": "Location per EC",
+   "value": "Kuthethoor/Bala village, Dakshina Kannada; Gurupura river 4 km S, Nandini river 9 km N",
+   "unit": "text",
+   "period": "2023",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/10.%20EC%20for%20Cap%20Ex%2016.6%20to%2018.2%20MMTPA%20(9.1.2023).pdf",
+   "source_title": "MoEFCC EC EC23A018KA154992 (09.01.2023) - Capacity expansion 16.6 to 18.2 MMTPA",
+   "confidence": "high"
+  },
+  {
+   "key": "land_area",
+   "label": "Refinery plant area per EC",
+   "value": "644.25 ha (1592 acres)",
+   "unit": "ha / acres",
+   "period": "2023",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/10.%20EC%20for%20Cap%20Ex%2016.6%20to%2018.2%20MMTPA%20(9.1.2023).pdf",
+   "source_title": "MoEFCC EC EC23A018KA154992 (09.01.2023) - Capacity expansion 16.6 to 18.2 MMTPA",
+   "confidence": "high"
+  },
+  {
+   "key": "land_area_2009",
+   "label": "Refinery land area per 2009 EC",
+   "value": 1425,
+   "unit": "acres",
+   "period": "2009",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/4.%20EC%20for%20Diesel%20Quality%20(23.12.2009).pdf",
+   "source_title": "MoEF EC J-11011/8/2009-IA II(I) (23.12.2009) - Diesel Quality Improvement & expansion to 13.6 MMTPA (scanned)",
+   "confidence": "high"
+  },
+  {
+   "key": "footprint_sr",
+   "label": "Operational footprint (company-wide at Mangaluru)",
+   "value": "~2034",
+   "unit": "acres",
+   "period": "FY2024-25",
+   "source_url": "https://mrpl.co.in/sites/default/files/Sustainability_Report/MRPL_Sustainability_report_FY_2024-25.pdf",
+   "source_title": "MRPL Sustainability Report FY2024-25",
+   "confidence": "medium"
+  },
+  {
+   "key": "greenbelt",
+   "label": "Greenbelt developed",
+   "value": 699,
+   "unit": "acres",
+   "period": "FY2024-25",
+   "source_url": "https://mrpl.co.in/sites/default/files/Sustainability_Report/MRPL_Sustainability_report_FY_2024-25.pdf",
+   "source_title": "MRPL Sustainability Report FY2024-25",
+   "confidence": "high"
+  },
+  {
+   "key": "api_range",
+   "label": "Crude API range (design)",
+   "value": "24-46",
+   "unit": "deg API",
+   "period": "website",
+   "source_url": "https://mrpl.co.in/en/Content/Profile",
+   "source_title": "MRPL website - Profile",
+   "confidence": "high"
+  },
+  {
+   "key": "api_range_processed",
+   "label": "API range of crudes processed to date",
+   "value": "15-46",
+   "unit": "deg API",
+   "period": "as of FY2025-26",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/a4a35c19a5b64944b130274489f73963.pdf",
+   "source_title": "MRPL 38th Annual Report 2025-26",
+   "confidence": "high"
+  },
+  {
+   "key": "crude_grades_basket",
+   "label": "Crude grades in basket",
+   "value": 273,
+   "unit": "grades",
+   "period": "FY2025-26",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/a4a35c19a5b64944b130274489f73963.pdf",
+   "source_title": "MRPL 38th Annual Report 2025-26",
+   "confidence": "high"
+  },
+  {
+   "key": "crude_grades_processed",
+   "label": "Crude varieties processed to date",
+   "value": 116,
+   "unit": "grades (more than)",
+   "period": "as of FY2025-26",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/a4a35c19a5b64944b130274489f73963.pdf",
+   "source_title": "MRPL 38th Annual Report 2025-26",
+   "confidence": "high"
+  },
+  {
+   "key": "distillate_yield_fy26",
+   "label": "Distillate yield",
+   "value": 81.94,
+   "unit": "%",
+   "period": "FY2025-26",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/a4a35c19a5b64944b130274489f73963.pdf",
+   "source_title": "MRPL 38th Annual Report 2025-26",
+   "confidence": "high"
+  },
+  {
+   "key": "distillate_yield_fy25",
+   "label": "Distillate yield (record)",
+   "value": 81.93,
+   "unit": "%",
+   "period": "FY2024-25",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf",
+   "source_title": "MRPL 37th Annual Report 2024-25",
+   "confidence": "high"
+  },
+  {
+   "key": "distillate_yield_fy24",
+   "label": "Distillate yield",
+   "value": 78.77,
+   "unit": "%",
+   "period": "FY2023-24",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf",
+   "source_title": "MRPL 36th Annual Report 2023-24",
+   "confidence": "high"
+  },
+  {
+   "key": "distillate_yield_fy23",
+   "label": "Distillate yield",
+   "value": 78.09,
+   "unit": "%",
+   "period": "FY2022-23",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/57014f72aa3348879567b1e7797f00ed.pdf",
+   "source_title": "MRPL 35th Annual Report 2022-23",
+   "confidence": "high"
+  },
+  {
+   "key": "distillate_yield_fy22",
+   "label": "Distillate yield",
+   "value": 78.79,
+   "unit": "%",
+   "period": "FY2021-22",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf",
+   "source_title": "MRPL 37th Annual Report 2024-25",
+   "confidence": "high"
+  },
+  {
+   "key": "fuel_loss_fy25",
+   "label": "Fuel & Loss (lowest post OMPL integration)",
+   "value": 10.42,
+   "unit": "%",
+   "period": "FY2024-25",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf",
+   "source_title": "MRPL 37th Annual Report 2024-25",
+   "confidence": "high"
+  },
+  {
+   "key": "fuel_loss_fy24",
+   "label": "Fuel & Loss",
+   "value": 11.02,
+   "unit": "%",
+   "period": "FY2023-24",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf",
+   "source_title": "MRPL 36th Annual Report 2023-24",
+   "confidence": "high"
+  },
+  {
+   "key": "fuel_loss_fy23",
+   "label": "Fuel & Loss",
+   "value": 11.13,
+   "unit": "%",
+   "period": "FY2022-23",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/57014f72aa3348879567b1e7797f00ed.pdf",
+   "source_title": "MRPL 35th Annual Report 2022-23",
+   "confidence": "high"
+  },
+  {
+   "key": "mbn_fy25",
+   "label": "Specific energy consumption (lowest since Phase-3)",
+   "value": 70.71,
+   "unit": "MBN",
+   "period": "FY2024-25",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf",
+   "source_title": "MRPL 37th Annual Report 2024-25",
+   "confidence": "high"
+  },
+  {
+   "key": "mbn_fy24",
+   "label": "Specific energy consumption (AR 2024-25 cites 71.2 as previous best)",
+   "value": 71.2,
+   "unit": "MBN",
+   "period": "FY2023-24",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf",
+   "source_title": "MRPL 37th Annual Report 2024-25",
+   "confidence": "medium"
+  },
+  {
+   "key": "mbn_fy23",
+   "label": "Specific energy consumption (PAT-VI target 69.08)",
+   "value": 71.3,
+   "unit": "MBN",
+   "period": "FY2022-23",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/57014f72aa3348879567b1e7797f00ed.pdf",
+   "source_title": "MRPL 35th Annual Report 2022-23",
+   "confidence": "high"
+  },
+  {
+   "key": "mbn_fy22",
+   "label": "Specific energy consumption",
+   "value": 73.45,
+   "unit": "MBN",
+   "period": "FY2021-22",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/57014f72aa3348879567b1e7797f00ed.pdf",
+   "source_title": "MRPL 35th Annual Report 2022-23",
+   "confidence": "high"
+  },
+  {
+   "key": "mbn_fy21",
+   "label": "Specific energy consumption",
+   "value": 81.41,
+   "unit": "MBN",
+   "period": "FY2020-21",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/652f4db54449453aa1166ed18f39abcd.pdf",
+   "source_title": "MRPL 33rd Annual Report 2020-21",
+   "confidence": "high"
+  },
+  {
+   "key": "mbn_fy20",
+   "label": "Specific energy consumption",
+   "value": 75.33,
+   "unit": "MBN",
+   "period": "FY2019-20",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/32f27c0116a244a38c94934b880ab9fc.pdf",
+   "source_title": "MRPL 32nd Annual Report 2019-20",
+   "confidence": "high"
+  },
+  {
+   "key": "mbn_fy19",
+   "label": "Specific energy consumption (PAT-II; baseline FY15 86.26, target 79.88)",
+   "value": 74.3,
+   "unit": "MBN",
+   "period": "FY2018-19",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/31a90f765f0a4bfca85e517a5645ed2e.pdf",
+   "source_title": "MRPL 34th Annual Report 2021-22",
+   "confidence": "high"
+  },
+  {
+   "key": "ccts_gei",
+   "label": "CCTS GHG emission intensity: target 5.6885, achieved (unaudited)",
+   "value": 5.3305,
+   "unit": "GEI (tCO2e basis)",
+   "period": "FY2025-26",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/a4a35c19a5b64944b130274489f73963.pdf",
+   "source_title": "MRPL 38th Annual Report 2025-26",
+   "confidence": "high"
+  },
+  {
+   "key": "ghg_intensity",
+   "label": "Scope 1+2 intensity",
+   "value": 0.32,
+   "unit": "tCO2e/MT crude",
+   "period": "FY2024-25",
+   "source_url": "https://mrpl.co.in/sites/default/files/Sustainability_Report/MRPL_Sustainability_report_FY_2024-25.pdf",
+   "source_title": "MRPL Sustainability Report FY2024-25",
+   "confidence": "high"
+  },
+  {
+   "key": "water_intensity",
+   "label": "Water intensity",
+   "value": 1.23,
+   "unit": "kL/MT crude",
+   "period": "FY2024-25",
+   "source_url": "https://mrpl.co.in/sites/default/files/Sustainability_Report/MRPL_Sustainability_report_FY_2024-25.pdf",
+   "source_title": "MRPL Sustainability Report FY2024-25",
+   "confidence": "high"
+  },
+  {
+   "key": "water_consumption",
+   "label": "Water consumption",
+   "value": 22.13,
+   "unit": "million kL",
+   "period": "FY2024-25",
+   "source_url": "https://mrpl.co.in/sites/default/files/Sustainability_Report/MRPL_Sustainability_report_FY_2024-25.pdf",
+   "source_title": "MRPL Sustainability Report FY2024-25",
+   "confidence": "high"
+  },
+  {
+   "key": "water_withdrawal",
+   "label": "Total water withdrawal",
+   "value": 25.16,
+   "unit": "million kL",
+   "period": "FY2024-25",
+   "source_url": "https://mrpl.co.in/sites/default/files/Sustainability_Report/MRPL_Sustainability_report_FY_2024-25.pdf",
+   "source_title": "MRPL Sustainability Report FY2024-25",
+   "confidence": "high"
+  },
+  {
+   "key": "desal_share",
+   "label": "Share of desalinated water in withdrawal",
+   "value": 22.6,
+   "unit": "%",
+   "period": "FY2024-25",
+   "source_url": "https://mrpl.co.in/sites/default/files/Sustainability_Report/MRPL_Sustainability_report_FY_2024-25.pdf",
+   "source_title": "MRPL Sustainability Report FY2024-25",
+   "confidence": "high"
+  },
+  {
+   "key": "water_requirement",
+   "label": "Total water requirement (2658 river+desal, 728 treated STP, 617 recycled)",
+   "value": 4003,
+   "unit": "m3/h",
+   "period": "2023",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/10.%20EC%20for%20Cap%20Ex%2016.6%20to%2018.2%20MMTPA%20(9.1.2023).pdf",
+   "source_title": "MoEFCC EC EC23A018KA154992 (09.01.2023) - Capacity expansion 16.6 to 18.2 MMTPA",
+   "confidence": "high"
+  },
+  {
+   "key": "effluent",
+   "label": "Effluent 1063 m3/h; 617 recycled to cooling towers; 446 m3/h to sea after ETP",
+   "value": 1063,
+   "unit": "m3/h",
+   "period": "2023",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/10.%20EC%20for%20Cap%20Ex%2016.6%20to%2018.2%20MMTPA%20(9.1.2023).pdf",
+   "source_title": "MoEFCC EC EC23A018KA154992 (09.01.2023) - Capacity expansion 16.6 to 18.2 MMTPA",
+   "confidence": "high"
+  },
+  {
+   "key": "power_requirement",
+   "label": "Power requirement of refinery-cum-petrochemical complex",
+   "value": 160,
+   "unit": "MW",
+   "period": "2023",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/10.%20EC%20for%20Cap%20Ex%2016.6%20to%2018.2%20MMTPA%20(9.1.2023).pdf",
+   "source_title": "MoEFCC EC EC23A018KA154992 (09.01.2023) - Capacity expansion 16.6 to 18.2 MMTPA",
+   "confidence": "high"
+  },
+  {
+   "key": "power_requirement_2021",
+   "label": "Power requirement for normal refinery operation",
+   "value": 180,
+   "unit": "MW",
+   "period": "2021",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/9.%20EC%20for%20Modernization%20Project%20(19.01.2021).pdf",
+   "source_title": "MoEFCC EC (19.01.2021) - MRPL Modernization Project",
+   "confidence": "high"
+  },
+  {
+   "key": "steam_capacity",
+   "label": "Steam generation capacity",
+   "value": 2230,
+   "unit": "TPH",
+   "period": "2017",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/7.%20EC%20for%20BS%20VI%20(10.7.2017).pdf",
+   "source_title": "MoEFCC EC (10.07.2017) - BS V/VI Auto Fuel Quality Project",
+   "confidence": "high"
+  },
+  {
+   "key": "sox_nox",
+   "label": "SOx / NOx emissions of existing complex",
+   "value": "56.95 / 29.88",
+   "unit": "TPD",
+   "period": "2023",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/10.%20EC%20for%20Cap%20Ex%2016.6%20to%2018.2%20MMTPA%20(9.1.2023).pdf",
+   "source_title": "MoEFCC EC EC23A018KA154992 (09.01.2023) - Capacity expansion 16.6 to 18.2 MMTPA",
+   "confidence": "high"
+  },
+  {
+   "key": "vlcc_fy26",
+   "label": "VLCCs handled at SPM (record)",
+   "value": 13,
+   "unit": "vessels",
+   "period": "FY2025-26",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/a4a35c19a5b64944b130274489f73963.pdf",
+   "source_title": "MRPL 38th Annual Report 2025-26",
+   "confidence": "high"
+  },
+  {
+   "key": "q_record",
+   "label": "Highest quarterly crude throughput",
+   "value": 4.56,
+   "unit": "MMT",
+   "period": "Q3 FY2025-26",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/a4a35c19a5b64944b130274489f73963.pdf",
+   "source_title": "MRPL 38th Annual Report 2025-26",
+   "confidence": "high"
+  },
+  {
+   "key": "hsd_prod_fy26",
+   "label": "HSD production (record)",
+   "value": 6.78,
+   "unit": "MMT",
+   "period": "FY2025-26",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/a4a35c19a5b64944b130274489f73963.pdf",
+   "source_title": "MRPL 38th Annual Report 2025-26",
+   "confidence": "high"
+  },
+  {
+   "key": "pp_prod_fy22",
+   "label": "PP production (record; nameplate 440 KTPA)",
+   "value": 460,
+   "unit": "KT",
+   "period": "FY2021-22",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/31a90f765f0a4bfca85e517a5645ed2e.pdf",
+   "source_title": "MRPL 34th Annual Report 2021-22",
+   "confidence": "high"
+  },
+  {
+   "key": "pfcc_dcu_util",
+   "label": "Record utilisation PFCC 117.9% and DCU 98.3%",
+   "value": "117.9 / 98.3",
+   "unit": "%",
+   "period": "FY2022-23",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/57014f72aa3348879567b1e7797f00ed.pdf",
+   "source_title": "MRPL 35th Annual Report 2022-23",
+   "confidence": "high"
+  },
+  {
+   "key": "safety_fy25",
+   "label": "LTIFR employees 0; contract workers 0.471; 1 contract-worker fatality",
+   "value": "0 / 0.471",
+   "unit": "per million hours",
+   "period": "FY2024-25",
+   "source_url": "https://mrpl.co.in/sites/default/files/Sustainability_Report/MRPL_Sustainability_report_FY_2024-25.pdf",
+   "source_title": "MRPL Sustainability Report FY2024-25",
+   "confidence": "high"
+  },
+  {
+   "key": "safety_fy26",
+   "label": "LTIFR employees 0.62, workers 0.21; 2 employee fatalities",
+   "value": "0.62 / 0.21",
+   "unit": "per million hours",
+   "period": "FY2025-26",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/a4a35c19a5b64944b130274489f73963.pdf",
+   "source_title": "MRPL 38th Annual Report 2025-26",
+   "confidence": "high"
+  },
+  {
+   "key": "incident_2025",
+   "label": "H2S exposure at tank FB7029A (dry slop), Oil Movement section: 2 died, 1 hospitalised",
+   "value": "2 deaths",
+   "unit": "persons",
+   "period": "12 Jul 2025",
+   "source_url": "https://www.etvbharat.com/en/!state/two-workers-die-one-hospitalised-due-to-gas-leak-at-mrpl-mangaluru-enn25071203390",
+   "source_title": "ETV Bharat - two workers die in MRPL gas leak (12 Jul 2025)",
+   "confidence": "high"
+  },
+  {
+   "key": "incident_2012",
+   "label": "Explosion during welding at SRU-II: 1 labourer killed, others injured",
+   "value": "1 death",
+   "unit": "persons",
+   "period": "Jan 2012",
+   "source_url": "http://www.kemmannu.com/index.php?action=flashnews&type=128",
+   "source_title": "Kemmannu.com - one killed in MRPL SRU-II blast (Jan 2012)",
+   "confidence": "medium"
+  },
+  {
+   "key": "no_major_fire_fy24",
+   "label": "No major fire incidents at refinery and aromatics",
+   "value": "0",
+   "unit": "incidents",
+   "period": "FY2023-24",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf",
+   "source_title": "MRPL 36th Annual Report 2023-24",
+   "confidence": "high"
+  },
+  {
+   "key": "green_h2",
+   "label": "Green hydrogen plant (Rs 56 cr; target Mar 2027)",
+   "value": 500,
+   "unit": "TPA",
+   "period": "FY2025-26",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/a4a35c19a5b64944b130274489f73963.pdf",
+   "source_title": "MRPL 38th Annual Report 2025-26",
+   "confidence": "high"
+  },
+  {
+   "key": "bio_atf",
+   "label": "Bio-ATF/SAF unit (target Jan 2027): 20 KLPD per AR 2024-25/SR; 33 KLPD per website",
+   "value": "20-33",
+   "unit": "KLPD",
+   "period": "2025-26",
+   "source_url": "https://mrpl.co.in/en/Content/Projects",
+   "source_title": "MRPL website - Projects",
+   "confidence": "medium"
+  },
+  {
+   "key": "solar",
+   "label": "Installed solar capacity",
+   "value": 8.76,
+   "unit": "MW",
+   "period": "FY2024-25",
+   "source_url": "https://mrpl.co.in/sites/default/files/Sustainability_Report/MRPL_Sustainability_report_FY_2024-25.pdf",
+   "source_title": "MRPL Sustainability Report FY2024-25",
+   "confidence": "high"
+  },
+  {
+   "key": "grid_power",
+   "label": "Grid import upgrade (220/33 kV refinery; 110/33 kV aromatics); import 28 -> 102 MW",
+   "value": "102",
+   "unit": "MW",
+   "period": "target 2026-28",
+   "source_url": "https://mrpl.co.in/en/Content/Projects",
+   "source_title": "MRPL website - Projects",
+   "confidence": "medium"
+  },
+  {
+   "key": "pat_dc",
+   "label": "PAT designated consumer REF0014KA (PAT-2, PAT-6)",
+   "value": "REF0014KA",
+   "unit": "id",
+   "period": "",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf",
+   "source_title": "MRPL 36th Annual Report 2023-24",
+   "confidence": "high"
+  },
+  {
+   "key": "solomon",
+   "label": "HSB Solomon benchmarking (CY2022; biennial cycle 2020-2028)",
+   "value": "yes",
+   "unit": "",
+   "period": "CY2022",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf",
+   "source_title": "MRPL 36th Annual Report 2023-24",
+   "confidence": "high"
+  }
+ ],
+ "units": [
+  {
+   "code": "CDU/VDU-1",
+   "name": "Crude & Vacuum Distillation Unit-1 (with pre-flash column)",
+   "phase": "Phase I (1996); revamp Oct 2011",
+   "capacity": "3.69 -> 4.8",
+   "unit": "MMTPA",
+   "licensor": "Engineers India Ltd (design)",
+   "purpose": "Primary separation; heat-integrated (pinch)",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/4.%20EC%20for%20Diesel%20Quality%20(23.12.2009).pdf",
+   "confidence": "high",
+   "note": "'present capacity' 5.0 MMTPA per PACE brief c.2018"
+  },
+  {
+   "code": "CDU/VDU-2",
+   "name": "Crude & Vacuum Distillation Unit-2",
+   "phase": "Phase II (1999)",
+   "capacity": "7.2",
+   "unit": "MMTPA",
+   "licensor": "Engineers India Ltd (design)",
+   "purpose": "Primary separation",
+   "source_url": "https://environmentclearance.nic.in/DownloadPfdFile.aspx?FileName=ME2hD5LK2d7ehBlLNo%2Fi1jG0gk46GQu53wzMRCyOnEsBrRNcPfxRnyv294r0VHaVrpVquU045MmQwsjxIQAa9FW98gf7Rm4B1VExHqd8gV7yectH9Sag5gTT3LgzAByZ&FilePath=93ZZBm8LWEXfg+HAlQix2fE2t8z%2FpgnoBhDlYdZCxzXmG8GlihX6H9UP1HygCn3pCkAF2zPFXFQNqA4krKa1Aw%3D%3D",
+   "confidence": "medium",
+   "note": "PACE proposed revamp to 9.7 MMTPA - execution not confirmed"
+  },
+  {
+   "code": "CDU/VDU-3",
+   "name": "Crude & Vacuum Distillation Unit-3",
+   "phase": "Phase III (2012-13)",
+   "capacity": "3.0 design; 3.3 quoted c.2018",
+   "unit": "MMTPA",
+   "licensor": "EIL (PMC); Toyo/Jacobs EPC",
+   "purpose": "Primary separation",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/3.%20EC%20for%20Phase%20-%20III%20(3.4.2008).pdf",
+   "confidence": "high"
+  },
+  {
+   "code": "CDU/VDU-TOTAL",
+   "name": "All CDU/VDU incl. Naphtha Splitter Unit",
+   "phase": "All",
+   "capacity": "16.6 (8000 h) / 18.2 (8760 h)",
+   "unit": "MMTPA",
+   "licensor": "EIL",
+   "purpose": "Aggregate primary capacity",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/10.%20EC%20for%20Cap%20Ex%2016.6%20to%2018.2%20MMTPA%20(9.1.2023).pdf",
+   "confidence": "high"
+  },
+  {
+   "code": "NSU",
+   "name": "Naphtha Splitter Unit",
+   "phase": "Phase I/II",
+   "capacity": "in CDU/VDU total",
+   "unit": "-",
+   "licensor": "Engineers India Ltd",
+   "purpose": "Naphtha fractionation",
+   "source_url": "https://mrpl.co.in/en/Content/Manufacturing_Units",
+   "confidence": "high"
+  },
+  {
+   "code": "HCU-1",
+   "name": "Hydrocracker Unit-1",
+   "phase": "Phase I",
+   "capacity": "share of 3.36 MMTPA (HCU-1+2)",
+   "unit": "MMTPA",
+   "licensor": "UOP (USA)",
+   "purpose": "VGO -> diesel/ATF; revamped to once-through Oct 2011 to feed PFCC",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/28862ef4de57492d93775176b1861679.pdf",
+   "confidence": "high"
+  },
+  {
+   "code": "HCU-2",
+   "name": "Hydrocracker Unit-2",
+   "phase": "Phase II",
+   "capacity": "share of 3.36 MMTPA (HCU-1+2)",
+   "unit": "MMTPA",
+   "licensor": "UOP (USA)",
+   "purpose": "VGO -> diesel/ATF; once-through revamp Apr 2012",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/28862ef4de57492d93775176b1861679.pdf",
+   "confidence": "high"
+  },
+  {
+   "code": "HCU-TOTAL",
+   "name": "Hydrocrackers combined",
+   "phase": "I & II",
+   "capacity": "3.36 / 3.79 (18.2 case)",
+   "unit": "MMTPA",
+   "licensor": "UOP",
+   "purpose": "Aggregate",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/10.%20EC%20for%20Cap%20Ex%2016.6%20to%2018.2%20MMTPA%20(9.1.2023).pdf",
+   "confidence": "high"
+  },
+  {
+   "code": "CCR-1",
+   "name": "CCR Platformer-1 with NHT",
+   "phase": "Phase I",
+   "capacity": "share of 0.93 MMTPA NHT/CCR",
+   "unit": "MMTPA",
+   "licensor": "UOP (USA)",
+   "purpose": "Reformate, H2, LPG; regenerator revamp in Modernization project",
+   "source_url": "https://mrpl.co.in/en/Content/Manufacturing_Units",
+   "confidence": "high"
+  },
+  {
+   "code": "CCR-2",
+   "name": "CCR Platformer-2 with NHT",
+   "phase": "Phase II",
+   "capacity": "share of 0.93 MMTPA NHT/CCR",
+   "unit": "MMTPA",
+   "licensor": "UOP (USA)",
+   "purpose": "Reformate, H2, LPG",
+   "source_url": "https://mrpl.co.in/en/Content/Manufacturing_Units",
+   "confidence": "high"
+  },
+  {
+   "code": "NHT/CCR-TOTAL",
+   "name": "NHT/CCR combined",
+   "phase": "I & II",
+   "capacity": "0.93 / 1.06 (18.2 case)",
+   "unit": "MMTPA",
+   "licensor": "UOP",
+   "purpose": "Aggregate",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/10.%20EC%20for%20Cap%20Ex%2016.6%20to%2018.2%20MMTPA%20(9.1.2023).pdf",
+   "confidence": "high"
+  },
+  {
+   "code": "RSU",
+   "name": "Reformate Splitter Unit",
+   "phase": "-",
+   "capacity": "0.82 / 0.94",
+   "unit": "MMTPA",
+   "licensor": "n/a",
+   "purpose": "Reformate splitting",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/10.%20EC%20for%20Cap%20Ex%2016.6%20to%2018.2%20MMTPA%20(9.1.2023).pdf",
+   "confidence": "high"
+  },
+  {
+   "code": "MX",
+   "name": "Mixed Xylene unit",
+   "phase": "-",
+   "capacity": "0.52 / 0.56",
+   "unit": "MMTPA",
+   "licensor": "n/a",
+   "purpose": "Xylol recovery",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/10.%20EC%20for%20Cap%20Ex%2016.6%20to%2018.2%20MMTPA%20(9.1.2023).pdf",
+   "confidence": "high"
+  },
+  {
+   "code": "ISOM",
+   "name": "Isomerisation (LNHT + Penex)",
+   "phase": "-",
+   "capacity": "0.59 MMTPA (EC); LNHT 690 / Penex 494 KTPA",
+   "unit": "MMTPA",
+   "licensor": "UOP (Penex)",
+   "purpose": "Light naphtha -> isomerate",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/10.%20EC%20for%20Cap%20Ex%2016.6%20to%2018.2%20MMTPA%20(9.1.2023).pdf",
+   "confidence": "high",
+   "note": "LNHT/Penex split from PACE brief c.2018; AR 2020-21 names 'LNHT & PENEX (ISOM unit)'"
+  },
+  {
+   "code": "VBU",
+   "name": "Visbreaker (Shell Soaker, with vacuum flash column)",
+   "phase": "Phase I/II",
+   "capacity": "0.00 existing / 0.02 (2023 EC)",
+   "unit": "MMTPA",
+   "licensor": "Shell / ABB Lummus (Holland)",
+   "purpose": "Residue upgrading; now largely DCU feed-prep",
+   "source_url": "https://mrpl.co.in/en/Content/Manufacturing_Units",
+   "confidence": "medium",
+   "note": "FY2022-23 VBU operated as DCU feed preparation unit (AR 2022-23)"
+  },
+  {
+   "code": "BBU",
+   "name": "Bitumen Blowing Unit (Biturox) + new train",
+   "phase": "Phase I; new train commissioned Nov 2024",
+   "capacity": "0.19 MMTPA (EC) + 144 KTPA new train",
+   "unit": "MMTPA / KTPA",
+   "licensor": "Porner (Austria)",
+   "purpose": "VG30/VG40 bitumen",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/10.%20EC%20for%20Cap%20Ex%2016.6%20to%2018.2%20MMTPA%20(9.1.2023).pdf",
+   "confidence": "high"
+  },
+  {
+   "code": "DCU",
+   "name": "Delayed Coker Unit",
+   "phase": "Phase III (3 Apr 2014)",
+   "capacity": "3.0 design; 3.09 / 3.48 (EC 2023)",
+   "unit": "MMTPA",
+   "licensor": "Lummus Technology",
+   "purpose": "Vacuum residue -> distillates + petcoke; oily sludge reuse",
+   "source_url": "https://www.ogj.com/refining-processing/refining/construction/article/17272169/mrpl-starts-delayed-coker-at-mangalore-refinery",
+   "confidence": "high"
+  },
+  {
+   "code": "PFCCU",
+   "name": "Petro FCC Unit with propylene recovery",
+   "phase": "Phase III (feed-cut 28 Aug 2014)",
+   "capacity": "2.2 design; 2.74 (EC 2023)",
+   "unit": "MMTPA",
+   "licensor": "Technip Stone & Webster (USA)",
+   "purpose": "~20% polymer-grade propylene, ~25% LPG, gasoline",
+   "source_url": "https://www.digitalrefining.com/news/1003078/mrpl-commissions-a-petrochemical-fluidized-catalytic-cracking-unit",
+   "confidence": "high"
+  },
+  {
+   "code": "PRU",
+   "name": "Propylene Recovery Unit (in PFCC)",
+   "phase": "Phase III",
+   "capacity": "0.72 (design)",
+   "unit": "MMTPA",
+   "licensor": "Technip Stone & Webster",
+   "purpose": "PGP to PP unit",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/3.%20EC%20for%20Phase%20-%20III%20(3.4.2008).pdf",
+   "confidence": "medium",
+   "note": "EC table partly obscured by stamp"
+  },
+  {
+   "code": "PFCC-WGS",
+   "name": "PFCC Wet Gas Scrubber",
+   "phase": "Modernization (commissioned FY2024-25)",
+   "capacity": "2992",
+   "unit": "KTPA",
+   "licensor": "n/a",
+   "purpose": "PM/SOx control",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/9.%20EC%20for%20Modernization%20Project%20(19.01.2021).pdf",
+   "confidence": "high"
+  },
+  {
+   "code": "LATU",
+   "name": "LPG Amine Treating Unit at PFCC",
+   "phase": "Modernization",
+   "capacity": "1365",
+   "unit": "KTPA",
+   "licensor": "n/a",
+   "purpose": "LPG H2S removal",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/9.%20EC%20for%20Modernization%20Project%20(19.01.2021).pdf",
+   "confidence": "high"
+  },
+  {
+   "code": "CHTU",
+   "name": "Coker Heavy Gas Oil Hydrotreater",
+   "phase": "Phase III (Apr-May 2014)",
+   "capacity": "0.65 design; 1.01 (EC 2023)",
+   "unit": "MMTPA",
+   "licensor": "UOP Unionfining",
+   "purpose": "HCGO -> PFCC feed; catalyst replaced May-Jun 2025",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/3.%20EC%20for%20Phase%20-%20III%20(3.4.2008).pdf",
+   "confidence": "high"
+  },
+  {
+   "code": "GOHDS",
+   "name": "Gas Oil Hydrodesulphurisation Unit",
+   "phase": "Phase I/II; revamp 2009",
+   "capacity": "1.35 -> 1.74",
+   "unit": "MMTPA",
+   "licensor": "n/a",
+   "purpose": "Diesel desulphurisation",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/4.%20EC%20for%20Diesel%20Quality%20(23.12.2009).pdf",
+   "confidence": "high"
+  },
+  {
+   "code": "DHDT",
+   "name": "Diesel Hydrotreater",
+   "phase": "Phase III (2013)",
+   "capacity": "3.7 design",
+   "unit": "MMTPA",
+   "licensor": "Axens (France)",
+   "purpose": "BS-VI diesel; also naphtha/kero draws",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/3.%20EC%20for%20Phase%20-%20III%20(3.4.2008).pdf",
+   "confidence": "high"
+  },
+  {
+   "code": "GOHDS+DHDT",
+   "name": "GOHDS & DHDT combined",
+   "phase": "-",
+   "capacity": "5.32 / 5.91 (18.2 case)",
+   "unit": "MMTPA",
+   "licensor": "-",
+   "purpose": "Aggregate",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/10.%20EC%20for%20Cap%20Ex%2016.6%20to%2018.2%20MMTPA%20(9.1.2023).pdf",
+   "confidence": "high"
+  },
+  {
+   "code": "FGTU",
+   "name": "FCC Gasoline Treating Unit",
+   "phase": "BS-VI project (11 Jul 2021)",
+   "capacity": "800",
+   "unit": "KTPA feed",
+   "licensor": "Axens (France)",
+   "purpose": "BS-VI MS",
+   "source_url": "https://www.business-standard.com/article/news-cm/mrpl-commissions-fcc-gasoline-treatment-unit-as-part-of-its-bs-vi-project-121071201044_1.html",
+   "confidence": "high"
+  },
+  {
+   "code": "KERO-MEROX",
+   "name": "Kerosene/ATF Merox",
+   "phase": "Phase I/II",
+   "capacity": "1.12 / 1.10",
+   "unit": "MMTPA",
+   "licensor": "UOP (USA)",
+   "purpose": "Sweetening",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/10.%20EC%20for%20Cap%20Ex%2016.6%20to%2018.2%20MMTPA%20(9.1.2023).pdf",
+   "confidence": "high"
+  },
+  {
+   "code": "LPG-MEROX",
+   "name": "LPG Merox",
+   "phase": "-",
+   "capacity": "0.22 / 0.25",
+   "unit": "MMTPA",
+   "licensor": "UOP (USA)",
+   "purpose": "Mercaptan removal",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/10.%20EC%20for%20Cap%20Ex%2016.6%20to%2018.2%20MMTPA%20(9.1.2023).pdf",
+   "confidence": "high"
+  },
+  {
+   "code": "MEROX-PH3",
+   "name": "LPG/ATF/Kero Mercaptan Treatment (Phase III)",
+   "phase": "Phase III",
+   "capacity": "0.5 design",
+   "unit": "MMTPA",
+   "licensor": "n/a",
+   "purpose": "Treating",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/3.%20EC%20for%20Phase%20-%20III%20(3.4.2008).pdf",
+   "confidence": "high"
+  },
+  {
+   "code": "HGU-1/2",
+   "name": "Hydrogen Generation Units 1 & 2 (naphtha SMR + UOP PSA)",
+   "phase": "Phase I/II",
+   "capacity": "51.14 (as printed 'NM3/hr', units unclear)",
+   "unit": "as printed",
+   "licensor": "KTI (Holland); PSA UOP",
+   "purpose": "H2 99.9%",
+   "source_url": "https://mrpl.co.in/en/Content/Manufacturing_Units",
+   "confidence": "low"
+  },
+  {
+   "code": "HGU-3",
+   "name": "Hydrogen Generation Unit-3",
+   "phase": "Phase III (2013)",
+   "capacity": "70 KTPA design",
+   "unit": "KTPA",
+   "licensor": "Haldor Topsoe (Denmark)",
+   "purpose": "H2; RLNG feed now used",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/3.%20EC%20for%20Phase%20-%20III%20(3.4.2008).pdf",
+   "confidence": "high"
+  },
+  {
+   "code": "PSA",
+   "name": "PSA unit feed capacity increase",
+   "phase": "reported FY2019-20",
+   "capacity": "21,593 -> 37,469",
+   "unit": "Nm3/h feed",
+   "licensor": "UOP",
+   "purpose": "H2 purification",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/32f27c0116a244a38c94934b880ab9fc.pdf",
+   "confidence": "medium"
+  },
+  {
+   "code": "SRU",
+   "name": "Sulphur Recovery Units - 7 trains (Blocks 1-3) + TGTU",
+   "phase": "Phase I-III + BS-VI",
+   "capacity": "0.29 MMTPA (EC); Ph-III 3x185 TPD; SRU-7 185 TPD (28 Mar 2022)",
+   "unit": "MMTPA / TPD",
+   "licensor": "Claus; BSR/Selectox tail gas (trains 1-3); TGTU by EIL with SINI (Italy)",
+   "purpose": "S recovery >99%",
+   "source_url": "https://mrpl.co.in/en/Content/Manufacturing_Units",
+   "confidence": "high"
+  },
+  {
+   "code": "SPU",
+   "name": "Sulphur Pastillation Unit",
+   "phase": "2013-14",
+   "capacity": "n/a",
+   "unit": "-",
+   "licensor": "n/a",
+   "purpose": "Dust-free sulphur",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/28862ef4de57492d93775176b1861679.pdf",
+   "confidence": "high"
+  },
+  {
+   "code": "PPU",
+   "name": "Polypropylene Unit (Novolen gas-phase, 2 reactors, 1 extruder)",
+   "phase": "Phase III (commercial Jun 2015)",
+   "capacity": "440 nameplate (8000 h); 0.51 MMTPA (EC 2023)",
+   "unit": "KTPA",
+   "licensor": "Lummus Novolen Technology (Germany)",
+   "purpose": "MANGPOL PP from PFCC propylene",
+   "source_url": "https://mrpl.co.in/en/Content/Petrochemical",
+   "confidence": "high"
+  },
+  {
+   "code": "NITROGEN",
+   "name": "Nitrogen Plant",
+   "phase": "BS-VI project",
+   "capacity": "n/a",
+   "unit": "-",
+   "licensor": "n/a",
+   "purpose": "Utility N2",
+   "source_url": "https://www.business-standard.com/article/news-cm/mrpl-commissions-fcc-gasoline-treatment-unit-as-part-of-its-bs-vi-project-121071201044_1.html",
+   "confidence": "medium"
+  },
+  {
+   "code": "AROM-NHT/CCR",
+   "name": "Aromatics NHT/CCR (ex-OMPL, MSEZ)",
+   "phase": "Aromatics (2008 EC design)",
+   "capacity": "0.95",
+   "unit": "MMTPA",
+   "licensor": "not stated",
+   "purpose": "Aromatics reforming",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/3.%20EC%20for%20Phase%20-%20III%20(3.4.2008).pdf",
+   "confidence": "high"
+  },
+  {
+   "code": "AROM-ISOMER",
+   "name": "Xylene Isomerisation",
+   "phase": "Aromatics",
+   "capacity": "3.16",
+   "unit": "MMTPA",
+   "licensor": "not stated",
+   "purpose": "C8 -> PX",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/3.%20EC%20for%20Phase%20-%20III%20(3.4.2008).pdf",
+   "confidence": "high"
+  },
+  {
+   "code": "AROM-TADP",
+   "name": "Transalkylation & Disproportionation",
+   "phase": "Aromatics",
+   "capacity": "1.72",
+   "unit": "MMTPA",
+   "licensor": "not stated",
+   "purpose": "Toluene/C9+ -> C8",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/3.%20EC%20for%20Phase%20-%20III%20(3.4.2008).pdf",
+   "confidence": "high"
+  },
+  {
+   "code": "AROM-PXREC",
+   "name": "Paraxylene Recovery (SMB adsorption)",
+   "phase": "Aromatics",
+   "capacity": "4.07",
+   "unit": "MMTPA",
+   "licensor": "not stated",
+   "purpose": "PX recovery",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/3.%20EC%20for%20Phase%20-%20III%20(3.4.2008).pdf",
+   "confidence": "high"
+  },
+  {
+   "code": "AROM-XFU",
+   "name": "Xylene Fractionation",
+   "phase": "Aromatics",
+   "capacity": "4.64",
+   "unit": "MMTPA",
+   "licensor": "not stated",
+   "purpose": "Fractionation",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/3.%20EC%20for%20Phase%20-%20III%20(3.4.2008).pdf",
+   "confidence": "high"
+  },
+  {
+   "code": "AROM-AEU",
+   "name": "Aromatics Extraction",
+   "phase": "Aromatics",
+   "capacity": "0.79",
+   "unit": "MMTPA",
+   "licensor": "not stated",
+   "purpose": "Benzene extraction",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/3.%20EC%20for%20Phase%20-%20III%20(3.4.2008).pdf",
+   "confidence": "high"
+  },
+  {
+   "code": "AROM-BTF",
+   "name": "Benzene-Toluene Fractionation",
+   "phase": "Aromatics",
+   "capacity": "2.2",
+   "unit": "MMTPA",
+   "licensor": "not stated",
+   "purpose": "B/T split; toluene sales from Jan 2025",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/3.%20EC%20for%20Phase%20-%20III%20(3.4.2008).pdf",
+   "confidence": "high"
+  },
+  {
+   "code": "AROM-PX",
+   "name": "Paraxylene capacity (aromatic complex)",
+   "phase": "Aromatics (amalgamated 2022)",
+   "capacity": "914 KTPA (AR) / 0.905 MMTPA (website)",
+   "unit": "KTPA",
+   "licensor": "-",
+   "purpose": "PX",
+   "source_url": "https://mrpl.co.in/en/Content/Profile",
+   "confidence": "high"
+  },
+  {
+   "code": "AROM-BZ",
+   "name": "Benzene capacity (aromatic complex)",
+   "phase": "Aromatics",
+   "capacity": "283 KTPA (AR) / 0.273 MMTPA (website)",
+   "unit": "KTPA",
+   "licensor": "-",
+   "purpose": "Benzene",
+   "source_url": "https://mrpl.co.in/en/Content/Profile",
+   "confidence": "high"
+  },
+  {
+   "code": "CPP-PH2",
+   "name": "Captive Power Plant (Phase II)",
+   "phase": "Phase II",
+   "capacity": "67.5",
+   "unit": "MW",
+   "licensor": "n/a",
+   "purpose": "Power/steam",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/2.%20EC%20for%20Phase%20-%20II%20(5.8.1996).pdf",
+   "confidence": "high"
+  },
+  {
+   "code": "CPP-PH3",
+   "name": "Captive Power Plant (Phase III, BHEL)",
+   "phase": "Phase III",
+   "capacity": "84 MW / 606 TPH",
+   "unit": "MW",
+   "licensor": "BHEL (EPC)",
+   "purpose": "Power & steam",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/3.%20EC%20for%20Phase%20-%20III%20(3.4.2008).pdf",
+   "confidence": "high"
+  },
+  {
+   "code": "CPP-AROM",
+   "name": "Aromatic complex CPP",
+   "phase": "Aromatics",
+   "capacity": "60 (design)",
+   "unit": "MW",
+   "licensor": "n/a",
+   "purpose": "Power",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/3.%20EC%20for%20Phase%20-%20III%20(3.4.2008).pdf",
+   "confidence": "high"
+  },
+  {
+   "code": "GT",
+   "name": "Gas turbines on NG (22 MW converted; 37 MW NG-designed)",
+   "phase": "-",
+   "capacity": "22 + 37",
+   "unit": "MW",
+   "licensor": "n/a",
+   "purpose": "Cogeneration",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf",
+   "confidence": "high"
+  },
+  {
+   "code": "DG",
+   "name": "Standby DG sets (10 nos)",
+   "phase": "-",
+   "capacity": "16,850 total",
+   "unit": "kVA",
+   "licensor": "-",
+   "purpose": "Emergency power",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/9.%20EC%20for%20Modernization%20Project%20(19.01.2021).pdf",
+   "confidence": "high"
+  },
+  {
+   "code": "RLNG",
+   "name": "RLNG/natural gas facility",
+   "phase": "Modernization",
+   "capacity": "0.8 MMSCMD (AR); 1.2 MMSCMD in 2021 EC scope",
+   "unit": "MMSCMD",
+   "licensor": "-",
+   "purpose": "Fuel & HGU feed",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf",
+   "confidence": "high"
+  },
+  {
+   "code": "DESAL",
+   "name": "Seawater RO desalination, Tannirbhavi",
+   "phase": "17 Dec 2021; expanded Feb 2024",
+   "capacity": "30 -> 40 MLD (CTO 40; EC 70)",
+   "unit": "MLD",
+   "licensor": "n/a",
+   "purpose": "Process water",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/8._Desalination_H1_FY_2025-26.pdf",
+   "confidence": "high"
+  },
+  {
+   "code": "WWTP",
+   "name": "WWTP-I/II/III (SBR, MBR, RO) + WAO spent-caustic unit",
+   "phase": "-",
+   "capacity": "446 m3/h permitted discharge",
+   "unit": "m3/h",
+   "licensor": "n/a",
+   "purpose": "Effluent treatment/recycle",
+   "source_url": "https://mrpl.co.in/en/Content/EMS",
+   "confidence": "high"
+  },
+  {
+   "code": "FGRS",
+   "name": "Flare Gas Recovery System",
+   "phase": "-",
+   "capacity": "n/a",
+   "unit": "-",
+   "licensor": "n/a",
+   "purpose": "Flare minimisation",
+   "source_url": "https://mrpl.co.in/en/Content/EMS",
+   "confidence": "high"
+  },
+  {
+   "code": "BIO-ATF",
+   "name": "Bio-ATF/SAF unit (under construction)",
+   "phase": "New",
+   "capacity": "20-33",
+   "unit": "KLPD",
+   "licensor": "n/a",
+   "purpose": "SAF",
+   "source_url": "https://mrpl.co.in/en/Content/Projects",
+   "confidence": "medium"
+  },
+  {
+   "code": "GH2",
+   "name": "Green hydrogen plant (under construction)",
+   "phase": "New",
+   "capacity": "500",
+   "unit": "TPA",
+   "licensor": "n/a",
+   "purpose": "Electrolytic H2",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/12._Green_Hydrogen_H1_FY_2025-26.pdf",
+   "confidence": "high"
+  }
+ ],
+ "infrastructure": [
+  {
+   "name": "SPM Mangala-1",
+   "detail": "~17 km off Mangaluru coast, 32 m draft, fully laden VLCCs (300,000 t); booster pumping station at Tannirbhavi",
+   "source_url": "https://mrpl.co.in/en/Content/Manufacturing_Units"
+  },
+  {
+   "name": "SPM commissioning",
+   "detail": "Commissioned 29-08-2013 (first vessel Ratna Puja, 87 TMT); Rs 1044 cr; AR states 16 km/30 m draft",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/28862ef4de57492d93775176b1861679.pdf"
+  },
+  {
+   "name": "New Mangalore Port jetties",
+   "detail": "Two captive jetties in NMPT/NMPA; crude & product pipelines refinery-port",
+   "source_url": "https://mrpl.co.in/en/Content/Profile"
+  },
+  {
+   "name": "Aromatics pipeline reroute",
+   "detail": "18in PX, 16in benzene, 18in naphtha lines from Jetty 13 to Jetty 10/11 (Rs 114 cr; MC target Jul-Dec 2026)",
+   "source_url": "https://mrpl.co.in/en/Content/Projects"
+  },
+  {
+   "name": "20-inch FO export line",
+   "detail": "New above-ground 20in FO line refinery-NMPA (Rs 112 cr; target Aug-Nov 2026)",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/a4a35c19a5b64944b130274489f73963.pdf"
+  },
+  {
+   "name": "Parallel jetty unloading",
+   "detail": "Parallel crude unloading from two jetties during monsoon; SPM typically shut in monsoon",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+  },
+  {
+   "name": "ISPRL Mangalore cavern",
+   "detail": "Lease of 760 TMT (5.586 MMbbl) SPR cavern capacity (FY2025-26); first crude from ISPRL Aug 2019",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/a4a35c19a5b64944b130274489f73963.pdf"
+  },
+  {
+   "name": "Petronet MHB pipeline",
+   "detail": "363 km Mangalore-Hassan-Bangalore products pipeline to Devangonthi; receipt at Hassan; pumping at Hassan & Neriya",
+   "source_url": "https://mrpl.co.in/en/Content/Manufacturing_Units"
+  },
+  {
+   "name": "Devangonthi Marketing Terminal",
+   "detail": "81 TKL gross storage; 10-bay gantry with VRS; ethanol & biodiesel handling; commissioned Q2 FY2024-25",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "name": "Depots",
+   "detail": "Hassan (Aduvalli), Kasaragod (Kerala), Hindupur (AP), Hosur (TN)",
+   "source_url": "https://mrpl.co.in/en/Content/Supply_Location"
+  },
+  {
+   "name": "Storage tanks",
+   "detail": "133 tanks incl. 7 Horton spheres & 7 bullets; 4 new HSD tanks x 30,200 KL (FY2021-22)",
+   "source_url": "https://mrpl.co.in/en/Content/Manufacturing_Units"
+  },
+  {
+   "name": "Petcoke logistics",
+   "detail": "Rail wagon loading silo, truck loading silos, closed conveyors",
+   "source_url": "https://mrpl.co.in/en/Content/Profile"
+  },
+  {
+   "name": "White oil loading facility",
+   "detail": "Road loading facility for white oils",
+   "source_url": "https://mrpl.co.in/en/Content/Profile"
+  },
+  {
+   "name": "Raw water",
+   "detail": "43 km raw-water line from Netravathi; Sarpady pumping station; 947 m3/h withdrawal agreement",
+   "source_url": "https://mrpl.co.in/en/Content/Manufacturing_Units"
+  },
+  {
+   "name": "Sarpady pumping station",
+   "detail": "KSPCB CFO valid to 2040",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/CFO_for_Sarapady_valid_till_31.12.2025.pdf"
+  },
+  {
+   "name": "Treated sewage water",
+   "detail": "MSEZL agreement up to 1231 m3/h treated STP water; dedicated RO",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/10.%20EC%20for%20Cap%20Ex%2016.6%20to%2018.2%20MMTPA%20(9.1.2023).pdf"
+  },
+  {
+   "name": "APMC yard pumping station",
+   "detail": "Baikampady; treated-water line ETP-1/2 to APMC (Rs 75 cr)",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/CFO_for_APMC_valid_till_31.12.2025.pdf"
+  },
+  {
+   "name": "MSEZ corridor",
+   "detail": "~15 km, 70/100 m road-cum-pipeline corridor NMPT-MSEZ",
+   "source_url": "https://www.mrpl.co.in/sites/default/files/3.%20EC%20for%20Phase%20-%20III%20(3.4.2008).pdf"
+  },
+  {
+   "name": "Control room",
+   "detail": "Blast-proof centralised DCS control room",
+   "source_url": "https://mrpl.co.in/en/Content/Manufacturing_Units"
+  },
+  {
+   "name": "Laboratories",
+   "detail": "NABL-accredited QC lab and R&D centre",
+   "source_url": "https://mrpl.co.in/en/Content/Research_And_Development"
+  },
+  {
+   "name": "Grid connectivity",
+   "detail": "220/33 kV from Bajpe MRS (400 kV Kadandale SS); Rs 385 cr",
+   "source_url": "https://mrpl.co.in/en/Content/Projects"
+  },
+  {
+   "name": "SMA aviation JV",
+   "detail": "Shell MRPL Aviation Fuels & Services (50:50) supplies ATF at southern airports",
+   "source_url": "https://mrpl.co.in/en/Content/Profile"
+  },
+  {
+   "name": "Retail network",
+   "detail": "252 HiQ outlets at 31 Mar 2026; 76 EV chargers",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/a4a35c19a5b64944b130274489f73963.pdf"
+  },
+  {
+   "name": "Export parcels",
+   "detail": "Products 40-90 kt; PX 6-12 kt via NMPT",
+   "source_url": "https://mrpl.co.in/en/Content/Global_Export"
+  }
+ ],
+ "throughput": [
+  {
+   "fy": "FY2017-18",
+   "crude_mmt": 16.31,
+   "utilisation_pct": null,
+   "note": "gross crude processed (record then)",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/6db774eedab64d40affda24b00169ab2.pdf"
+  },
+  {
+   "fy": "FY2018-19",
+   "crude_mmt": 16.23,
+   "utilisation_pct": 108.2,
+   "note": "total input 16.43; utilisation computed vs 15 MMTPA",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/32f27c0116a244a38c94934b880ab9fc.pdf"
+  },
+  {
+   "fy": "FY2019-20",
+   "crude_mmt": 13.95,
+   "utilisation_pct": 93.0,
+   "note": "total input 14.14; utilisation computed",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/32f27c0116a244a38c94934b880ab9fc.pdf"
+  },
+  {
+   "fy": "FY2020-21",
+   "crude_mmt": 11.475,
+   "utilisation_pct": 76.5,
+   "note": "total input 11.497; COVID; utilisation computed",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/652f4db54449453aa1166ed18f39abcd.pdf"
+  },
+  {
+   "fy": "FY2021-22",
+   "crude_mmt": 14.871,
+   "utilisation_pct": 99.1,
+   "note": "gross; net throughput 15.04; utilisation computed",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/31a90f765f0a4bfca85e517a5645ed2e.pdf"
+  },
+  {
+   "fy": "FY2022-23",
+   "crude_mmt": 17.116,
+   "utilisation_pct": 114,
+   "note": "AR-stated",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/57014f72aa3348879567b1e7797f00ed.pdf"
+  },
+  {
+   "fy": "FY2023-24",
+   "crude_mmt": 16.53,
+   "utilisation_pct": 110,
+   "note": "AR-stated; CARE: 16.59 MMT / 111%",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+  },
+  {
+   "fy": "FY2024-25",
+   "crude_mmt": 18.04,
+   "utilisation_pct": 120,
+   "note": "crude 18.04; gross throughput 18.18 (121% per CARE)",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "fy": "FY2025-26",
+   "crude_mmt": 16.774,
+   "utilisation_pct": 111.8,
+   "note": "AR-stated",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/a4a35c19a5b64944b130274489f73963.pdf"
+  }
+ ],
+ "crude_basket": [
+  {
+   "item": "Crude grades in basket",
+   "value": "273",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/a4a35c19a5b64944b130274489f73963.pdf"
+  },
+  {
+   "item": "Crude varieties processed to date",
+   "value": ">116 (API 15-46)",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/a4a35c19a5b64944b130274489f73963.pdf"
+  },
+  {
+   "item": "Sourcing regions",
+   "value": "Asia, South America, Africa, USA, Russia; NOC term + spot; FOB/CFR/DAP",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/a4a35c19a5b64944b130274489f73963.pdf"
+  },
+  {
+   "item": "Russian crude share",
+   "value": "~35-40% of imports in Sep-2025 quarter",
+   "source_url": "https://www.marketscreener.com/news/india-s-mrpl-seeks-cheaper-oil-amid-us-pressure-hopes-to-keep-buying-russian-ce7d5adfd181f121"
+  },
+  {
+   "item": "Russian crude status",
+   "value": "No Russian imports after Oct-2025 US sanctions; Middle East ~40% of needs (Jan 2026)",
+   "source_url": "https://oilprice.com/Latest-Energy-News/World-News/Indian-Refiner-MRPL-Shifts-from-Russian-to-Venezuelan-Oil-Supply.html"
+  },
+  {
+   "item": "New crudes FY2025-26",
+   "value": "Hout (32.5), Sarir Mesla (37.24), Gindungo (32.71), Mostarda (28.3)",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/a4a35c19a5b64944b130274489f73963.pdf"
+  },
+  {
+   "item": "New crudes FY2024-25",
+   "value": "Kaliningrad, Varandey, Sandibinskaya (Russia); Eocene (18.1); Peregrino (14.4); Merey-16 (15.69)",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "item": "New crudes FY2023-24",
+   "value": "Siberian Light; KG D6 (Ruby FPSO); KG DWN 98/2",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+  },
+  {
+   "item": "New crudes FY2022-23",
+   "value": "Kuwait Super Light, Khafji, CPC Blend, Okwuibome",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/57014f72aa3348879567b1e7797f00ed.pdf"
+  },
+  {
+   "item": "New crudes FY2021-22",
+   "value": "Tupi, Amna, Egina, Basrah Medium, Baobab (high TAN)",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/31a90f765f0a4bfca85e517a5645ed2e.pdf"
+  },
+  {
+   "item": "Opportunity feeds",
+   "value": "20 TMT HSFO as intermediate feed (FY2023-24); VGO from HPCL Vizag (Sep 2021)",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+  },
+  {
+   "item": "Supply disruption",
+   "value": "Mar 2026: ~100 kbpd CDU and secondary units incl. a hydrocracker shut amid Hormuz disruption (media)",
+   "source_url": "https://www.businesstoday.in/latest/corporate/story/mrpl-shuts-refining-units-as-west-asia-crude-supply-disruption-hits-operations-report-519274-2026-03-05"
+  }
+ ],
+ "operations_events": [
+  {
+   "period": "May 2019",
+   "event": "Force majeure: water scarcity",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/32f27c0116a244a38c94934b880ab9fc.pdf"
+  },
+  {
+   "period": "18 Aug 2019",
+   "event": "Phase-III units shut after landslide tilted pipe-rack",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/32f27c0116a244a38c94934b880ab9fc.pdf"
+  },
+  {
+   "period": "Sep 2019",
+   "event": "BS-VI MS/HSD production started",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/32f27c0116a244a38c94934b880ab9fc.pdf"
+  },
+  {
+   "period": "FY2020-21",
+   "event": "Catalyst replacement HCU-1, HCU-2, GOHDS",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/652f4db54449453aa1166ed18f39abcd.pdf"
+  },
+  {
+   "period": "FY2023-24",
+   "event": "M&I shutdown of Phase-III units, HCU-1 and Aromatics",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+  },
+  {
+   "period": "FY2024-25",
+   "event": "New bitumen train & PFCC WGS commissioned; toluene from Jan 2025",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "period": "Apr-Jun 2025",
+   "event": "Phase-II M&I shutdown; CHTU catalyst replacement",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/a4a35c19a5b64944b130274489f73963.pdf"
+  },
+  {
+   "period": "12 Jul 2025",
+   "event": "H2S incident, 2 fatalities (Oil Movement)",
+   "source_url": "https://www.etvbharat.com/en/!state/two-workers-die-one-hospitalised-due-to-gas-leak-at-mrpl-mangaluru-enn25071203390"
+  },
+  {
+   "period": "Mar 2026",
+   "event": "CDU (~100 kbpd) + secondary units shut (media)",
+   "source_url": "https://www.businesstoday.in/latest/corporate/story/mrpl-shuts-refining-units-as-west-asia-crude-supply-disruption-hits-operations-report-519274-2026-03-05"
+  },
+  {
+   "period": "Sep 2028 (planned)",
+   "event": "Planned shutdown for drive-turbine conversion",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/a4a35c19a5b64944b130274489f73963.pdf"
+  }
+ ],
+ "digitalisation": [
+  {
+   "item": "SAP S/4HANA cloud ERP",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "item": "AI/ML real-time optimisation, digital twins, closed-loop AI, predictive maintenance, flare monitoring",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "item": "Agentic AI for reliability; RPA",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/a4a35c19a5b64944b130274489f73963.pdf"
+  },
+  {
+   "item": "AI/ML apps: CPP machine loading, CCR naphtha prediction, PP MFI/XS prediction",
+   "source_url": "https://mrpl.co.in/en/Content/Research_And_Development"
+  },
+  {
+   "item": "DCS control room; ISO/IEC 27001",
+   "source_url": "https://mrpl.co.in/en/Content/Manufacturing_Units"
+  }
+ ]
+}

@@ -16,7 +16,7 @@ from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import audit, chat, engine, laya, production, rag, seed
+from . import audit, chat, engine, laya, mrpl, production, rag, seed
 from .auth import Ctx, current, err, notify, router as auth_router, user_by_id
 from .config import CLEARANCE_LABELS, CLEARANCE_BY_LABEL, DEMO_MODE, REPORTS, VERSION, WEB_DIST
 from .db import ex, init_db, j, new_id, now_iso, q, q1, uj
@@ -66,6 +66,11 @@ def startup() -> None:
     init_db()
     seed.run(ingest=True)
     seed.refresh_alert_notifications()
+    mrpl.ensure_departments()
+    try:
+        mrpl.ensure_public_docs()
+    except Exception as e:  # pragma: no cover
+        engine.log(f"[mrpl] public briefing ingest failed: {e!r}")
     laya.get()
     install_guard()
     audit.write("system", "app.started", "api", {"version": VERSION})
@@ -619,6 +624,28 @@ async def prod_scenario(body: dict[str, Any], ctx: Ctx = Depends(current)) -> di
     return res
 
 
+# ------------------------------------------------------------------ MRPL public intelligence & departments
+@app.get("/api/company")
+def company(ctx: Ctx = Depends(current)) -> dict[str, Any]:
+    return mrpl.load()
+
+
+@app.get("/api/departments")
+def departments_list(ctx: Ctx = Depends(current)) -> list[dict[str, Any]]:
+    return mrpl.departments()
+
+
+@app.post("/api/admin/mrpl/reload")
+def mrpl_reload(ctx: Ctx = Depends(current)) -> dict[str, Any]:
+    ctx.require("admin")
+    mrpl.ensure_departments()
+    n = mrpl.ensure_public_docs()
+    from . import mrpl_facts
+    mrpl_facts.reset()
+    audit.write(ctx.actor, "mrpl.reloaded", "mrpl", {"documents_reingested": n})
+    return {"ok": True, "documents_reingested": n, "departments": len(mrpl.departments())}
+
+
 # ------------------------------------------------------------------ laya
 @app.post("/api/laya/classify")
 def laya_classify(body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str, Any]:
@@ -717,6 +744,17 @@ def simulate(body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str, Any
         raise err(404, "not_found", "user or document not found")
     dec = pdp.decide(subject_for(u), body.get("action", "read"), rag.doc_resource(d))
     return {"effect": dec.effect, "matched": dec.matched, "reason": dec.reason}
+
+
+@app.post("/api/admin/demo/reset")
+def demo_reset(ctx: Ctx = Depends(current)) -> dict[str, Any]:
+    """Rehearsal helper: revoke all grants, clear access requests, reset findings to PENDING."""
+    ctx.require("admin")
+    g = ex("UPDATE grants SET revoked_at=? WHERE revoked_at IS NULL", (now_iso(),)).rowcount
+    a = ex("DELETE FROM access_requests").rowcount
+    ex("UPDATE findings SET state='PENDING'")
+    audit.write(ctx.actor, "demo.reset", "demo", {"grants_revoked": g, "requests_cleared": a})
+    return {"ok": True, "grants_revoked": g, "requests_cleared": a}
 
 
 @app.get("/api/health")

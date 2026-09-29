@@ -15,6 +15,7 @@ import Discover from './pages/Discover';
 import Audit from './pages/Audit';
 import Admin from './pages/Admin';
 import Settings from './pages/Settings';
+import Company from './pages/Company';
 import { Forbidden, NotFound } from './pages/Errors';
 import { Logo } from './components/Logo';
 import { Spinner } from './components/ui';
@@ -48,6 +49,7 @@ export default function App() {
       <Route element={<RequireAuth><AppShell /></RequireAuth>}>
         <Route index element={<Navigate to="/chat" replace />} />
         <Route path="/chat/:chatId?" element={<Chat />} />
+        <Route path="/company" element={<Company />} />
         <Route path="/knowledge" element={<Knowledge />} />
         <Route path="/knowledge/:id" element={<DocumentView />} />
         <Route path="/inbox" element={<Inbox />} />

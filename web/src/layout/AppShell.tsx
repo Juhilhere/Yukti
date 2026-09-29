@@ -2,7 +2,7 @@ import { useEffect, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  Activity, Bell, BookOpen, Box, Code2, Compass, Cpu, Factory, Inbox, KeyRound, LogOut, MemoryStick, MessageSquare,
+  Activity, Bell, BookOpen, Building2, Box, Code2, Compass, Cpu, Factory, Inbox, KeyRound, LogOut, MemoryStick, MessageSquare,
   MonitorSmartphone, Settings, ShieldCheck, ShieldHalf, ScrollText, User2, Wrench, Gauge, Zap, AlertTriangle, CheckCheck,
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
@@ -48,6 +48,7 @@ function Rail() {
   const inbox = useInboxCount(!!me);
   const top: NavItem[] = [
     { to: '/chat', label: 'Chat', icon: <MessageSquare size={18} />, perm: 'chat' },
+    { to: '/company', label: 'MRPL Intelligence', icon: <Building2 size={18} /> },
     { to: '/knowledge', label: 'Knowledge', icon: <BookOpen size={18} /> },
     { to: '/inbox', label: 'Inbox — approvals & access', icon: <Inbox size={18} />, badge: inbox },
     { to: '/assets', label: 'Assets & compliance', icon: <Wrench size={18} /> },

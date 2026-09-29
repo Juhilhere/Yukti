@@ -5,7 +5,7 @@ import json
 import re
 from typing import Any, AsyncIterator
 
-from . import audit, engine, rag
+from . import audit, engine, mrpl_facts, rag
 from . import laya as laya_mod
 from .auth import Ctx
 from .db import ex, j, new_id, now_iso, q, q1, uj
@@ -120,6 +120,28 @@ async def run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | No
                 facts = rag.dossier_facts(ctx.subject, main)
                 meta["facts"] = facts
                 yield _sse("facts", {"facts": facts, "tag": main})
+        if not facts and mrpl_facts.looks_like_company_question(content):
+            pub = mrpl_facts.fact_search(content, 10)
+            if pub:
+                groups: dict[str, list[dict[str, Any]]] = {}
+                for r in pub:
+                    key = " ".join(re.findall(r"[a-z]+", re.sub(r"\(.*?\)", "", r["label"].lower()))[:3])
+                    groups.setdefault(key, []).append(r)
+                pf = []
+                for key, rs in groups.items():
+                    cands = [{"value": x["value"], "source_label": (x["source_title"] or x["source_url"])[:90], "source_id": x["source_url"],
+                              "revision": x["period"], "effective": x["period"], "status": "PUBLIC", "recommended": False} for x in rs]
+                    nums = {m.group(0) for x in rs for m in [re.search(r"\d+(?:\.\d+)?", x["value"])] if m}
+                    r0 = rs[0]
+                    conflicting = len(rs) > 1 and len(nums) > 1 and not key.startswith(("news", "financials", "timeline", "crude throughput", "department"))
+                    pf.append({"slot": "MRPL public", "attribute": r0["label"],
+                               "value": r0["value"] + (f" ({r0['period']})" if r0["period"] and r0["period"] not in r0["value"] else ""),
+                               "status": "CONFLICTING" if conflicting else "KNOWN",
+                               "note": ("Public sources disagree — values differ by source/basis; cite the source when quoting." if conflicting else "Public source"),
+                               "candidates": cands})
+                facts = facts + pf
+                meta["facts"] = facts
+                yield _sse("facts", {"facts": facts, "tag": "MRPL"})
         parts = []
         for s in sources:
             parts.append(f"<doc id=\"{s['id']}\" ref=\"{s['doc_number']} rev {s['revision']} ({s['status']}) p.{s['page']} — {s['title']}\">\n"
@@ -129,7 +151,7 @@ async def run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | No
             ctx_block += (f"\n\nNOTE: {ret['denied']['count']} relevant document(s) exist but are withheld by access policy "
                           f"(departments: {', '.join(ret['denied']['departments'])}). Tell the user they can request access; do not guess their content.")
         if facts:
-            ctx_block += "\n\nFACTS (structured, verified — use these values verbatim):\n" + _facts_block(facts)
+            ctx_block += "\n\nFACTS (structured, verified plant/public records — quote values verbatim and cite their [F#] id):\n" + _facts_block(facts)
 
     # 4) Build messages
     sys_parts = [YUKTI_SYSTEM]

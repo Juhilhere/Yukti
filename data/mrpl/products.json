@@ -1,0 +1,2102 @@
+{
+ "retrieved_on": "2026-09-29",
+ "topic": "products",
+ "facts": [
+  {
+   "key": "crude_processed_fy22_note",
+   "label": "FY22 capacity utilisation H2",
+   "value": "116",
+   "unit": "%",
+   "period": "FY2021-22",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/e48fd029cb5849df9136c87a8ff639d1.pdf",
+   "source_title": "MRPL Annual Report 2021-22",
+   "confidence": "high"
+  },
+  {
+   "key": "crude_processed_fy23",
+   "label": "Gross crude throughput (then record)",
+   "value": 17.116,
+   "unit": "MMT",
+   "period": "FY2022-23",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf",
+   "source_title": "MRPL Annual Report 2024-25",
+   "confidence": "high"
+  },
+  {
+   "key": "crude_processed_fy24",
+   "label": "Crude processed",
+   "value": 16.533,
+   "unit": "MMT",
+   "period": "FY2023-24",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf",
+   "source_title": "MRPL Annual Report 2023-24",
+   "confidence": "high"
+  },
+  {
+   "key": "crude_processed_fy25",
+   "label": "Crude processed (net, product table)",
+   "value": 18.044,
+   "unit": "MMT",
+   "period": "FY2024-25",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf",
+   "source_title": "MRPL Annual Report 2024-25",
+   "confidence": "high"
+  },
+  {
+   "key": "crude_throughput_gross_fy25",
+   "label": "Gross crude throughput (record)",
+   "value": 18.18,
+   "unit": "MMT",
+   "period": "FY2024-25",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf",
+   "source_title": "MRPL Annual Report 2024-25",
+   "confidence": "high"
+  },
+  {
+   "key": "crude_processed_fy26",
+   "label": "Crude processed",
+   "value": 16.774,
+   "unit": "MMT",
+   "period": "FY2025-26",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf",
+   "source_title": "MRPL Annual Report 2025-26",
+   "confidence": "high"
+  },
+  {
+   "key": "distillate_yield_fy24",
+   "label": "Distillate yield",
+   "value": 78.77,
+   "unit": "%",
+   "period": "FY2023-24",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf",
+   "source_title": "MRPL Annual Report 2023-24",
+   "confidence": "high"
+  },
+  {
+   "key": "distillate_yield_fy25",
+   "label": "Distillate yield (record)",
+   "value": 81.93,
+   "unit": "%",
+   "period": "FY2024-25",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf",
+   "source_title": "MRPL Annual Report 2024-25",
+   "confidence": "high"
+  },
+  {
+   "key": "fuel_loss_fy25",
+   "label": "Fuel & loss",
+   "value": 10.42,
+   "unit": "%",
+   "period": "FY2024-25",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf",
+   "source_title": "MRPL Annual Report 2024-25",
+   "confidence": "high"
+  },
+  {
+   "key": "grm_fy24",
+   "label": "Gross refining margin",
+   "value": 10.36,
+   "unit": "USD/bbl",
+   "period": "FY2023-24",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf",
+   "source_title": "MRPL Annual Report 2023-24",
+   "confidence": "high"
+  },
+  {
+   "key": "grm_fy25",
+   "label": "Gross refining margin",
+   "value": 4.45,
+   "unit": "USD/bbl",
+   "period": "FY2024-25",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf",
+   "source_title": "MRPL Annual Report 2025-26",
+   "confidence": "high"
+  },
+  {
+   "key": "grm_fy26",
+   "label": "Gross refining margin",
+   "value": 9.22,
+   "unit": "USD/bbl",
+   "period": "FY2025-26",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf",
+   "source_title": "MRPL Annual Report 2025-26",
+   "confidence": "high"
+  },
+  {
+   "key": "export_share_qty_fy24",
+   "label": "Exports (incl. deemed) share of turnover - quantity",
+   "value": 34,
+   "unit": "%",
+   "period": "FY2023-24",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf",
+   "source_title": "MRPL Annual Report 2023-24 (BRSR)",
+   "confidence": "high"
+  },
+  {
+   "key": "export_share_value_fy24",
+   "label": "Exports (incl. deemed) share of turnover - value",
+   "value": 31,
+   "unit": "%",
+   "period": "FY2023-24",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf",
+   "source_title": "MRPL Annual Report 2023-24 (BRSR)",
+   "confidence": "high"
+  },
+  {
+   "key": "export_share_fy25",
+   "label": "Total exports share of turnover",
+   "value": 33.37,
+   "unit": "%",
+   "period": "FY2024-25",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf",
+   "source_title": "MRPL Annual Report 2024-25 (BRSR)",
+   "confidence": "high"
+  },
+  {
+   "key": "export_share_fy26",
+   "label": "Total exports share of turnover",
+   "value": 28.43,
+   "unit": "%",
+   "period": "FY2025-26",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf",
+   "source_title": "MRPL Annual Report 2025-26 (BRSR)",
+   "confidence": "high"
+  },
+  {
+   "key": "export_value_fy25",
+   "label": "Export value",
+   "value": 36466,
+   "unit": "INR crore",
+   "period": "FY2024-25",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf",
+   "source_title": "MRPL Annual Report 2025-26",
+   "confidence": "high"
+  },
+  {
+   "key": "export_value_fy26",
+   "label": "Export value",
+   "value": 29880,
+   "unit": "INR crore",
+   "period": "FY2025-26",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf",
+   "source_title": "MRPL Annual Report 2025-26",
+   "confidence": "high"
+  },
+  {
+   "key": "export_qty_fy24",
+   "label": "Total product exports (table)",
+   "value": 4.969,
+   "unit": "MMT",
+   "period": "FY2023-24",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf",
+   "source_title": "MRPL Annual Report 2023-24",
+   "confidence": "high"
+  },
+  {
+   "key": "export_qty_fy25",
+   "label": "Total product exports (table)",
+   "value": 6.039,
+   "unit": "MMT",
+   "period": "FY2024-25",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf",
+   "source_title": "MRPL Annual Report 2024-25",
+   "confidence": "high"
+  },
+  {
+   "key": "export_qty_fy26",
+   "label": "Total product exports (table)",
+   "value": 4.964,
+   "unit": "MMT",
+   "period": "FY2025-26",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf",
+   "source_title": "MRPL Annual Report 2025-26",
+   "confidence": "high"
+  },
+  {
+   "key": "export_record_month",
+   "label": "Highest-ever monthly product export",
+   "value": 723.2,
+   "unit": "TMT",
+   "period": "Sep-2025",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf",
+   "source_title": "MRPL Annual Report 2025-26",
+   "confidence": "high"
+  },
+  {
+   "key": "export_countries_fy24",
+   "label": "International markets served",
+   "value": 27,
+   "unit": "countries",
+   "period": "FY2023-24",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf",
+   "source_title": "MRPL Annual Report 2023-24 (BRSR)",
+   "confidence": "high"
+  },
+  {
+   "key": "export_countries_fy25",
+   "label": "International markets served",
+   "value": 28,
+   "unit": "countries",
+   "period": "FY2024-25",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf",
+   "source_title": "MRPL Annual Report 2024-25 (BRSR)",
+   "confidence": "high"
+  },
+  {
+   "key": "export_countries_fy26",
+   "label": "International markets served",
+   "value": 22,
+   "unit": "countries",
+   "period": "FY2025-26",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf",
+   "source_title": "MRPL Annual Report 2025-26 (BRSR)",
+   "confidence": "high"
+  },
+  {
+   "key": "domestic_states_fy25",
+   "label": "Domestic markets served",
+   "value": "18 states + 5 UTs",
+   "unit": "count",
+   "period": "FY2024-25",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf",
+   "source_title": "MRPL Annual Report 2024-25 (BRSR)",
+   "confidence": "high"
+  },
+  {
+   "key": "domestic_states_fy26",
+   "label": "Domestic markets served",
+   "value": "18 states + 4 UTs",
+   "unit": "count",
+   "period": "FY2025-26",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf",
+   "source_title": "MRPL Annual Report 2025-26 (BRSR)",
+   "confidence": "high"
+  },
+  {
+   "key": "revenue_ops_fy25",
+   "label": "Revenue from operations (standalone)",
+   "value": 109280,
+   "unit": "INR crore",
+   "period": "FY2024-25",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf",
+   "source_title": "MRPL Annual Report 2025-26",
+   "confidence": "high"
+  },
+  {
+   "key": "revenue_ops_fy26",
+   "label": "Revenue from operations (standalone)",
+   "value": 105155,
+   "unit": "INR crore",
+   "period": "FY2025-26",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf",
+   "source_title": "MRPL Annual Report 2025-26",
+   "confidence": "high"
+  },
+  {
+   "key": "turnover_share_hsd_fy24",
+   "label": "HSD share of turnover",
+   "value": 45.1,
+   "unit": "%",
+   "period": "FY2023-24",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf",
+   "source_title": "MRPL Annual Report 2023-24 (BRSR)",
+   "confidence": "high"
+  },
+  {
+   "key": "turnover_share_ms_fy24",
+   "label": "MS share of turnover",
+   "value": 16.99,
+   "unit": "%",
+   "period": "FY2023-24",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf",
+   "source_title": "MRPL Annual Report 2023-24 (BRSR)",
+   "confidence": "high"
+  },
+  {
+   "key": "turnover_share_atf_fy24",
+   "label": "ATF share of turnover",
+   "value": 15.15,
+   "unit": "%",
+   "period": "FY2023-24",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf",
+   "source_title": "MRPL Annual Report 2023-24 (BRSR)",
+   "confidence": "high"
+  },
+  {
+   "key": "turnover_share_lpg_fy24",
+   "label": "LPG share of turnover",
+   "value": 6.05,
+   "unit": "%",
+   "period": "FY2023-24",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf",
+   "source_title": "MRPL Annual Report 2023-24 (BRSR)",
+   "confidence": "high"
+  },
+  {
+   "key": "turnover_share_pp_fy24",
+   "label": "Polypropylene share of turnover",
+   "value": 3.73,
+   "unit": "%",
+   "period": "FY2023-24",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf",
+   "source_title": "MRPL Annual Report 2023-24 (BRSR)",
+   "confidence": "high"
+  },
+  {
+   "key": "turnover_share_bitumen_fy24",
+   "label": "Bitumen share of turnover",
+   "value": 0.54,
+   "unit": "%",
+   "period": "FY2023-24",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf",
+   "source_title": "MRPL Annual Report 2023-24 (BRSR)",
+   "confidence": "high"
+  },
+  {
+   "key": "turnover_share_hsd_fy25",
+   "label": "HSD share of turnover",
+   "value": 42.37,
+   "unit": "%",
+   "period": "FY2024-25",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf",
+   "source_title": "MRPL Annual Report 2024-25 (BRSR)",
+   "confidence": "high"
+  },
+  {
+   "key": "turnover_share_ms_fy25",
+   "label": "MS share of turnover",
+   "value": 17.59,
+   "unit": "%",
+   "period": "FY2024-25",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf",
+   "source_title": "MRPL Annual Report 2024-25 (BRSR)",
+   "confidence": "high"
+  },
+  {
+   "key": "turnover_share_atf_fy25",
+   "label": "ATF share of turnover",
+   "value": 17.26,
+   "unit": "%",
+   "period": "FY2024-25",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf",
+   "source_title": "MRPL Annual Report 2024-25 (BRSR)",
+   "confidence": "high"
+  },
+  {
+   "key": "turnover_share_lpg_fy25",
+   "label": "LPG share of turnover",
+   "value": 6.91,
+   "unit": "%",
+   "period": "FY2024-25",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf",
+   "source_title": "MRPL Annual Report 2024-25 (BRSR)",
+   "confidence": "high"
+  },
+  {
+   "key": "turnover_share_pp_fy25",
+   "label": "Polypropylene share of turnover",
+   "value": 5.72,
+   "unit": "%",
+   "period": "FY2024-25",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf",
+   "source_title": "MRPL Annual Report 2024-25 (BRSR)",
+   "confidence": "high"
+  },
+  {
+   "key": "turnover_share_benzene_fy25",
+   "label": "Benzene share of turnover",
+   "value": 1.74,
+   "unit": "%",
+   "period": "FY2024-25",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf",
+   "source_title": "MRPL Annual Report 2024-25 (BRSR)",
+   "confidence": "high"
+  },
+  {
+   "key": "turnover_share_petcoke_fy25",
+   "label": "Petcoke share of turnover",
+   "value": 1.07,
+   "unit": "%",
+   "period": "FY2024-25",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf",
+   "source_title": "MRPL Annual Report 2024-25 (BRSR)",
+   "confidence": "high"
+  },
+  {
+   "key": "turnover_share_bitumen_fy25",
+   "label": "Bitumen share of turnover",
+   "value": 0.68,
+   "unit": "%",
+   "period": "FY2024-25",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf",
+   "source_title": "MRPL Annual Report 2024-25 (BRSR)",
+   "confidence": "high"
+  },
+  {
+   "key": "turnover_share_sko_fy25",
+   "label": "SKO share of turnover",
+   "value": 0.33,
+   "unit": "%",
+   "period": "FY2024-25",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf",
+   "source_title": "MRPL Annual Report 2024-25 (BRSR)",
+   "confidence": "high"
+  },
+  {
+   "key": "turnover_share_hsd_fy26",
+   "label": "HSD share of turnover",
+   "value": 47.1,
+   "unit": "%",
+   "period": "FY2025-26",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf",
+   "source_title": "MRPL Annual Report 2025-26 (BRSR)",
+   "confidence": "high"
+  },
+  {
+   "key": "turnover_share_ms_fy26",
+   "label": "MS share of turnover",
+   "value": 23.44,
+   "unit": "%",
+   "period": "FY2025-26",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf",
+   "source_title": "MRPL Annual Report 2025-26 (BRSR)",
+   "confidence": "high"
+  },
+  {
+   "key": "turnover_share_atf_fy26",
+   "label": "ATF share of turnover",
+   "value": 13.32,
+   "unit": "%",
+   "period": "FY2025-26",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf",
+   "source_title": "MRPL Annual Report 2025-26 (BRSR)",
+   "confidence": "high"
+  },
+  {
+   "key": "turnover_share_lpg_fy26",
+   "label": "LPG share of turnover",
+   "value": 6.44,
+   "unit": "%",
+   "period": "FY2025-26",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf",
+   "source_title": "MRPL Annual Report 2025-26 (BRSR)",
+   "confidence": "high"
+  },
+  {
+   "key": "turnover_share_pp_fy26",
+   "label": "Polypropylene share of turnover",
+   "value": 4.43,
+   "unit": "%",
+   "period": "FY2025-26",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf",
+   "source_title": "MRPL Annual Report 2025-26 (BRSR)",
+   "confidence": "high"
+  },
+  {
+   "key": "domestic_direct_sales_fy22",
+   "label": "Domestic sales volume (all products, direct)",
+   "value": 1988,
+   "unit": "TMT",
+   "period": "FY2021-22",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/e48fd029cb5849df9136c87a8ff639d1.pdf",
+   "source_title": "MRPL Annual Report 2021-22",
+   "confidence": "high"
+  },
+  {
+   "key": "domestic_direct_sales_value_fy22",
+   "label": "Domestic sales value (direct)",
+   "value": 11033,
+   "unit": "INR crore",
+   "period": "FY2021-22",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/e48fd029cb5849df9136c87a8ff639d1.pdf",
+   "source_title": "MRPL Annual Report 2021-22",
+   "confidence": "high"
+  },
+  {
+   "key": "domestic_direct_sales_fy23",
+   "label": "Direct domestic sales volume",
+   "value": 2.3,
+   "unit": "MMT",
+   "period": "FY2022-23",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf",
+   "source_title": "MRPL Annual Report 2023-24",
+   "confidence": "high"
+  },
+  {
+   "key": "domestic_direct_sales_fy24",
+   "label": "Direct domestic sales volume",
+   "value": 2.6,
+   "unit": "MMT",
+   "period": "FY2023-24",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf",
+   "source_title": "MRPL Annual Report 2023-24",
+   "confidence": "high"
+  },
+  {
+   "key": "domestic_direct_sales_value_fy24",
+   "label": "Direct domestic sales value",
+   "value": 15408,
+   "unit": "INR crore",
+   "period": "FY2023-24",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf",
+   "source_title": "MRPL Annual Report 2023-24",
+   "confidence": "high"
+  },
+  {
+   "key": "institutional_sales_fy25",
+   "label": "Institutional domestic sales volume",
+   "value": 2.99,
+   "unit": "MMT",
+   "period": "FY2024-25",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf",
+   "source_title": "MRPL Annual Report 2024-25",
+   "confidence": "high"
+  },
+  {
+   "key": "institutional_sales_value_fy25",
+   "label": "Institutional domestic sales value",
+   "value": 15214.29,
+   "unit": "INR crore",
+   "period": "FY2024-25",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf",
+   "source_title": "MRPL Annual Report 2024-25",
+   "confidence": "high"
+  },
+  {
+   "key": "institutional_sales_fy24_restated",
+   "label": "Institutional sales FY24 as restated in AR25",
+   "value": 2.44,
+   "unit": "MMT",
+   "period": "FY2023-24",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf",
+   "source_title": "MRPL Annual Report 2024-25",
+   "confidence": "medium"
+  },
+  {
+   "key": "pp_capacity",
+   "label": "Polypropylene plant nameplate capacity (Novolen gas-phase, Ziegler-Natta)",
+   "value": 440,
+   "unit": "KTPA",
+   "period": "current",
+   "source_url": "https://mrpl.co.in/en/MenuContent/Mangpol",
+   "source_title": "MRPL Mangpol page (via search snippet)",
+   "confidence": "medium"
+  },
+  {
+   "key": "px_capacity",
+   "label": "Aromatic complex paraxylene capacity",
+   "value": 0.905,
+   "unit": "MMTPA",
+   "period": "current",
+   "source_url": "https://mrpl.co.in/en/Content/Profile",
+   "source_title": "MRPL Profile page (via search snippet)",
+   "confidence": "medium"
+  },
+  {
+   "key": "benzene_capacity",
+   "label": "Aromatic complex benzene capacity",
+   "value": 0.273,
+   "unit": "MMTPA",
+   "period": "current",
+   "source_url": "https://mrpl.co.in/en/Content/Profile",
+   "source_title": "MRPL Profile page (via search snippet)",
+   "confidence": "medium"
+  },
+  {
+   "key": "toluene_capacity",
+   "label": "Toluene production capacity",
+   "value": 40,
+   "unit": "TMT/yr",
+   "period": "launched Jan-2025",
+   "source_url": "https://www.deccanherald.com/india/karnataka/union-minister-hardeep-singh-puri-launches-mrpls-product-toluene-3351667",
+   "source_title": "Deccan Herald - Puri launches MRPL Toluene",
+   "confidence": "high"
+  },
+  {
+   "key": "bbu_train2_capacity",
+   "label": "New bitumen blowing train capacity",
+   "value": 144,
+   "unit": "KTPA",
+   "period": "commissioned Nov-2024",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf",
+   "source_title": "MRPL Annual Report 2023-24",
+   "confidence": "high"
+  },
+  {
+   "key": "pp_sales_fy24",
+   "label": "Polypropylene sales",
+   "value": 384,
+   "unit": "TMT",
+   "period": "FY2023-24",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf",
+   "source_title": "MRPL Annual Report 2023-24",
+   "confidence": "high"
+  },
+  {
+   "key": "pp_sales_fy25",
+   "label": "Polypropylene sales (record)",
+   "value": 473,
+   "unit": "TMT",
+   "period": "FY2024-25",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf",
+   "source_title": "MRPL Annual Report 2024-25",
+   "confidence": "high"
+  },
+  {
+   "key": "ms_prod_record_fy25",
+   "label": "MS production (record)",
+   "value": 2.69,
+   "unit": "MMT",
+   "period": "FY2024-25",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf",
+   "source_title": "MRPL Annual Report 2024-25",
+   "confidence": "high"
+  },
+  {
+   "key": "atf_prod_record_fy25",
+   "label": "ATF production (record)",
+   "value": 2.72,
+   "unit": "MMT",
+   "period": "FY2024-25",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf",
+   "source_title": "MRPL Annual Report 2024-25",
+   "confidence": "high"
+  },
+  {
+   "key": "hsd_prod_record_fy26",
+   "label": "HSD production (record)",
+   "value": 6.78,
+   "unit": "MMT",
+   "period": "FY2025-26",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf",
+   "source_title": "MRPL Annual Report 2025-26",
+   "confidence": "high"
+  },
+  {
+   "key": "xylol_prod_record_fy26",
+   "label": "Xylol production (record)",
+   "value": 34.3,
+   "unit": "TMT",
+   "period": "FY2025-26",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf",
+   "source_title": "MRPL Annual Report 2025-26",
+   "confidence": "high"
+  },
+  {
+   "key": "toluene_prod_fy26",
+   "label": "Toluene production (record)",
+   "value": 4.4,
+   "unit": "TMT",
+   "period": "FY2025-26",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf",
+   "source_title": "MRPL Annual Report 2025-26",
+   "confidence": "high"
+  },
+  {
+   "key": "mto_prod_fy26",
+   "label": "MTO production (record)",
+   "value": 21,
+   "unit": "TMT",
+   "period": "FY2025-26",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf",
+   "source_title": "MRPL Annual Report 2025-26",
+   "confidence": "high"
+  },
+  {
+   "key": "pmhbl_dispatch_fy26",
+   "label": "Auto fuels + ATF dispatched via PMHBL pipeline (record)",
+   "value": 4.07,
+   "unit": "MMT",
+   "period": "FY2025-26",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf",
+   "source_title": "MRPL Annual Report 2025-26",
+   "confidence": "high"
+  },
+  {
+   "key": "retail_outlets_fy22",
+   "label": "Operational retail outlets",
+   "value": 32,
+   "unit": "outlets",
+   "period": "31-Mar-2022",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/e48fd029cb5849df9136c87a8ff639d1.pdf",
+   "source_title": "MRPL Annual Report 2021-22",
+   "confidence": "high"
+  },
+  {
+   "key": "retail_outlets_fy24",
+   "label": "Operational retail outlets",
+   "value": 101,
+   "unit": "outlets",
+   "period": "31-Mar-2024",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf",
+   "source_title": "MRPL Annual Report 2023-24",
+   "confidence": "high"
+  },
+  {
+   "key": "retail_outlets_fy25",
+   "label": "Operational HiQ retail outlets",
+   "value": 167,
+   "unit": "outlets",
+   "period": "31-Mar-2025",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf",
+   "source_title": "MRPL Annual Report 2024-25",
+   "confidence": "high"
+  },
+  {
+   "key": "retail_outlets_fy26",
+   "label": "Operational HiQ retail outlets",
+   "value": 252,
+   "unit": "outlets",
+   "period": "31-Mar-2026",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf",
+   "source_title": "MRPL Annual Report 2025-26",
+   "confidence": "high"
+  },
+  {
+   "key": "retail_sales_fy24",
+   "label": "Retail outlet sales (record)",
+   "value": 153980,
+   "unit": "KL",
+   "period": "FY2023-24",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf",
+   "source_title": "MRPL Annual Report 2023-24",
+   "confidence": "high"
+  },
+  {
+   "key": "retail_sales_fy25",
+   "label": "Retail outlet sales volume",
+   "value": 229.8,
+   "unit": "million litres",
+   "period": "FY2024-25",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf",
+   "source_title": "MRPL Annual Report 2024-25",
+   "confidence": "high"
+  },
+  {
+   "key": "retail_sales_fy26",
+   "label": "Retail MS+HSD sales",
+   "value": 343.9,
+   "unit": "million litres",
+   "period": "FY2025-26",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf",
+   "source_title": "MRPL Annual Report 2025-26",
+   "confidence": "high"
+  },
+  {
+   "key": "ethanol_blend_fy25",
+   "label": "Ethanol blending achieved in MS",
+   "value": 15.5,
+   "unit": "%",
+   "period": "FY2024-25",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf",
+   "source_title": "MRPL Annual Report 2024-25",
+   "confidence": "high"
+  },
+  {
+   "key": "ethanol_blend_fy26",
+   "label": "Ethanol blending in MS sold at MRPL ROs (E20)",
+   "value": 19.76,
+   "unit": "%",
+   "period": "FY2025-26",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf",
+   "source_title": "MRPL Annual Report 2025-26",
+   "confidence": "high"
+  },
+  {
+   "key": "ev_chargers_fy26",
+   "label": "EV charging stations at HiQ outlets",
+   "value": 76,
+   "unit": "stations",
+   "period": "FY2025-26",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf",
+   "source_title": "MRPL Annual Report 2025-26",
+   "confidence": "high"
+  },
+  {
+   "key": "smafsl_turnover_fy24",
+   "label": "SMAFSL turnover",
+   "value": 2087.4,
+   "unit": "INR crore",
+   "period": "FY2023-24",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf",
+   "source_title": "MRPL Annual Report 2023-24",
+   "confidence": "high"
+  },
+  {
+   "key": "smafsl_turnover_fy25",
+   "label": "SMAFSL turnover",
+   "value": 2549,
+   "unit": "INR crore",
+   "period": "FY2024-25",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf",
+   "source_title": "MRPL Annual Report 2024-25",
+   "confidence": "high"
+  },
+  {
+   "key": "smafsl_turnover_fy26",
+   "label": "SMAFSL turnover",
+   "value": 2706,
+   "unit": "INR crore",
+   "period": "FY2025-26",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf",
+   "source_title": "MRPL Annual Report 2025-26",
+   "confidence": "high"
+  },
+  {
+   "key": "smafsl_delco_fy25",
+   "label": "SMAFSL delco (Indian airports) sales volume",
+   "value": 446529,
+   "unit": "KL",
+   "period": "FY2024-25",
+   "source_url": "https://www.icra.in/Rating/GetRationalReportFilePdf?id=137363",
+   "source_title": "ICRA rationale on SMAFSL, 29-Aug-2025",
+   "confidence": "high"
+  },
+  {
+   "key": "smafsl_conco_fy25",
+   "label": "SMAFSL conco (overseas contracting) volume",
+   "value": 579980,
+   "unit": "KL",
+   "period": "FY2024-25",
+   "source_url": "https://www.icra.in/Rating/GetRationalReportFilePdf?id=137363",
+   "source_title": "ICRA rationale on SMAFSL, 29-Aug-2025",
+   "confidence": "high"
+  },
+  {
+   "key": "devangonthi_storage",
+   "label": "Devangonthi terminal gross storage",
+   "value": 81,
+   "unit": "TKL",
+   "period": "commissioned Q2 FY2024-25",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf",
+   "source_title": "MRPL Annual Report 2024-25",
+   "confidence": "high"
+  },
+  {
+   "key": "export_parcel_size",
+   "label": "Export parcel size via New Mangalore Port",
+   "value": "40,000-90,000",
+   "unit": "MT",
+   "period": "current",
+   "source_url": "https://mrpl.co.in/en/Content/Global_Export",
+   "source_title": "MRPL Global Export page (via search snippet)",
+   "confidence": "medium"
+  },
+  {
+   "key": "pp_price_hr003_jan23",
+   "label": "Mangpol HR003 ex-works price, Jaipur (dealer list)",
+   "value": 97000,
+   "unit": "INR/MT",
+   "period": "01-Jan-2023",
+   "source_url": "https://fabpack.in/mrpl/price_list/fabpack-2023-01-01.pdf",
+   "source_title": "Banglore Polycotters (MRPL DCA) price list wef 01-01-2023",
+   "confidence": "medium"
+  }
+ ],
+ "products": [
+  {
+   "name": "LPG",
+   "category": "Fuels",
+   "spec_standard": "IS 4576 (generic Indian standard; MRPL page not directly verified)",
+   "uses": "Domestic/commercial cooking, industrial fuel",
+   "markets": "OMCs (bulk); domestic only - no exports reported FY22-FY26",
+   "brand_or_grades": "",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "name": "Motor Spirit (Petrol) BS-VI / E20",
+   "category": "Fuels",
+   "spec_standard": "IS 2796 BS-VI (generic Indian standard; MRPL page not directly verified); all MS at MRPL ROs E20 (19.76% ethanol) in FY26",
+   "uses": "Passenger vehicles",
+   "markets": "OMCs via PMHBL pipeline; MRPL HiQ retail outlets",
+   "brand_or_grades": "MRPL HiQ (retail)",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf"
+  },
+  {
+   "name": "MS 95 RON (Reformate-based gasoline)",
+   "category": "Fuels",
+   "spec_standard": "95 RON; FY24 export grade labelled 'Non BS VI spec'",
+   "uses": "Gasoline blending/export",
+   "markets": "Exports (1.13 MMT FY26)",
+   "brand_or_grades": "",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf"
+  },
+  {
+   "name": "MS 92 RON",
+   "category": "Fuels",
+   "spec_standard": "92 RON export gasoline",
+   "uses": "Gasoline export",
+   "markets": "Exports (0.52 MMT FY26)",
+   "brand_or_grades": "",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf"
+  },
+  {
+   "name": "High Speed Diesel BS-VI (Euro VI)",
+   "category": "Fuels",
+   "spec_standard": "IS 1460 BS-VI (generic Indian standard; MRPL page not directly verified); export gas oil <10 ppm S",
+   "uses": "Road transport, railways, industry",
+   "markets": "OMCs, Indian Railways, bulk industry, HiQ ROs; exports ~1.7-2.0 MMT/yr",
+   "brand_or_grades": "MRPL HiQ (retail)",
+   "source_url": "https://mrpl.co.in/en/Content/Global_Export"
+  },
+  {
+   "name": "High Flash HSD (HFHSD)",
+   "category": "Fuels",
+   "spec_standard": "High flash-point diesel (listed as HFHSD in FY24 AR)",
+   "uses": "Likely naval/marine use (use not stated by MRPL - low confidence)",
+   "markets": "Domestic + exports (1.63 MMT exported FY24)",
+   "brand_or_grades": "",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+  },
+  {
+   "name": "Aviation Turbine Fuel (Jet A-1)",
+   "category": "Fuels",
+   "spec_standard": "IS 1571 (generic Indian standard; MRPL page not directly verified); export ATF meets DEF STAN; AS9100D certified production (first Indian refinery)",
+   "uses": "Civil aviation; Defence-grade ATF supplied to IOCL (first time Sep-2021)",
+   "markets": "SMAFSL JV (Bengaluru, Goa, Mangalore, Hyderabad + smaller airports), OMCs, exports (1.4-2.1 MMT/yr)",
+   "brand_or_grades": "",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+  },
+  {
+   "name": "Superior Kerosene Oil (SKO)",
+   "category": "Fuels",
+   "spec_standard": "IS 1459 (generic Indian standard; MRPL page not directly verified)",
+   "uses": "PDS/industrial kerosene",
+   "markets": "Domestic",
+   "brand_or_grades": "",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "name": "Naphtha",
+   "category": "Fuels",
+   "spec_standard": "",
+   "uses": "Petrochemical feed (OPaL, first supply Sep-2021), fertiliser",
+   "markets": "OPaL, domestic industry, exports",
+   "brand_or_grades": "",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/e48fd029cb5849df9136c87a8ff639d1.pdf"
+  },
+  {
+   "name": "Marine Fuel Oil (MFO, 0.35% S low-sulphur)",
+   "category": "Fuels",
+   "spec_standard": "ISO 8217-type marine fuel (generic Indian standard; MRPL page not directly verified); 0.35% S grade exported first time Jul-2021",
+   "uses": "Ship bunker fuel",
+   "markets": "Exports (69.9 KT FY26); domestic bunkering at NMPA not confirmed",
+   "brand_or_grades": "",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/e48fd029cb5849df9136c87a8ff639d1.pdf"
+  },
+  {
+   "name": "Furnace Oil (FO)",
+   "category": "Fuels",
+   "spec_standard": "IS 1593 (generic Indian standard; MRPL page not directly verified)",
+   "uses": "Industrial heating fuel",
+   "markets": "Domestic industry",
+   "brand_or_grades": "",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf"
+  },
+  {
+   "name": "Vacuum Gas Oil (VGO)",
+   "category": "Fuels",
+   "spec_standard": "",
+   "uses": "Cracker feed",
+   "markets": "Occasional exports (79.5 KT FY25)",
+   "brand_or_grades": "",
+   "source_url": "https://mrpl.co.in/en/Content/Global_Export"
+  },
+  {
+   "name": "Bitumen VG-30",
+   "category": "Specialty",
+   "spec_standard": "IS 73 (MRPL spec sheet cites IS 73-2006)",
+   "uses": "Road paving",
+   "markets": "Road contractors, state agencies, NHAI contractors (Karnataka & adjoining)",
+   "brand_or_grades": "",
+   "source_url": "https://mrpl.co.in/sites/default/files/%E0%A4%B5%E0%A4%BF%E0%A4%AD%E0%A4%BF%E0%A4%A8%E0%A5%8D%E0%A4%A8%20%E0%A4%89%E0%A4%A4%E0%A5%8D%E0%A4%AA%E0%A4%BE%E0%A4%A6/spec_bitumen_vg30_1437546539.pdf"
+  },
+  {
+   "name": "Bitumen VG-40",
+   "category": "Specialty",
+   "spec_standard": "IS 73",
+   "uses": "Heavy-traffic road paving",
+   "markets": "Road contractors; new Biturox train (Nov-2024) for consistent VG-40",
+   "brand_or_grades": "",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "name": "Bitumen VG-10",
+   "category": "Specialty",
+   "spec_standard": "IS 73",
+   "uses": "Road paving (colder/low-traffic), emulsions",
+   "markets": "Made on demand",
+   "brand_or_grades": "",
+   "source_url": "https://mrpl.co.in/en/Content/Bitumen"
+  },
+  {
+   "name": "Petroleum Coke (Petcoke)",
+   "category": "By-products",
+   "spec_standard": "",
+   "uses": "Cement, power, lime kilns",
+   "markets": "Cement & industry; rail rakes from own siding; occasional export",
+   "brand_or_grades": "",
+   "source_url": "https://www.mrpl.co.in/Content/PetCoke"
+  },
+  {
+   "name": "Sulphur",
+   "category": "By-products",
+   "spec_standard": "",
+   "uses": "Fertiliser, chemicals (sulphuric acid)",
+   "markets": "Domestic industry; occasional export (21 KT FY22)",
+   "brand_or_grades": "",
+   "source_url": "https://mrpl.co.in/en/Content/Global_Export"
+  },
+  {
+   "name": "Polypropylene (homopolymer)",
+   "category": "Petrochemicals",
+   "spec_standard": "ASTM-tested grades; Novolen gas-phase",
+   "uses": "Raffia, IM, TQ film, CPP film, non-woven, thermoforming",
+   "markets": "Pan-India via DCA/CS network & depots (incl. Gujarat, MP); small exports",
+   "brand_or_grades": "Mangpol (see pp_grades)",
+   "source_url": "https://mrpl.co.in/en/MenuContent/Mangpol"
+  },
+  {
+   "name": "Green Polypropylene",
+   "category": "Petrochemicals",
+   "spec_standard": "Brochure exists; certification basis not verified",
+   "uses": "Sustainable packaging",
+   "markets": "Not verified",
+   "brand_or_grades": "Mangpol Green PP (brochure title only - low confidence)",
+   "source_url": "https://mrpl.co.in/Content/Brochure_Green_Polypropylene.pdf"
+  },
+  {
+   "name": "Paraxylene",
+   "category": "Petrochemicals",
+   "spec_standard": "MRPL PX spec page exists",
+   "uses": "PTA/polyester feed",
+   "markets": "Exports (315 KT FY22); complex run largely in reformate mode FY24-26",
+   "brand_or_grades": "",
+   "source_url": "https://mrpl.co.in/en/Content/PX_Details__and_Specifications"
+  },
+  {
+   "name": "Benzene",
+   "category": "Petrochemicals",
+   "spec_standard": "MRPL spec page (not read)",
+   "uses": "Chemicals (LAB, phenol, cumene)",
+   "markets": "Exports (~0.1-0.22 MMT/yr) + domestic",
+   "brand_or_grades": "",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "name": "Reformate",
+   "category": "Petrochemicals",
+   "spec_standard": "High-octane aromatic stream",
+   "uses": "Gasoline blending",
+   "markets": "Exports (0.79-0.87 MMT/yr FY24-25)",
+   "brand_or_grades": "",
+   "source_url": "https://www.alphaspread.com/security/nse/mrpl/investor-relations/earnings-call/q4-2024"
+  },
+  {
+   "name": "Xylol (Mixed Xylene)",
+   "category": "Petrochemicals",
+   "spec_standard": "MSDS: bp 137-140 C, SG 0.864",
+   "uses": "Solvent for paints, coatings",
+   "markets": "Domestic paint/solvent industry",
+   "brand_or_grades": "Xylol",
+   "source_url": "https://mrpl.co.in/en/Content/Xylol_(Xylenes)"
+  },
+  {
+   "name": "Toluene",
+   "category": "Petrochemicals",
+   "spec_standard": "",
+   "uses": "Pharma, chemicals, paints, defence",
+   "markets": "Domestic (import substitution; India demand ~650 TMT)",
+   "brand_or_grades": "",
+   "source_url": "https://www.deccanherald.com/india/karnataka/union-minister-hardeep-singh-puri-launches-mrpls-product-toluene-3351667"
+  },
+  {
+   "name": "Heavy Aromatics",
+   "category": "Petrochemicals",
+   "spec_standard": "MRPL HA spec page",
+   "uses": "Solvent/fuel blending",
+   "markets": "Domestic",
+   "brand_or_grades": "",
+   "source_url": "https://mrpl.co.in/Content/HA%C2%A0_Details_and_Specifications"
+  },
+  {
+   "name": "Paraffin Rich Raffinate",
+   "category": "Petrochemicals",
+   "spec_standard": "MRPL PR spec page",
+   "uses": "Solvent/cracker feed",
+   "markets": "Exports (148 KT FY22)",
+   "brand_or_grades": "",
+   "source_url": "https://mrpl.co.in/en/Content/PR%C2%A0_Details_and_Specifications"
+  },
+  {
+   "name": "Mineral Turpentine Oil (MTO)",
+   "category": "Specialty",
+   "spec_standard": "IS 1745 (generic Indian standard; MRPL page not directly verified)",
+   "uses": "Paint thinner/solvent",
+   "markets": "Domestic paint industry (first parcel Mar-2024)",
+   "brand_or_grades": "",
+   "source_url": "https://www.mrpl.co.in/Content/Mineral_Turpentine_Oil"
+  },
+  {
+   "name": "Iso-Butyl Benzene (IBB)",
+   "category": "Specialty",
+   "spec_standard": "Patented MRPL/CSIR-NCL process",
+   "uses": "Ibuprofen API intermediate, perfumery",
+   "markets": "200 TPA demo plant - under commissioning (MC Dec-2025)",
+   "brand_or_grades": "",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf"
+  },
+  {
+   "name": "Bio-ATF / Sustainable Aviation Fuel",
+   "category": "Fuels (future)",
+   "spec_standard": "HEFA-type Bio-ATF (CSIR-IIP/EIL tech)",
+   "uses": "SAF blending (1% 2027, 2% 2028, 5% 2030 intl flights)",
+   "markets": "Planned; plant 20 KLPD (AR25) / 33 KLPD (AR26); co-processing UCO in HCU trialled",
+   "brand_or_grades": "",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf"
+  },
+  {
+   "name": "Green Hydrogen",
+   "category": "By-products (captive, future)",
+   "spec_standard": "Electrolytic",
+   "uses": "Captive hydroprocessing (blended with SMR H2)",
+   "markets": "Captive; 500 TPA plant targeted mid-2027",
+   "brand_or_grades": "",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf"
+  },
+  {
+   "name": "Propylene",
+   "category": "Petrochemicals (intermediate)",
+   "spec_standard": "",
+   "uses": "Captive PP feed from PFCC",
+   "markets": "Captive (not a sales product)",
+   "brand_or_grades": "",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  }
+ ],
+ "pp_grades": [
+  {
+   "grade": "HR003",
+   "mfi": "3.5 g/10min (230C/2.16kg)",
+   "process": "Novolen gas-phase homopolymer, extrusion",
+   "applications": "Raffia tapes: woven sacks (fertiliser, cement, food grain), FIBC, leno bags, ropes, yarn",
+   "source_url": "https://www.banglorepolycotters.com/mrpl/technical_datasheet/MRPL-HR003.pdf"
+  },
+  {
+   "grade": "HR005T",
+   "mfi": "4.5",
+   "process": "Novolen gas-phase homopolymer, high-speed extrusion",
+   "applications": "Woven sacks, general purpose, wrapping",
+   "source_url": "https://www.banglorepolycotters.com/mrpl/technical_datasheet/MRPL-HR005T.pdf"
+  },
+  {
+   "grade": "HR003N / HR005TN",
+   "mfi": "n/a (non-prime variants)",
+   "process": "Non-prime",
+   "applications": "Raffia",
+   "source_url": "https://fabpack.in/mrpl/price_list/fabpack-2023-01-01.pdf"
+  },
+  {
+   "grade": "HM012T (also HM012)",
+   "mfi": "12",
+   "process": "Novolen gas-phase homopolymer, injection moulding",
+   "applications": "General-purpose IM, caps & closures, furniture, household, compounding",
+   "source_url": "https://www.banglorepolycotters.com/mrpl/technical_datasheet/MRPL-HM012.pdf"
+  },
+  {
+   "grade": "HM012CT",
+   "mfi": "12",
+   "process": "Clarified homopolymer, IM",
+   "applications": "Transparent containers, housewares",
+   "source_url": "https://www.banglorepolycotters.com/mrpl/technical_datasheet/MRPL-HM012CT.pdf"
+  },
+  {
+   "grade": "HM025AR",
+   "mfi": "24",
+   "process": "Controlled-rheology, antistatic + nucleated, IM",
+   "applications": "Furniture, multi-cavity, lamp housings, long-flow parts; TWIM",
+   "source_url": "https://www.banglorepolycotters.com/mrpl/technical_datasheet/MRPL-HM025AR.pdf"
+  },
+  {
+   "grade": "HM065AT",
+   "mfi": "65",
+   "process": "Nucleated homopolymer, IM (65 MFI nucleated grade commercialised FY24)",
+   "applications": "Thin-wall IM, multi-cavity, compounding, masterbatch",
+   "source_url": "https://www.banglorepolycotters.com/mrpl/technical_datasheet/MRPL-HM065AT.pdf"
+  },
+  {
+   "grade": "HF010",
+   "mfi": "10.5",
+   "process": "Homopolymer, TQ (tubular water-quench) film",
+   "applications": "Textile over-wraps, garment bags, general packaging film",
+   "source_url": "https://www.banglorepolycotters.com/mrpl/technical_datasheet/MRPL-HF010.pdf"
+  },
+  {
+   "grade": "HY035R / HY035UR",
+   "mfi": "35",
+   "process": "Controlled-rheology homopolymer",
+   "applications": "Spunbond non-woven, fine-denier multifilament, lamination, extrusion coating",
+   "source_url": "https://www.banglorepolycotters.com/mrpl/technical_datasheet/MRPL-HY035R.pdf"
+  },
+  {
+   "grade": "HT003T",
+   "mfi": "3.5",
+   "process": "Nucleated, antistatic homopolymer",
+   "applications": "Thermoforming, rigid packaging, transparent extrusion",
+   "source_url": "https://www.banglorepolycotters.com/mrpl/technical_datasheet/MRPL-HT003T.pdf"
+  },
+  {
+   "grade": "CPP film grade (code not public)",
+   "mfi": "n/a",
+   "process": "Cast PP film grade, first produced FY2024-25",
+   "applications": "Cast film / niche packaging",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "grade": "OG-I / OG-II / OG-III / OG-IV / OG-VI",
+   "mfi": "n/a",
+   "process": "Off-grade (IM / raffia / film / lamination / thermoforming)",
+   "applications": "Lower-price off-spec material",
+   "source_url": "https://fabpack.in/mrpl/price_list/fabpack-2023-01-01.pdf"
+  }
+ ],
+ "production_sales": [
+  {
+   "fy": "FY2021-22",
+   "product": "HSD",
+   "production_kt": 6364,
+   "sales_kt": 6358,
+   "export_kt": 2959,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/e48fd029cb5849df9136c87a8ff639d1.pdf"
+  },
+  {
+   "fy": "FY2021-22",
+   "product": "MS",
+   "production_kt": 1727,
+   "sales_kt": 1766,
+   "export_kt": 635,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/e48fd029cb5849df9136c87a8ff639d1.pdf"
+  },
+  {
+   "fy": "FY2021-22",
+   "product": "LPG",
+   "production_kt": 1049,
+   "sales_kt": 1051,
+   "export_kt": 0,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/e48fd029cb5849df9136c87a8ff639d1.pdf"
+  },
+  {
+   "fy": "FY2021-22",
+   "product": "ATF",
+   "production_kt": 855,
+   "sales_kt": 857,
+   "export_kt": 696,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/e48fd029cb5849df9136c87a8ff639d1.pdf"
+  },
+  {
+   "fy": "FY2021-22",
+   "product": "Petcoke",
+   "production_kt": 835,
+   "sales_kt": 828,
+   "export_kt": 44,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/e48fd029cb5849df9136c87a8ff639d1.pdf"
+  },
+  {
+   "fy": "FY2021-22",
+   "product": "Polypropylene",
+   "production_kt": 460,
+   "sales_kt": 457,
+   "export_kt": 63,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/e48fd029cb5849df9136c87a8ff639d1.pdf"
+  },
+  {
+   "fy": "FY2021-22",
+   "product": "Paraxylene",
+   "production_kt": 390,
+   "sales_kt": 399,
+   "export_kt": 315,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/e48fd029cb5849df9136c87a8ff639d1.pdf"
+  },
+  {
+   "fy": "FY2021-22",
+   "product": "Marine Fuel Oil",
+   "production_kt": 328,
+   "sales_kt": 328,
+   "export_kt": 328,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/e48fd029cb5849df9136c87a8ff639d1.pdf"
+  },
+  {
+   "fy": "FY2021-22",
+   "product": "Reformate",
+   "production_kt": 295,
+   "sales_kt": 273,
+   "export_kt": 273,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/e48fd029cb5849df9136c87a8ff639d1.pdf"
+  },
+  {
+   "fy": "FY2021-22",
+   "product": "Sulphur",
+   "production_kt": 195,
+   "sales_kt": 191,
+   "export_kt": 21,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/e48fd029cb5849df9136c87a8ff639d1.pdf"
+  },
+  {
+   "fy": "FY2021-22",
+   "product": "Naphtha",
+   "production_kt": 157,
+   "sales_kt": 161,
+   "export_kt": 61,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/e48fd029cb5849df9136c87a8ff639d1.pdf"
+  },
+  {
+   "fy": "FY2021-22",
+   "product": "Benzene",
+   "production_kt": 148,
+   "sales_kt": 147,
+   "export_kt": 108,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/e48fd029cb5849df9136c87a8ff639d1.pdf"
+  },
+  {
+   "fy": "FY2021-22",
+   "product": "Bitumen",
+   "production_kt": 131,
+   "sales_kt": 132,
+   "export_kt": 0,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/e48fd029cb5849df9136c87a8ff639d1.pdf"
+  },
+  {
+   "fy": "FY2021-22",
+   "product": "Paraffin Rich Raffinate",
+   "production_kt": 123,
+   "sales_kt": 148,
+   "export_kt": 148,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/e48fd029cb5849df9136c87a8ff639d1.pdf"
+  },
+  {
+   "fy": "FY2021-22",
+   "product": "Kerosene",
+   "production_kt": 48,
+   "sales_kt": 46,
+   "export_kt": 0,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/e48fd029cb5849df9136c87a8ff639d1.pdf"
+  },
+  {
+   "fy": "FY2021-22",
+   "product": "Xylol",
+   "production_kt": 3,
+   "sales_kt": 2,
+   "export_kt": 0,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/e48fd029cb5849df9136c87a8ff639d1.pdf"
+  },
+  {
+   "fy": "FY2021-22",
+   "product": "Heavy Aromatics",
+   "production_kt": 3,
+   "sales_kt": 4,
+   "export_kt": 0,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/e48fd029cb5849df9136c87a8ff639d1.pdf"
+  },
+  {
+   "fy": "FY2023-24",
+   "product": "LPG",
+   "production_kt": 1027.8,
+   "sales_kt": null,
+   "export_kt": null,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+  },
+  {
+   "fy": "FY2023-24",
+   "product": "Polypropylene",
+   "production_kt": 389.1,
+   "sales_kt": 384,
+   "export_kt": null,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+  },
+  {
+   "fy": "FY2023-24",
+   "product": "MS BS-VI",
+   "production_kt": 2041.3,
+   "sales_kt": null,
+   "export_kt": null,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+  },
+  {
+   "fy": "FY2023-24",
+   "product": "MS 95 RON",
+   "production_kt": 213.6,
+   "sales_kt": null,
+   "export_kt": 219.7,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+  },
+  {
+   "fy": "FY2023-24",
+   "product": "Xylol",
+   "production_kt": 5.7,
+   "sales_kt": null,
+   "export_kt": null,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+  },
+  {
+   "fy": "FY2023-24",
+   "product": "Naphtha",
+   "production_kt": 49.4,
+   "sales_kt": null,
+   "export_kt": 20.9,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+  },
+  {
+   "fy": "FY2023-24",
+   "product": "SKO",
+   "production_kt": 49.2,
+   "sales_kt": null,
+   "export_kt": null,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+  },
+  {
+   "fy": "FY2023-24",
+   "product": "MTO",
+   "production_kt": 0.1,
+   "sales_kt": null,
+   "export_kt": null,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+  },
+  {
+   "fy": "FY2023-24",
+   "product": "HSD",
+   "production_kt": 4461.5,
+   "sales_kt": null,
+   "export_kt": null,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+  },
+  {
+   "fy": "FY2023-24",
+   "product": "HFHSD",
+   "production_kt": 1743.9,
+   "sales_kt": null,
+   "export_kt": 1633.2,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+  },
+  {
+   "fy": "FY2023-24",
+   "product": "ATF",
+   "production_kt": 2090.9,
+   "sales_kt": null,
+   "export_kt": 1664.9,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+  },
+  {
+   "fy": "FY2023-24",
+   "product": "VGO",
+   "production_kt": 271.9,
+   "sales_kt": null,
+   "export_kt": 271.9,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+  },
+  {
+   "fy": "FY2023-24",
+   "product": "MFO",
+   "production_kt": 226.0,
+   "sales_kt": null,
+   "export_kt": 187.3,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+  },
+  {
+   "fy": "FY2023-24",
+   "product": "FO",
+   "production_kt": 66.3,
+   "sales_kt": null,
+   "export_kt": 62.9,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+  },
+  {
+   "fy": "FY2023-24",
+   "product": "Bitumen",
+   "production_kt": 125.5,
+   "sales_kt": null,
+   "export_kt": null,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+  },
+  {
+   "fy": "FY2023-24",
+   "product": "Petcoke",
+   "production_kt": 816.4,
+   "sales_kt": null,
+   "export_kt": null,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+  },
+  {
+   "fy": "FY2023-24",
+   "product": "Sulphur",
+   "production_kt": 187.1,
+   "sales_kt": null,
+   "export_kt": null,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+  },
+  {
+   "fy": "FY2023-24",
+   "product": "Paraxylene",
+   "production_kt": 18.8,
+   "sales_kt": null,
+   "export_kt": 21.0,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+  },
+  {
+   "fy": "FY2023-24",
+   "product": "Benzene",
+   "production_kt": 130.9,
+   "sales_kt": null,
+   "export_kt": 98.8,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+  },
+  {
+   "fy": "FY2023-24",
+   "product": "Heavy Aromatics",
+   "production_kt": 1.0,
+   "sales_kt": null,
+   "export_kt": null,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+  },
+  {
+   "fy": "FY2023-24",
+   "product": "Reformate",
+   "production_kt": 830.9,
+   "sales_kt": null,
+   "export_kt": 788.7,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+  },
+  {
+   "fy": "FY2024-25",
+   "product": "HSD",
+   "production_kt": 6679.9,
+   "sales_kt": null,
+   "export_kt": 2026.6,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "fy": "FY2024-25",
+   "product": "ATF",
+   "production_kt": 2721.7,
+   "sales_kt": null,
+   "export_kt": 2134.4,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "fy": "FY2024-25",
+   "product": "MS",
+   "production_kt": 2006.8,
+   "sales_kt": null,
+   "export_kt": null,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "fy": "FY2024-25",
+   "product": "LPG",
+   "production_kt": 1187.1,
+   "sales_kt": null,
+   "export_kt": null,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "fy": "FY2024-25",
+   "product": "Petcoke",
+   "production_kt": 944.7,
+   "sales_kt": null,
+   "export_kt": null,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "fy": "FY2024-25",
+   "product": "Reformate",
+   "production_kt": 797.9,
+   "sales_kt": null,
+   "export_kt": 865.1,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "fy": "FY2024-25",
+   "product": "MS 95",
+   "production_kt": 482.8,
+   "sales_kt": null,
+   "export_kt": 433.5,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "fy": "FY2024-25",
+   "product": "Polypropylene",
+   "production_kt": 454.6,
+   "sales_kt": 473,
+   "export_kt": null,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "fy": "FY2024-25",
+   "product": "Sulphur",
+   "production_kt": 210.9,
+   "sales_kt": null,
+   "export_kt": null,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "fy": "FY2024-25",
+   "product": "Benzene",
+   "production_kt": 208.8,
+   "sales_kt": null,
+   "export_kt": 216.7,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "fy": "FY2024-25",
+   "product": "MS 92",
+   "production_kt": 199.8,
+   "sales_kt": null,
+   "export_kt": 189.6,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "fy": "FY2024-25",
+   "product": "Bitumen",
+   "production_kt": 167.1,
+   "sales_kt": null,
+   "export_kt": null,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "fy": "FY2024-25",
+   "product": "VGO",
+   "production_kt": 79.5,
+   "sales_kt": null,
+   "export_kt": 79.5,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "fy": "FY2024-25",
+   "product": "Naphtha",
+   "production_kt": 68.1,
+   "sales_kt": null,
+   "export_kt": 93.9,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "fy": "FY2024-25",
+   "product": "SKO",
+   "production_kt": 53.6,
+   "sales_kt": null,
+   "export_kt": null,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "fy": "FY2024-25",
+   "product": "Xylol",
+   "production_kt": 23.9,
+   "sales_kt": null,
+   "export_kt": null,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "fy": "FY2024-25",
+   "product": "MTO",
+   "production_kt": 5.9,
+   "sales_kt": null,
+   "export_kt": null,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "fy": "FY2024-25",
+   "product": "Toluene",
+   "production_kt": 0.8,
+   "sales_kt": null,
+   "export_kt": null,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "fy": "FY2025-26",
+   "product": "LPG",
+   "production_kt": 1127.9,
+   "sales_kt": null,
+   "export_kt": null,
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf"
+  },
+  {
+   "fy": "FY2025-26",
+   "product": "Polypropylene",
+   "production_kt": 441.7,
+   "sales_kt": null,
+   "export_kt": null,
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf"
+  },
+  {
+   "fy": "FY2025-26",
+   "product": "Benzene",
+   "production_kt": 141.9,
+   "sales_kt": null,
+   "export_kt": 138.7,
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf"
+  },
+  {
+   "fy": "FY2025-26",
+   "product": "MS",
+   "production_kt": 3313.4,
+   "sales_kt": null,
+   "export_kt": null,
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf"
+  },
+  {
+   "fy": "FY2025-26",
+   "product": "Xylol",
+   "production_kt": 34.3,
+   "sales_kt": null,
+   "export_kt": null,
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf"
+  },
+  {
+   "fy": "FY2025-26",
+   "product": "Naphtha",
+   "production_kt": 67.6,
+   "sales_kt": null,
+   "export_kt": 29.2,
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf"
+  },
+  {
+   "fy": "FY2025-26",
+   "product": "Toluene",
+   "production_kt": 4.4,
+   "sales_kt": null,
+   "export_kt": null,
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf"
+  },
+  {
+   "fy": "FY2025-26",
+   "product": "SKO",
+   "production_kt": 42.1,
+   "sales_kt": null,
+   "export_kt": null,
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf"
+  },
+  {
+   "fy": "FY2025-26",
+   "product": "MTO",
+   "production_kt": 21.0,
+   "sales_kt": null,
+   "export_kt": null,
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf"
+  },
+  {
+   "fy": "FY2025-26",
+   "product": "HSD",
+   "production_kt": 6777.9,
+   "sales_kt": null,
+   "export_kt": 1704.1,
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf"
+  },
+  {
+   "fy": "FY2025-26",
+   "product": "ATF",
+   "production_kt": 1957.1,
+   "sales_kt": null,
+   "export_kt": 1378.2,
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf"
+  },
+  {
+   "fy": "FY2025-26",
+   "product": "Marine Fuel Oil",
+   "production_kt": 61.7,
+   "sales_kt": null,
+   "export_kt": 69.9,
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf"
+  },
+  {
+   "fy": "FY2025-26",
+   "product": "Furnace Oil",
+   "production_kt": 7.1,
+   "sales_kt": null,
+   "export_kt": null,
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf"
+  },
+  {
+   "fy": "FY2025-26",
+   "product": "Bitumen",
+   "production_kt": 186.8,
+   "sales_kt": null,
+   "export_kt": null,
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf"
+  },
+  {
+   "fy": "FY2025-26",
+   "product": "Petcoke",
+   "production_kt": 857.7,
+   "sales_kt": null,
+   "export_kt": null,
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf"
+  },
+  {
+   "fy": "FY2025-26",
+   "product": "Sulphur",
+   "production_kt": 182.1,
+   "sales_kt": null,
+   "export_kt": null,
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf"
+  },
+  {
+   "fy": "FY2025-26",
+   "product": "MS-95 RON",
+   "production_kt": null,
+   "sales_kt": null,
+   "export_kt": 1126.3,
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf"
+  },
+  {
+   "fy": "FY2025-26",
+   "product": "MS-92 RON",
+   "production_kt": null,
+   "sales_kt": null,
+   "export_kt": 518.0,
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf"
+  },
+  {
+   "fy": "FY2022-23",
+   "product": "ATF (record then)",
+   "production_kt": 1920,
+   "sales_kt": null,
+   "export_kt": null,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+  },
+  {
+   "fy": "FY2022-23",
+   "product": "MS (record then)",
+   "production_kt": 2430,
+   "sales_kt": null,
+   "export_kt": null,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "fy": "FY2022-23",
+   "product": "HSD (record then)",
+   "production_kt": 6580,
+   "sales_kt": null,
+   "export_kt": null,
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  }
+ ],
+ "marketing": [
+  {
+   "item": "Retail brand",
+   "value": "MRPL HiQ ('High Quality' fuel & services)",
+   "source_url": "https://mrpl.co.in/en/Content/Retail_Sale"
+  },
+  {
+   "item": "HiQ outlets 31-Mar-2022",
+   "value": "32 (35 by AR date); ads for 400+ Karnataka and 100 Kerala locations",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/e48fd029cb5849df9136c87a8ff639d1.pdf"
+  },
+  {
+   "item": "HiQ outlets 31-Mar-2024",
+   "value": "101 (38 added in FY24; Karnataka & Kerala)",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+  },
+  {
+   "item": "HiQ outlets 31-Mar-2025",
+   "value": "167 (66 added; entered Tamil Nadu with 3 outlets)",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "item": "HiQ outlets 31-Mar-2026",
+   "value": "252 (85 added; first outlet in Andhra Pradesh)",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf"
+  },
+  {
+   "item": "Retail states (FY26)",
+   "value": "Karnataka, Kerala, Tamil Nadu, Andhra Pradesh; Telangana planned",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf"
+  },
+  {
+   "item": "Retail targets (historical)",
+   "value": "~250 ROs by Mar-2025 (AR22); 1000 ROs medium term (AR24)",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+  },
+  {
+   "item": "Kerala 2025 dealer ad",
+   "value": "575 locations advertised across Kerala (third-party report)",
+   "source_url": "https://sharook.com/mrpl-petroleum-retail-advertisement-petrol-pump-ad-for-kerala-state-2025/"
+  },
+  {
+   "item": "Marketing terminal",
+   "value": "Devangonthi (Bengaluru): 81 TKL, 10-bay TT gantry, ethanol & biodiesel dosing; fed by PMHBL pipeline; commissioned Q2 FY25",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "item": "Depots/terminals FY26",
+   "value": "Depots upgraded at Hosur (TN), Hindupur (AP), Kasaragod (KL); third-party terminals Mangalore & Ennore (asset-light)",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf"
+  },
+  {
+   "item": "Aviation JV",
+   "value": "Shell MRPL Aviation Fuels & Services Ltd (50:50 with Shell Gas BV), inc. Mar-2008, ops Aug-2008; delco at Bengaluru, Goa, Mangalore, Hyderabad + smaller airports; conco for Indian airlines abroad",
+   "source_url": "https://www.icra.in/Rating/GetRationalReportFilePdf?id=137363"
+  },
+  {
+   "item": "Bulk customers",
+   "value": "OMCs, Indian Railways, state govt undertakings, PSUs, road contractors, mining, cement, other industries",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "item": "Institutional leadership",
+   "value": "Leadership in Karnataka & adjoining states for bitumen, sulphur, petcoke, ATF (JV), PP, xylol, benzene",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "item": "PP channel",
+   "value": "Pan-India Del Credere Agents & Consignment Stockists (DCA/CS) + distributors; depots added for MSMEs; warehousing expanded in Gujarat & MP (FY26)",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf"
+  },
+  {
+   "item": "Exports logistics",
+   "value": "Parcels 40-90 KT via New Mangalore Port; markets from US/Latin America to Australia/Japan",
+   "source_url": "https://mrpl.co.in/en/Content/Global_Export"
+  },
+  {
+   "item": "Petcoke logistics",
+   "value": "Own railway siding; 500th petcoke rake Oct-2023; 181 rakes FY24",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+  },
+  {
+   "item": "Bunkering at NMPA",
+   "value": "No MRPL-specific bunkering service verified; MRPL exports MFO cargoes; new FO pipeline to NMPA approved (AR24)",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+  },
+  {
+   "item": "SPR lease",
+   "value": "Leased ISPRL Mangalore cavern storage (760 TMT / 5.586 MMbbl) in FY26",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf"
+  }
+ ],
+ "launches": [
+  {
+   "date": "2021-07",
+   "product": "Marine Fuel Oil 0.35% S",
+   "detail": "First export of low-sulphur MFO",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/e48fd029cb5849df9136c87a8ff639d1.pdf"
+  },
+  {
+   "date": "2021-09",
+   "product": "ATF Defence grade",
+   "detail": "First supply to IOCL",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/e48fd029cb5849df9136c87a8ff639d1.pdf"
+  },
+  {
+   "date": "2021-09",
+   "product": "Naphtha to OPaL",
+   "detail": "First supply to ONGC Petro additions",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/e48fd029cb5849df9136c87a8ff639d1.pdf"
+  },
+  {
+   "date": "2021-10",
+   "product": "ATF export 60 KT cargo",
+   "detail": "First 60 KT ATF export parcel",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/e48fd029cb5849df9136c87a8ff639d1.pdf"
+  },
+  {
+   "date": "2022-03",
+   "product": "BS-VI project completion",
+   "detail": "SRU-7 (28-Mar-2022), FGTU enabling BS-VI MS",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/e48fd029cb5849df9136c87a8ff639d1.pdf"
+  },
+  {
+   "date": "FY2023-24",
+   "product": "HM065AT (65 MFI nucleated PP)",
+   "detail": "Introduced as commercial thin-wall IM grade",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+  },
+  {
+   "date": "FY2023-24",
+   "product": "ATF AS9100D",
+   "detail": "First Indian refinery with AS9100D for ATF production",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+  },
+  {
+   "date": "2024-03",
+   "product": "Mineral Turpentine Oil",
+   "detail": "First parcel delivered to customer",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+  },
+  {
+   "date": "2024-11",
+   "product": "Bitumen VG-40 (new Biturox train)",
+   "detail": "New 144 KTPA bitumen train commissioned; consistent VG-40",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "date": "FY2024-25 (Q2)",
+   "product": "Devangonthi terminal",
+   "detail": "MS/HSD/ATF dispatch from Bengaluru terminal",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "date": "FY2024-25",
+   "product": "Cast PP (CPP) film grade",
+   "detail": "First production of CPP grade",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "date": "2025-01-13",
+   "product": "Toluene",
+   "detail": "Launched by MoPNG Minister Hardeep Puri; 40 TMT/yr capacity",
+   "source_url": "https://aninews.in/news/business/minister-shri-puri-launches-mrpls-new-product20250113170433/"
+  },
+  {
+   "date": "FY2024-25",
+   "product": "Tamil Nadu retail entry",
+   "detail": "3 HiQ outlets commissioned",
+   "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/161636e409d7464996e216b0ffbb5bba.pdf"
+  },
+  {
+   "date": "2025 (ADIPEC Nov-2025 paper)",
+   "product": "SAF via UCO co-processing",
+   "detail": "Refinery-scale trial, up to 3 vol% UCO in hydrocracker",
+   "source_url": "https://onepetro.org/SPEADIP/proceedings-abstract/25ADIP/25ADIP/793162"
+  },
+  {
+   "date": "FY2025-26",
+   "product": "E20 petrol at HiQ outlets",
+   "detail": "19.76% ethanol in all MS sold at MRPL ROs",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf"
+  },
+  {
+   "date": "FY2025-26",
+   "product": "Andhra Pradesh retail entry",
+   "detail": "First HiQ outlet in AP",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf"
+  },
+  {
+   "date": "FY2025-26",
+   "product": "New nucleated PP grades",
+   "detail": "Commercial production of aesthetically enhanced 65 MFI TWIM and thermoforming grades",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf"
+  },
+  {
+   "date": "2025-12",
+   "product": "Iso-Butyl Benzene",
+   "detail": "200 TPA demo plant mechanically complete; under commissioning",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf"
+  },
+  {
+   "date": "2027 (planned)",
+   "product": "Bio-ATF / SAF plant",
+   "detail": "Commercial production expected 2027",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf"
+  },
+  {
+   "date": "mid-2027 (planned)",
+   "product": "Green Hydrogen 500 TPA",
+   "detail": "Captive use",
+   "source_url": "https://nsearchives.nseindia.com/annual_reports/AR_29967_MRPL_2025_2026_A_12052715_23072026175544.pdf"
+  }
+ ],
+ "notes": [
+  "mrpl.co.in pages were behind a bot-check (HTTP 503) and could not be read directly; mrpl.co.in page URLs are cited from search-engine snippets (confidence medium). Annual report PDFs (admin.mrpl.co.in / NSE) were read in full.",
+  "FY2022-23 product-wise table not retrieved; only record figures quoted in later ARs.",
+  "production_kt values from FY24-FY26 tables converted from MT; sales_kt mostly unavailable except PP.",
+  "Paraxylene absent from FY25/FY26 production tables (aromatic complex run in reformate/benzene mode).",
+  "Not verified as MRPL products: hexane, 100-octane petrol, ISCC-certified green PP details."
+ ]
+}

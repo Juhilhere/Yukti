@@ -38,3 +38,12 @@ export const uiStore = {
 export function useUI(): UIState {
   return useSyncExternalStore((cb) => { subs.add(cb); return () => { subs.delete(cb); }; }, () => ui);
 }
+
+/* ---- org directory ---- */
+export type Department = { code: string; name: string; group: string; description: string; manager_name: string | null };
+export const useDepartments = () => useQuery({
+  queryKey: ['departments'] as const,
+  queryFn: () => api.get<Department[]>('/api/departments', { silent: true }),
+  staleTime: 5 * 60_000, retry: 1,
+  select: (d) => (Array.isArray(d) ? d.filter((x) => x && typeof x.name === 'string' && x.name.trim()) : []),
+});

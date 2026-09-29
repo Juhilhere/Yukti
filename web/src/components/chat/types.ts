@@ -10,6 +10,8 @@ export const SUGGESTIONS: { title: string; prompt: string; tag: string }[] = [
   { tag: 'Process limits', title: 'MDEA amine strength', prompt: 'What is the MDEA amine strength limit for the amine unit?' },
   { tag: 'Compliance', title: 'Expiring certificates', prompt: 'Which certificates expire in the next 30 days?' },
   { tag: 'Maintenance', title: 'CDU-1 work orders', prompt: 'Summarise open work orders for CDU-1' },
+  { tag: 'MRPL facts', title: 'Capacity & complexity', prompt: "What is MRPL's refining capacity, Nelson complexity and main process units?" },
+  { tag: 'Products', title: 'Product slate & PP grades', prompt: "List MRPL's product slate and polypropylene grades" },
 ];
 
 /** Replace bare [S1] markers with markdown links that we render as citation pills. */

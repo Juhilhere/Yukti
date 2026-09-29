@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { BookOpen, CheckCircle2, Circle, FileUp, Search, Upload, XCircle, MinusCircle } from 'lucide-react';
@@ -10,6 +10,7 @@ import { DataTable, type Column } from '../components/DataTable';
 import { Modal } from '../components/Modal';
 import { toast } from '../components/Toast';
 import { cx, fmtBytes, fmtDate } from '../lib/format';
+import { useDepartments } from '../lib/queries';
 
 const DOC_TYPES = ['SOP', 'P&ID', 'SLD', 'datasheet', 'inspection_report', 'manual', 'audit_report', 'work_orders', 'asset_register', 'other'];
 const DEPARTMENTS = ['Operations', 'Maintenance', 'Electrical', 'Instrumentation', 'Process', 'Safety', 'Inspection', 'Planning', 'Quality', 'IT'];
@@ -135,6 +136,22 @@ function UploadDialog({ onClose }: { onClose: () => void }) {
   const [title, setTitle] = useState('');
   const [docType, setDocType] = useState('SOP');
   const [dept, setDept] = useState('Operations');
+  const deptQ = useDepartments();
+  const deptGroups = useMemo(() => {
+    const list = deptQ.data ?? [];
+    if (!list.length) return null;
+    const m = new Map<string, string[]>();
+    list.forEach((d) => { const g = d.group?.trim() || 'Other'; if (!m.has(g)) m.set(g, []); m.get(g)!.push(d.name); });
+    return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([g, ns]) => [g, [...new Set(ns)].sort()] as const);
+  }, [deptQ.data]);
+  useEffect(() => {
+    // Keep the selection valid once the directory arrives.
+    if (!deptGroups) return;
+    const names = deptGroups.flatMap(([, ns]) => ns);
+    if (names.includes(dept)) return;
+    const lc = dept.toLowerCase();
+    setDept(names.find((n) => n.toLowerCase() === lc) ?? names.find((n) => n.toLowerCase().includes(lc)) ?? names[0]);
+  }, [deptGroups]); // eslint-disable-line react-hooks/exhaustive-deps
   const [cls, setCls] = useState('INTERNAL');
   const [docNo, setDocNo] = useState('');
   const [rev, setRev] = useState('');
@@ -203,7 +220,11 @@ function UploadDialog({ onClose }: { onClose: () => void }) {
               <select className="input" value={docType} onChange={(e) => setDocType(e.target.value)}>{DOC_TYPES.map((d) => <option key={d}>{d}</option>)}</select>
             </Field>
             <Field label="Department">
-              <select className="input" value={dept} onChange={(e) => setDept(e.target.value)}>{DEPARTMENTS.map((d) => <option key={d}>{d}</option>)}</select>
+              <select className="input" value={dept} onChange={(e) => setDept(e.target.value)}>
+                {deptGroups
+                  ? deptGroups.map(([g, names]) => <optgroup key={g} label={g}>{names.map((d) => <option key={d} value={d}>{d}</option>)}</optgroup>)
+                  : DEPARTMENTS.map((d) => <option key={d}>{d}</option>)}
+              </select>
             </Field>
             <Field label="Classification">
               <select className="input" value={cls} onChange={(e) => setCls(e.target.value)}>{CLASSIFICATIONS.map((d) => <option key={d}>{d}</option>)}</select>

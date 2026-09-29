@@ -1,0 +1,1197 @@
+{
+  "retrieved_on": "2026-09-29",
+  "topic": "finance_esg",
+  "company": "Mangalore Refinery and Petrochemicals Limited (MRPL)",
+  "notes": [
+    "Revenue: revenue_cr = revenue from operations incl. excise (press releases); sales_net_excise_cr = FY26 AR ten-year table (net of excise).",
+    "FY2016-17..FY2019-20 standalone; FY2020-21 onward 'integrated' (post-OMPL merger, restated) per FY26 AR ten-year table.",
+    "EBITDA basis differs by year (Screener operating profit excl. other income for FY17-FY23; rating-agency PBILDT FY24-25; company-reported FY26).",
+    "Quarterly GRMs for Q2/Q3 FY26 not found in public sources; Q4 FY26 and Q1 FY27 GRMs from a single secondary source (low confidence)."
+  ],
+  "facts": [
+    {
+      "key": "market_cap",
+      "label": "Market capitalisation (latest)",
+      "value": 30083,
+      "unit": "INR crore",
+      "period": "2026-09-29 (share price Rs 172)",
+      "source_url": "https://www.screener.in/company/MRPL/",
+      "source_title": "Screener.in MRPL standalone page",
+      "confidence": "medium"
+    },
+    {
+      "key": "market_cap_dec25",
+      "label": "Market capitalisation as on 31-Dec-2025 (NSE rank 299)",
+      "value": 25243.01,
+      "unit": "INR crore",
+      "period": "2025-12-31",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf",
+      "source_title": "MRPL 38th Annual Report FY2025-26 (incl. BRSR), BSE filing 23-Jul-2026",
+      "confidence": "high"
+    },
+    {
+      "key": "share_price",
+      "label": "Share price",
+      "value": 172,
+      "unit": "INR",
+      "period": "2026-09-29",
+      "source_url": "https://www.screener.in/company/MRPL/",
+      "source_title": "Screener.in",
+      "confidence": "medium"
+    },
+    {
+      "key": "pe",
+      "label": "P/E (TTM)",
+      "value": 10.9,
+      "unit": "x",
+      "period": "2026-09-29",
+      "source_url": "https://www.screener.in/company/MRPL/",
+      "source_title": "Screener.in",
+      "confidence": "medium"
+    },
+    {
+      "key": "book_value",
+      "label": "Book value per share",
+      "value": 80.8,
+      "unit": "INR",
+      "period": "31-Mar-2026",
+      "source_url": "https://www.screener.in/company/MRPL/",
+      "source_title": "Screener.in",
+      "confidence": "medium"
+    },
+    {
+      "key": "net_worth",
+      "label": "Net worth",
+      "value": 14167.15,
+      "unit": "INR crore",
+      "period": "31-Mar-2026",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf",
+      "source_title": "MRPL 38th Annual Report FY2025-26 (incl. BRSR), BSE filing 23-Jul-2026",
+      "confidence": "high"
+    },
+    {
+      "key": "borrowings",
+      "label": "Borrowings (10-year table)",
+      "value": 14334,
+      "unit": "INR crore",
+      "period": "31-Mar-2026",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf",
+      "source_title": "MRPL 38th Annual Report FY2025-26 (incl. BRSR), BSE filing 23-Jul-2026",
+      "confidence": "medium"
+    },
+    {
+      "key": "borrowings_dec25",
+      "label": "Total borrowings",
+      "value": 9290,
+      "unit": "INR crore",
+      "period": "31-Dec-2025",
+      "source_url": "https://www.psuconnect.in/financial/mrpl-q3-and-9m-fy-2025-26-results-net-profit-rises-to-1445-crore-in-q3",
+      "source_title": "PSU Connect: MRPL Q3 & 9M FY26 results",
+      "confidence": "high"
+    },
+    {
+      "key": "de_ratio",
+      "label": "Debt-equity ratio",
+      "value": 1.01,
+      "unit": "x",
+      "period": "FY2025-26",
+      "source_url": "https://scanx.trade/stock-market-news/companies/mrpl-annual-report-fy-2025-26-profit-after-tax-surges-to-1-931-crore-on-stronger-refining-margins/46365539",
+      "source_title": "ScanX summary of FY26 annual report",
+      "confidence": "medium"
+    },
+    {
+      "key": "ronw",
+      "label": "Return on net worth",
+      "value": 14.25,
+      "unit": "%",
+      "period": "FY2025-26",
+      "source_url": "https://scanx.trade/stock-market-news/companies/mrpl-annual-report-fy-2025-26-profit-after-tax-surges-to-1-931-crore-on-stronger-refining-margins/46365539",
+      "source_title": "ScanX summary of FY26 annual report",
+      "confidence": "medium"
+    },
+    {
+      "key": "iscr",
+      "label": "Interest service coverage ratio",
+      "value": 7.11,
+      "unit": "x",
+      "period": "FY2025-26",
+      "source_url": "https://scanx.trade/stock-market-news/companies/mrpl-annual-report-fy-2025-26-profit-after-tax-surges-to-1-931-crore-on-stronger-refining-margins/46365539",
+      "source_title": "ScanX summary of FY26 annual report",
+      "confidence": "medium"
+    },
+    {
+      "key": "dividend_fy26",
+      "label": "Dividend per share (interim, recommended as final)",
+      "value": 4,
+      "unit": "INR/share (payout Rs 701.04 cr)",
+      "period": "FY2025-26",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf",
+      "source_title": "MRPL 38th Annual Report FY2025-26 (incl. BRSR), BSE filing 23-Jul-2026",
+      "confidence": "high"
+    },
+    {
+      "key": "exchequer",
+      "label": "Contribution to exchequer (central + state)",
+      "value": 19882,
+      "unit": "INR crore",
+      "period": "FY2025-26",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf",
+      "source_title": "MRPL 38th Annual Report FY2025-26 (incl. BRSR), BSE filing 23-Jul-2026",
+      "confidence": "medium"
+    },
+    {
+      "key": "crude_fy26",
+      "label": "Crude processed",
+      "value": 16.774,
+      "unit": "MMT",
+      "period": "FY2025-26",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf",
+      "source_title": "MRPL 38th Annual Report FY2025-26 (incl. BRSR), BSE filing 23-Jul-2026",
+      "confidence": "high"
+    },
+    {
+      "key": "cap_util_fy26",
+      "label": "Capacity utilisation (despite Apr-May 2025 Phase-II shutdown)",
+      "value": 111.8,
+      "unit": "%",
+      "period": "FY2025-26",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf",
+      "source_title": "MRPL 38th Annual Report FY2025-26 (incl. BRSR), BSE filing 23-Jul-2026",
+      "confidence": "high"
+    },
+    {
+      "key": "distillate_fy26",
+      "label": "Distillate yield",
+      "value": 81.94,
+      "unit": "%",
+      "period": "FY2025-26",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf",
+      "source_title": "MRPL 38th Annual Report FY2025-26 (incl. BRSR), BSE filing 23-Jul-2026",
+      "confidence": "high"
+    },
+    {
+      "key": "crude_grades",
+      "label": "Crude grades in basket / varieties processed to date",
+      "value": "273 grades in basket; >116 processed",
+      "unit": "count",
+      "period": "as of FY2025-26",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf",
+      "source_title": "MRPL 38th Annual Report FY2025-26 (incl. BRSR), BSE filing 23-Jul-2026",
+      "confidence": "high"
+    },
+    {
+      "key": "nci",
+      "label": "Nelson Complexity Index",
+      "value": 11.67,
+      "unit": "index",
+      "period": "2025",
+      "source_url": "https://www.careratings.com/upload/CompanyFiles/PR/202506120619_Mangalore_Refinery_and_Petrochemicals_Limited.pdf",
+      "source_title": "CareEdge rating rationale 23-Jun-2025",
+      "confidence": "high"
+    },
+    {
+      "key": "capacity",
+      "label": "Nameplate refining capacity",
+      "value": 15.0,
+      "unit": "MMTPA",
+      "period": "2025",
+      "source_url": "https://www.careratings.com/upload/CompanyFiles/PR/202506120619_Mangalore_Refinery_and_Petrochemicals_Limited.pdf",
+      "source_title": "CareEdge rating rationale 23-Jun-2025",
+      "confidence": "high"
+    },
+    {
+      "key": "shareholding",
+      "label": "Shareholding: ONGC direct / HPCL",
+      "value": "71.63% / 16.96%",
+      "unit": "%",
+      "period": "31-Mar-2025",
+      "source_url": "https://www.careratings.com/upload/CompanyFiles/PR/202506120619_Mangalore_Refinery_and_Petrochemicals_Limited.pdf",
+      "source_title": "CareEdge rating rationale 23-Jun-2025",
+      "confidence": "high"
+    },
+    {
+      "key": "export_share_fy25",
+      "label": "Share of revenue from exports",
+      "value": 33,
+      "unit": "%",
+      "period": "FY2024-25",
+      "source_url": "https://www.careratings.com/upload/CompanyFiles/PR/202506120619_Mangalore_Refinery_and_Petrochemicals_Limited.pdf",
+      "source_title": "CareEdge rating rationale 23-Jun-2025",
+      "confidence": "high"
+    },
+    {
+      "key": "import_share_fy25",
+      "label": "Share of crude imported",
+      "value": 81,
+      "unit": "%",
+      "period": "FY2024-25",
+      "source_url": "https://www.careratings.com/upload/CompanyFiles/PR/202506120619_Mangalore_Refinery_and_Petrochemicals_Limited.pdf",
+      "source_title": "CareEdge rating rationale 23-Jun-2025",
+      "confidence": "high"
+    },
+    {
+      "key": "retail_outlets",
+      "label": "HiQ retail outlets operational (85 added in FY26)",
+      "value": 252,
+      "unit": "count",
+      "period": "31-Mar-2026",
+      "source_url": "https://scanx.trade/stock-market-news/companies/mrpl-annual-report-fy-2025-26-profit-after-tax-surges-to-1-931-crore-on-stronger-refining-margins/46365539",
+      "source_title": "ScanX summary of FY26 annual report",
+      "confidence": "medium"
+    },
+    {
+      "key": "ev_chargers",
+      "label": "EV charging stations commissioned at HiQ outlets",
+      "value": 76,
+      "unit": "count",
+      "period": "FY2025-26",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf",
+      "source_title": "MRPL 38th Annual Report FY2025-26 (incl. BRSR), BSE filing 23-Jul-2026",
+      "confidence": "high"
+    },
+    {
+      "key": "ethanol_blend",
+      "label": "Ethanol blending achieved in MS at MRPL outlets",
+      "value": 19.76,
+      "unit": "%",
+      "period": "FY2025-26",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf",
+      "source_title": "MRPL 38th Annual Report FY2025-26 (incl. BRSR), BSE filing 23-Jul-2026",
+      "confidence": "high"
+    },
+    {
+      "key": "employees",
+      "label": "Employees (2,231 male / 219 female)",
+      "value": 2450,
+      "unit": "count",
+      "period": "31-Mar-2026",
+      "source_url": "https://scanx.trade/stock-market-news/companies/mrpl-annual-report-fy-2025-26-profit-after-tax-surges-to-1-931-crore-on-stronger-refining-margins/46365539",
+      "source_title": "ScanX summary of FY26 BRSR",
+      "confidence": "medium"
+    },
+    {
+      "key": "rnd_spend",
+      "label": "R&D expenditure",
+      "value": 46.73,
+      "unit": "INR crore (4,672.57 lakh)",
+      "period": "FY2025-26",
+      "source_url": "https://scanx.trade/stock-market-news/companies/mrpl-annual-report-fy-2025-26-profit-after-tax-surges-to-1-931-crore-on-stronger-refining-margins/46365539",
+      "source_title": "ScanX summary of FY26 annual report",
+      "confidence": "medium"
+    },
+    {
+      "key": "patents",
+      "label": "Patents filed (13 granted incl. 1 US)",
+      "value": 42,
+      "unit": "count (cumulative)",
+      "period": "as of FY2025-26",
+      "source_url": "https://scanx.trade/stock-market-news/companies/mrpl-annual-report-fy-2025-26-profit-after-tax-surges-to-1-931-crore-on-stronger-refining-margins/46365539",
+      "source_title": "ScanX summary of FY26 annual report",
+      "confidence": "medium"
+    },
+    {
+      "key": "q1fy27_exceptional",
+      "label": "Exceptional income in Q1 FY27 (product-pricing adjustment for earlier period)",
+      "value": 471.76,
+      "unit": "INR crore",
+      "period": "Q1 FY2026-27",
+      "source_url": "https://insights.dsij.in/dsijarticledetail/mrpl-share-price-jumps-9-as-company-reports-q1-fy27-results-revenue-nearly-doubles",
+      "source_title": "DSIJ: MRPL Q1 FY27 results",
+      "confidence": "medium"
+    },
+    {
+      "key": "q4fy26_tax_note",
+      "label": "Q4 FY26 PBT vs PAT gap (tax expense in quarter; FY26 total tax expense ~Rs 2,090 cr)",
+      "value": 1116,
+      "unit": "INR crore",
+      "period": "Q4 FY2025-26",
+      "source_url": "https://www.psuconnect.in/financial/mrpl-q4-net-profit-at-119-cr-revenue-from-operations-at-28493-cr",
+      "source_title": "PSU Connect: MRPL Q4 FY26",
+      "confidence": "medium"
+    }
+  ],
+  "financials": [
+    {
+      "fy": "FY2016-17",
+      "revenue_cr": null,
+      "sales_net_excise_cr": 43192,
+      "ebitda_cr": 4714,
+      "ebitda_basis": "Screener operating profit",
+      "pat_cr": 3643,
+      "grm_usd_bbl": 7.75,
+      "throughput_mmt": 16.27,
+      "throughput_basis": "gross crude processed (AR FY18)",
+      "borrowings_cr": 8541,
+      "net_worth_cr": 10071,
+      "eps_inr": 20.79,
+      "dps_inr": 6.0,
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf",
+      "notes": "Standalone. PAT/NW/debt/GRM from FY26 AR ten-year table; EPS & op. profit Screener; DPS derived (Rs 1,052 cr dividend / 175.26 cr shares, cross-checked with Screener 29% payout); throughput from https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/063089060dd04d43948cd2a1cd219285.pdf"
+    },
+    {
+      "fy": "FY2017-18",
+      "revenue_cr": null,
+      "sales_net_excise_cr": 48434,
+      "ebitda_cr": 4311,
+      "ebitda_basis": "Screener operating profit",
+      "pat_cr": 2224,
+      "grm_usd_bbl": 7.54,
+      "throughput_mmt": 16.31,
+      "throughput_basis": "gross crude processed (AR FY18)",
+      "borrowings_cr": 7950,
+      "net_worth_cr": 11033,
+      "eps_inr": 12.69,
+      "dps_inr": 3.0,
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf",
+      "notes": "Standalone; throughput https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/063089060dd04d43948cd2a1cd219285.pdf; PAT cross-checked https://www.business-standard.com/article/news-ians/mrpl-net-profit-down-by-72-in-q4-118051600006_1.html"
+    },
+    {
+      "fy": "FY2018-19",
+      "revenue_cr": null,
+      "sales_net_excise_cr": 62030,
+      "ebitda_cr": 1681,
+      "ebitda_basis": "Screener operating profit",
+      "pat_cr": 332,
+      "grm_usd_bbl": 4.06,
+      "throughput_mmt": 16.23,
+      "throughput_basis": "crude processed; total input 16.43 MMT (AR FY20)",
+      "borrowings_cr": 9131,
+      "net_worth_cr": 10727,
+      "eps_inr": 1.89,
+      "dps_inr": 1.0,
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf",
+      "notes": "Standalone; throughput https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1c7d3b3b1d7f4c65b46e50c3422a1bdb.pdf"
+    },
+    {
+      "fy": "FY2019-20",
+      "revenue_cr": null,
+      "sales_net_excise_cr": 50979,
+      "ebitda_cr": -2522,
+      "ebitda_basis": "Screener operating profit",
+      "pat_cr": -2740,
+      "grm_usd_bbl": -0.23,
+      "throughput_mmt": 13.95,
+      "throughput_basis": "crude processed; total input 14.14 MMT",
+      "borrowings_cr": 11896,
+      "net_worth_cr": 7767,
+      "eps_inr": -15.64,
+      "dps_inr": 0,
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf",
+      "notes": "Standalone; water-shortage force majeure, pipe-rack damage, COVID; throughput https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1c7d3b3b1d7f4c65b46e50c3422a1bdb.pdf"
+    },
+    {
+      "fy": "FY2020-21",
+      "revenue_cr": null,
+      "sales_net_excise_cr": 31902,
+      "ebitda_cr": 708,
+      "ebitda_basis": "Screener operating profit",
+      "pat_cr": -761,
+      "grm_usd_bbl": 3.9,
+      "throughput_mmt": 11.475,
+      "throughput_basis": "crude processed; total input 11.497 MMT",
+      "borrowings_cr": 23833,
+      "net_worth_cr": 4238,
+      "eps_inr": -4.34,
+      "dps_inr": 0,
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf",
+      "notes": "Integrated (post-OMPL merger, restated). FY21 AR originally reported GRM 3.71 and standalone loss ~Rs 240 cr (pre-merger); throughput https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/086a690e6e6248c8a437003311416d01.pdf"
+    },
+    {
+      "fy": "FY2021-22",
+      "revenue_cr": null,
+      "sales_net_excise_cr": 69731,
+      "ebitda_cr": 4944,
+      "ebitda_basis": "Screener operating profit",
+      "pat_cr": 2955,
+      "grm_usd_bbl": 8.6,
+      "throughput_mmt": 14.871,
+      "throughput_basis": "gross crude; net throughput 15.040 MMT",
+      "borrowings_cr": 21085,
+      "net_worth_cr": 7197,
+      "eps_inr": 16.86,
+      "dps_inr": 0,
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf",
+      "notes": "Integrated. FY22 AR reported GRM 8.73 (FY26 ten-year table shows 8.60); throughput https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/e48fd029cb5849df9136c87a8ff639d1.pdf"
+    },
+    {
+      "fy": "FY2022-23",
+      "revenue_cr": null,
+      "sales_net_excise_cr": 107788,
+      "ebitda_cr": 6528,
+      "ebitda_basis": "Screener operating profit",
+      "pat_cr": 2639,
+      "grm_usd_bbl": 9.88,
+      "throughput_mmt": 17.116,
+      "throughput_basis": "gross crude (then record)",
+      "borrowings_cr": 16707,
+      "net_worth_cr": 9835,
+      "eps_inr": 15.05,
+      "dps_inr": 0,
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf",
+      "notes": "Integrated; throughput per https://www.mangalorean.com/mrpl-announces-q4-and-fy-2024-25-results-achieves-record-refining-throughput/"
+    },
+    {
+      "fy": "FY2023-24",
+      "revenue_cr": 105223,
+      "sales_net_excise_cr": 90300,
+      "ebitda_cr": 7862,
+      "ebitda_basis": "CareEdge PBILDT (consolidated); CRISIL adj. EBITDA 7,899",
+      "pat_cr": 3596,
+      "grm_usd_bbl": 10.36,
+      "throughput_mmt": 16.53,
+      "throughput_basis": "crude; total 16.59 MMT (111% util.)",
+      "borrowings_cr": 12452,
+      "net_worth_cr": 13252,
+      "eps_inr": 20.52,
+      "dps_inr": 3.0,
+      "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf",
+      "notes": "Integrated; revenue from ops per https://www.mangalorean.com/mrpl-announces-q4-and-fy-2024-25-results-achieves-record-refining-throughput/; EBITDA https://www.careratings.com/upload/CompanyFiles/PR/202506120619_Mangalore_Refinery_and_Petrochemicals_Limited.pdf"
+    },
+    {
+      "fy": "FY2024-25",
+      "revenue_cr": 109277,
+      "sales_net_excise_cr": 94852,
+      "ebitda_cr": 2321,
+      "ebitda_basis": "CareEdge PBILDT (consolidated); CRISIL adj. EBITDA 2,469",
+      "pat_cr": 51,
+      "grm_usd_bbl": 4.45,
+      "throughput_mmt": 18.044,
+      "throughput_basis": "gross crude (record); total 18.18 MMT (121% util.)",
+      "borrowings_cr": 12867,
+      "net_worth_cr": 12934,
+      "eps_inr": 0.29,
+      "dps_inr": 0,
+      "source_url": "https://www.mangalorean.com/mrpl-announces-q4-and-fy-2024-25-results-achieves-record-refining-throughput/",
+      "notes": "PBT 113 cr; distillate yield 81.93%; SEC 70.71 MBN; ten-year table shows PAT 50 (rounding); EBITDA https://www.careratings.com/upload/CompanyFiles/PR/202506120619_Mangalore_Refinery_and_Petrochemicals_Limited.pdf"
+    },
+    {
+      "fy": "FY2025-26",
+      "revenue_cr": 105155,
+      "sales_net_excise_cr": 88735,
+      "ebitda_cr": 6449,
+      "ebitda_basis": "company results (standalone)",
+      "pat_cr": 1931,
+      "grm_usd_bbl": 9.22,
+      "throughput_mmt": 16.774,
+      "throughput_basis": "crude; ~17.00 MMT incl. other inputs; 111.8% util.",
+      "borrowings_cr": 14334,
+      "net_worth_cr": 14167,
+      "eps_inr": 11.02,
+      "dps_inr": 4.0,
+      "source_url": "https://www.psuconnect.in/financial/mrpl-q4-net-profit-at-119-cr-revenue-from-operations-at-28493-cr",
+      "notes": "PBT 4,022 cr; consolidated PAT attributable 1,825 cr; ten-year data https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    }
+  ],
+  "quarters": [
+    {
+      "quarter": "Q4 FY2023-24 (Jan-Mar 2024)",
+      "revenue_cr": 29190,
+      "pat_cr": 1137,
+      "grm_usd_bbl": 11.35,
+      "throughput_mmt": 4.512,
+      "source_url": "https://www.business-standard.com/amp/markets/capital-market-news/mrpl-tumbles-as-q4-pat-drops-40-yoy-to-rs-1-137-cr-grm-reduces-to-11-35-barrel-124050600247_1.html",
+      "confidence": "high",
+      "note": "throughput 4.512 MMT per FY24 AR (record quarter); BS reports 4.60 incl. other inputs"
+    },
+    {
+      "quarter": "Q1 FY2024-25 (Apr-Jun 2024)",
+      "revenue_cr": null,
+      "pat_cr": 66,
+      "grm_usd_bbl": 4.7,
+      "throughput_mmt": null,
+      "source_url": "https://www.business-standard.com/amp/markets/capital-market-news/mrpl-slides-as-q1-pat-slumps-94-yoy-to-rs-66-cr-grm-drops-to-4-70-barrel-124072300563_1.html",
+      "confidence": "high"
+    },
+    {
+      "quarter": "Q2 FY2024-25 (Jul-Sep 2024)",
+      "revenue_cr": 28786,
+      "pat_cr": -682,
+      "grm_usd_bbl": null,
+      "throughput_mmt": 4.58,
+      "source_url": "https://www.businesstoday.in/markets/stocks/story/mrpl-shares-jump-9-as-company-swings-to-profit-in-q2-fy26-498371-2025-10-16",
+      "confidence": "high"
+    },
+    {
+      "quarter": "Q3 FY2024-25 (Oct-Dec 2024)",
+      "revenue_cr": 25601,
+      "pat_cr": 304,
+      "grm_usd_bbl": null,
+      "throughput_mmt": null,
+      "source_url": "https://www.psuconnect.in/financial/mrpl-q3-and-9m-fy-2025-26-results-net-profit-rises-to-1445-crore-in-q3",
+      "confidence": "high"
+    },
+    {
+      "quarter": "Q4 FY2024-25 (Jan-Mar 2025)",
+      "revenue_cr": 27601,
+      "pat_cr": 363,
+      "grm_usd_bbl": 6.23,
+      "throughput_mmt": null,
+      "source_url": "https://www.mangalorean.com/mrpl-announces-q4-and-fy-2024-25-results-achieves-record-refining-throughput/",
+      "confidence": "high"
+    },
+    {
+      "quarter": "Q1 FY2025-26 (Apr-Jun 2025)",
+      "revenue_cr": 20989,
+      "pat_cr": -272,
+      "grm_usd_bbl": 3.88,
+      "throughput_mmt": 3.52,
+      "source_url": "https://www.business-standard.com/amp/markets/capital-market-news/mrpl-tumbles-after-reporting-q1-net-loss-of-rs-272-cr-grm-drops-to-3-88-barrel-125072100747_1.html",
+      "confidence": "high",
+      "note": "45-day Phase-II planned shutdown; consolidated loss 270.66 cr"
+    },
+    {
+      "quarter": "Q2 FY2025-26 (Jul-Sep 2025)",
+      "revenue_cr": 25953,
+      "pat_cr": 639,
+      "grm_usd_bbl": null,
+      "throughput_mmt": 4.43,
+      "ebitda_cr": 1565,
+      "source_url": "https://www.businesstoday.in/markets/stocks/story/mrpl-shares-jump-9-as-company-swings-to-profit-in-q2-fy26-498371-2025-10-16",
+      "confidence": "high"
+    },
+    {
+      "quarter": "Q3 FY2025-26 (Oct-Dec 2025)",
+      "revenue_cr": 29720,
+      "pat_cr": 1445,
+      "grm_usd_bbl": null,
+      "throughput_mmt": 4.7,
+      "source_url": "https://www.psuconnect.in/financial/mrpl-q3-and-9m-fy-2025-26-results-net-profit-rises-to-1445-crore-in-q3",
+      "confidence": "high",
+      "note": "PBT 2,214 cr; debt cut to 9,290 cr; D/E 0.63"
+    },
+    {
+      "quarter": "Q4 FY2025-26 (Jan-Mar 2026)",
+      "revenue_cr": 28493,
+      "pat_cr": 119,
+      "grm_usd_bbl": 11.2,
+      "throughput_mmt": null,
+      "ebitda_cr": 1842,
+      "source_url": "https://www.psuconnect.in/financial/mrpl-q4-net-profit-at-119-cr-revenue-from-operations-at-28493-cr",
+      "confidence": "high (GRM low: single secondary source https://www.whalesbook.com/news/English/energy/MRPL-Q1-Earnings-Miss-EBITDA-Estimates-Profits-Rise/6a5864725cb7edf90c327b74)",
+      "note": "PBT 1,235 cr; large tax charge in quarter; consolidated PAT 117 cr"
+    },
+    {
+      "quarter": "Q1 FY2026-27 (Apr-Jun 2026)",
+      "revenue_cr": 41609,
+      "pat_cr": 915,
+      "grm_usd_bbl": 8.3,
+      "throughput_mmt": 4.43,
+      "ebitda_cr": 1860,
+      "source_url": "https://indianmasterminds.com/news/mrpl-q1-fy27-results-net-profit-rs946-crore-revenue-rs41609-crore-217210/",
+      "confidence": "high for rev/PAT; GRM low (single secondary source https://www.whalesbook.com/news/English/energy/MRPL-Q1-Earnings-Miss-EBITDA-Estimates-Profits-Rise/6a5864725cb7edf90c327b74)",
+      "note": "Consolidated revenue 41,608.96 cr (~98% YoY; some outlets misreport 46%); consolidated PAT 945.68 cr; standalone PAT 915 cr; includes exceptional income 471.76 cr; EPS Rs 5.40"
+    }
+  ],
+  "ratings": [
+    {
+      "agency": "CRISIL Ratings",
+      "rating": "Crisil AAA/Stable (NCD Rs 2,060 cr; corporate credit rating); Crisil A1+ (CP Rs 5,000 cr; ST bank Rs 1,000 cr)",
+      "date": "2025-06-05",
+      "action": "Reaffirmed",
+      "source_url": "https://www.crisil.com/mnt/winshare/Ratings/RatingList/RatingDocs/MangaloreRefineryandPetrochemicalsLimited_June%2005_%202025_RR_370236.html"
+    },
+    {
+      "agency": "CARE Ratings (CareEdge)",
+      "rating": "CARE AAA; Stable (NCDs Rs 1,217 + 1,200 + 2,583 cr); CARE A1+ (CP Rs 5,000 cr)",
+      "date": "2025-06-23",
+      "action": "Reaffirmed",
+      "source_url": "https://www.careratings.com/upload/CompanyFiles/PR/202506120619_Mangalore_Refinery_and_Petrochemicals_Limited.pdf"
+    },
+    {
+      "agency": "ICRA",
+      "rating": "[ICRA]AAA (Stable) / [ICRA]A1+ on Rs 28,548 cr (NCD 2,060; term loans; fund-based; issuer rating)",
+      "date": "2025-06-09",
+      "action": "Outstanding (change in limits)",
+      "source_url": "https://www.icra.in/Rating/GetRationalReportFilePdf?id=135622"
+    },
+    {
+      "agency": "ICRA",
+      "rating": "[ICRA]AAA (Stable) / [ICRA]A1+ on Rs 28,548 cr (incl. Issuer Rating [ICRA]AAA (Stable))",
+      "date": "2025-12-22",
+      "action": "Outstanding (change in limits)",
+      "source_url": "https://www.icra.in/Rating/GetRationalReportFilePdf?id=139791"
+    }
+  ],
+  "esg": [
+    {
+      "metric": "Net-zero target (Scope 1 & 2)",
+      "value": 2038,
+      "unit": "year",
+      "period": "target",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "metric": "Scope 1 GHG emissions",
+      "value": 5262173,
+      "unit": "tCO2e",
+      "period": "FY2025-26",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "metric": "Scope 1 GHG emissions",
+      "value": 5675575,
+      "unit": "tCO2e",
+      "period": "FY2024-25",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "metric": "Scope 1 GHG emissions",
+      "value": 5515578,
+      "unit": "tCO2e",
+      "period": "FY2023-24",
+      "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+    },
+    {
+      "metric": "Scope 1 GHG emissions",
+      "value": 5590664,
+      "unit": "tCO2e",
+      "period": "FY2022-23",
+      "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+    },
+    {
+      "metric": "Scope 2 GHG emissions",
+      "value": 29986,
+      "unit": "tCO2e",
+      "period": "FY2025-26",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "metric": "Scope 2 GHG emissions",
+      "value": 143254,
+      "unit": "tCO2e",
+      "period": "FY2024-25",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "metric": "Scope 2 GHG emissions",
+      "value": 153542,
+      "unit": "tCO2e",
+      "period": "FY2023-24",
+      "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+    },
+    {
+      "metric": "Scope 2 GHG emissions",
+      "value": 92035,
+      "unit": "tCO2e",
+      "period": "FY2022-23",
+      "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+    },
+    {
+      "metric": "Scope 1+2 intensity (physical)",
+      "value": 0.315,
+      "unit": "tCO2e/t gross crude",
+      "period": "FY2025-26 (FY25: 0.320; FY24: 0.34; FY23: 0.33)",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "metric": "Scope 1+2 intensity (turnover)",
+      "value": 5.03,
+      "unit": "tCO2e/INR million",
+      "period": "FY2025-26 (FY25: 5.32)",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "metric": "Scope 1+2 emission intensity reduction vs FY2022-23 baseline",
+      "value": 9.63,
+      "unit": "%",
+      "period": "FY2025-26",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "metric": "Absolute Scope 1+2 reduction vs FY2022-23 baseline",
+      "value": 11.44,
+      "unit": "%",
+      "period": "FY2025-26",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "metric": "CCTS GHG emission-intensity target vs achieved (unaudited)",
+      "value": "target 5.6885 / achieved 5.3305",
+      "unit": "GEI (tCO2e per t product, CCTS basis)",
+      "period": "FY2025-26",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "metric": "Total energy consumed",
+      "value": 70350874,
+      "unit": "GJ",
+      "period": "FY2025-26 (FY25: 74,964,550)",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "metric": "Renewable energy consumed (electricity)",
+      "value": 756248,
+      "unit": "GJ",
+      "period": "FY2025-26 (FY25: 204,225)",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "metric": "Renewable energy generated in-house",
+      "value": 34640,
+      "unit": "GJ",
+      "period": "FY2025-26",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "metric": "Energy intensity (physical)",
+      "value": 4.19,
+      "unit": "GJ/t gross crude",
+      "period": "FY2025-26 (FY25: 4.15)",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "metric": "Energy intensity (turnover)",
+      "value": 66.93,
+      "unit": "GJ/INR million",
+      "period": "FY2025-26 (FY25: 68.60)",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "metric": "Specific energy consumption",
+      "value": 70.71,
+      "unit": "MBN",
+      "period": "FY2024-25 (FY24: 71.2 per press release)",
+      "source_url": "https://www.mangalorean.com/mrpl-announces-q4-and-fy-2024-25-results-achieves-record-refining-throughput/"
+    },
+    {
+      "metric": "PAT-VI cycle MBN: target vs achieved",
+      "value": "target 69.08 / achieved 71.3",
+      "unit": "MBN",
+      "period": "FY2020-21 to FY2022-23",
+      "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+    },
+    {
+      "metric": "Fuel savings from energy-efficiency measures",
+      "value": 43436,
+      "unit": "MTOE",
+      "period": "FY2025-26",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "metric": "Solar power generated (captive)",
+      "value": 9626761,
+      "unit": "kWh",
+      "period": "FY2025-26 (FY25: 8,838,213 kWh; FY24: 7,890 MWh)",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "metric": "Installed solar capacity",
+      "value": 8.76,
+      "unit": "MW (6.06 refinery + 2.5 aromatics + 0.2 desal)",
+      "period": "FY2023-24",
+      "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+    },
+    {
+      "metric": "Grid power import capacity augmentation (for RE import)",
+      "value": "28 -> 102",
+      "unit": "MW",
+      "period": "by FY2027-28",
+      "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+    },
+    {
+      "metric": "Green hydrogen plant",
+      "value": 500,
+      "unit": "TPA (Rs 56 cr; target Mar-2027)",
+      "period": "under construction",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "metric": "Bio-ATF demo plant",
+      "value": 20,
+      "unit": "KLPD (Rs 364 cr; target Jan-2027)",
+      "period": "under construction",
+      "source_url": "https://scanx.trade/stock-market-news/companies/mrpl-annual-report-fy-2025-26-profit-after-tax-surges-to-1-931-crore-on-stronger-refining-margins/46365539"
+    },
+    {
+      "metric": "Total water withdrawal",
+      "value": 23170931,
+      "unit": "kL",
+      "period": "FY2025-26 (FY25: 25,165,814)",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "metric": "Water withdrawal - surface water",
+      "value": 18985746,
+      "unit": "kL",
+      "period": "FY2025-26 (FY25: 14,224,168)",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "metric": "Water withdrawal - desalinated seawater",
+      "value": 463316,
+      "unit": "kL",
+      "period": "FY2025-26 (FY25: 5,677,319)",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "metric": "Water withdrawal - others (treated sewage/SEPU water)",
+      "value": 3721869,
+      "unit": "kL",
+      "period": "FY2025-26 (FY25: 5,264,327)",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "metric": "Total water consumption",
+      "value": 21802513,
+      "unit": "kL",
+      "period": "FY2025-26 (FY25: 22,127,450)",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "metric": "Water intensity (physical)",
+      "value": 1.3,
+      "unit": "kL/t gross crude",
+      "period": "FY2025-26 (FY25: 1.23)",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "metric": "Water discharged (treated, to seawater)",
+      "value": 2706766,
+      "unit": "kL",
+      "period": "FY2025-26 (FY25: 6,947,003)",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "metric": "Desalination plant capacity",
+      "value": 40,
+      "unit": "MLD (expanded from 30, commissioned Feb-2024)",
+      "period": "since Feb-2024",
+      "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+    },
+    {
+      "metric": "Total waste generated",
+      "value": 16889,
+      "unit": "t",
+      "period": "FY2025-26 (FY25: 15,245)",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "metric": "Hazardous waste (oily sludge, spent catalyst etc.)",
+      "value": 10592,
+      "unit": "t",
+      "period": "FY2025-26 (FY25: 9,356)",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "metric": "SOx emissions",
+      "value": 14628,
+      "unit": "TPA",
+      "period": "FY2025-26 (FY25: 17,325)",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "metric": "NOx emissions",
+      "value": 2544,
+      "unit": "TPA",
+      "period": "FY2025-26 (FY25: 2,190)",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "metric": "Particulate matter",
+      "value": 163.3,
+      "unit": "TPA",
+      "period": "FY2025-26 (FY25: 172.04)",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "metric": "EPR plastic obligation fulfilled",
+      "value": 2145,
+      "unit": "t",
+      "period": "FY2025-26",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "metric": "CSR spend",
+      "value": 48.67,
+      "unit": "INR crore (obligation 65.42)",
+      "period": "FY2025-26",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "metric": "CSR spend",
+      "value": 29.09,
+      "unit": "INR crore",
+      "period": "FY2024-25",
+      "source_url": "https://www.careratings.com/upload/CompanyFiles/PR/202506120619_Mangalore_Refinery_and_Petrochemicals_Limited.pdf"
+    },
+    {
+      "metric": "CSR spend",
+      "value": 20.48,
+      "unit": "INR crore",
+      "period": "FY2023-24",
+      "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+    },
+    {
+      "metric": "LTIFR - employees",
+      "value": 0.62,
+      "unit": "per million person-hours",
+      "period": "FY2025-26 (FY25: 0)",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "metric": "LTIFR - contract workers",
+      "value": 0.21,
+      "unit": "per million person-hours",
+      "period": "FY2025-26 (FY25: 0.47)",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "metric": "Fatalities",
+      "value": "2 employees (FY26); 1 contract worker (FY25)",
+      "unit": "count",
+      "period": "FY2025-26 / FY2024-25",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "metric": "Recordable work-related injuries",
+      "value": "11 employees + 19 workers",
+      "unit": "count",
+      "period": "FY2025-26",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "metric": "Women in workforce",
+      "value": 8.94,
+      "unit": "% (219 of 2,450)",
+      "period": "31-Mar-2026",
+      "source_url": "https://scanx.trade/stock-market-news/companies/mrpl-annual-report-fy-2025-26-profit-after-tax-surges-to-1-931-crore-on-stronger-refining-margins/46365539"
+    },
+    {
+      "metric": "Training",
+      "value": 9452,
+      "unit": "man-days (avg 4.95 mgmt / 2.91 non-mgmt per employee)",
+      "period": "FY2025-26",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "metric": "MSE procurement share",
+      "value": 51,
+      "unit": "% (Rs 1,120 cr; target 25%)",
+      "period": "FY2025-26",
+      "source_url": "https://scanx.trade/stock-market-news/companies/mrpl-annual-report-fy-2025-26-profit-after-tax-surges-to-1-931-crore-on-stronger-refining-margins/46365539"
+    },
+    {
+      "metric": "GHG/energy/water assurance provider",
+      "value": "Bureau Veritas",
+      "unit": "-",
+      "period": "FY2025-26 BRSR",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    }
+  ],
+  "digital": [
+    {
+      "initiative": "SAP S/4HANA ERP",
+      "detail": "SAP migrated to S/4HANA (reported in FY24 AR); statutory auditor confirms accounting runs on SAP HANA S4 (FY26); additional SAP modules under development (CWIP Rs 224.58 mn).",
+      "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+    },
+    {
+      "initiative": "AI-based real-time optimisers (RTO)",
+      "detail": "MRPL claims first refinery to introduce AI-based RTOs in process units; implemented in polypropylene, captive power plant and PFCC; 2 patents filed for algorithms (FY24). PFCC RTO moved from advisory to closed-loop mode.",
+      "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+    },
+    {
+      "initiative": "REVEAL AI suite (PolyOptima, Power Optima, Rotary Sentinel AI, FLARE REVEAL)",
+      "detail": "In-house AI suite: PolyOptima soft-sensor/RTO for PP (MFI, xylene solubles; GoI Best Innovation award Sep-2022); Power Optima hybrid digital twins of turbines for steam/power loading; Rotary Sentinel AI multi-agent reliability framework (MoPNG Special Innovation Award Nov-2024); FLARE REVEAL causal-AI flaring root cause; planned Refinery Virtual Assistant. Per MD M. Shyamprasad Kamath (May 2026).",
+      "source_url": "https://egov.eletsonline.com/2026/05/mrpls-blueprint-for-smart-operations/"
+    },
+    {
+      "initiative": "Agentic AI, RPA and flare analytics",
+      "detail": "FY26: working on Agentic AI frameworks for equipment reliability; RPA for routine workflows; flare monitoring & analytics implemented.",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "initiative": "Prescriptive/predictive maintenance",
+      "detail": "AI/ML prescriptive maintenance tool for hydroprocessing recycle gas compressor completed FY24; vibration sensors on critical rotating machines; FY26 AR cites real-time monitoring of critical equipment and piping with digital sensors.",
+      "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+    },
+    {
+      "initiative": "Enterprise Data Platform (EDP)",
+      "detail": "FY26: unified enterprise data platform with advanced analytics as single source of truth; groundwork for predictive/prescriptive analytics.",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "initiative": "Digital Procurement Portal & Vendor Invoice Management",
+      "detail": "FY26: end-to-end e-procurement workflow (PR to PO) with role-based access; vendor invoice management system for digital capture/verification.",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "initiative": "Cybersecurity / ISMS",
+      "detail": "ISO/IEC 27001:2022-aligned ISMS upgrade (FY26); 24x7 Security Operations Centre (FY24); DPDP Act compliance under way.",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "initiative": "IoT environmental monitoring",
+      "detail": "Online stack and ETP analyser data integrated with CPCB portal via IoT for real-time compliance reporting (FY26).",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "initiative": "Drones & AI in safety",
+      "detail": "Drones and AI for safety observations, mast-climbing work platform used during shutdown (FY24); FY26 risk register notes SOPs for drone threats / no-fly zone.",
+      "source_url": "https://admin.mrpl.co.in/img/UploadedFiles/AnnualReport/Files/1817d38cd9bb442080a60295fd69afd3.pdf"
+    }
+  ],
+  "news": [
+    {
+      "date": "2025-01-06",
+      "headline": "MRPL signs MoU with ISPRL to use underground caverns for crude storage",
+      "summary": "Lease of ISPRL Mangaluru cavern storage to improve supply security without capex.",
+      "source_url": "https://www.business-standard.com/companies/news/mrpl-signs-mou-with-isprl-to-utilise-underground-caverns-for-crude-storage-125010701111_1.html"
+    },
+    {
+      "date": "2025-02-15",
+      "headline": "Tripartite MoU with SOCAR and ONGC at India Energy Week 2025",
+      "summary": "MoU for supply/trade of crude, LNG and products between SOCAR and ONGC group (date = MRPL press-release filing).",
+      "source_url": "https://nsearchives.nseindia.com/corporate/MRPL_15022025170357_PressRelease.pdf"
+    },
+    {
+      "date": "2025-04-29",
+      "headline": "FY25 results: PAT falls to Rs 51 cr; record 18.044 MMT crude throughput",
+      "summary": "GRM US$4.45/bbl vs 10.36; distillate yield 81.93%; record ATF 2.72 MMT.",
+      "source_url": "https://www.mangalorean.com/mrpl-announces-q4-and-fy-2024-25-results-achieves-record-refining-throughput/"
+    },
+    {
+      "date": "2025-06-05",
+      "headline": "CRISIL reaffirms AAA/Stable and A1+",
+      "summary": "Cites ONGC support; FY25 EBITDA fell to Rs 2,469 cr; debt Rs 12,867 cr.",
+      "source_url": "https://www.crisil.com/mnt/winshare/Ratings/RatingList/RatingDocs/MangaloreRefineryandPetrochemicalsLimited_June%2005_%202025_RR_370236.html"
+    },
+    {
+      "date": "2025-06-23",
+      "headline": "CareEdge reaffirms CARE AAA; Stable / CARE A1+",
+      "summary": "Notes FY25 GRM moderation, ~33% export revenue, expected debt rise in FY26.",
+      "source_url": "https://www.careratings.com/upload/CompanyFiles/PR/202506120619_Mangalore_Refinery_and_Petrochemicals_Limited.pdf"
+    },
+    {
+      "date": "2025-07-12",
+      "headline": "Toxic gas leak at MRPL kills two, one hospitalised",
+      "summary": "Two operators found unconscious on tank FB7029A (dry slop) platform in oil movement section; inquiry committee set up. FY26 BRSR reports 2 employee fatalities.",
+      "source_url": "https://www.thenewsminute.com/karnataka/mangaluru-two-employees-die-another-critical-due-to-toxic-gas-leak-at-mrpl"
+    },
+    {
+      "date": "2025-07-21",
+      "headline": "Q1 FY26 net loss Rs 272 cr; GRM US$3.88/bbl",
+      "summary": "45-day Phase-II planned shutdown and inventory losses; throughput 3.52 MMT.",
+      "source_url": "https://www.business-standard.com/amp/markets/capital-market-news/mrpl-tumbles-after-reporting-q1-net-loss-of-rs-272-cr-grm-drops-to-3-88-barrel-125072100747_1.html"
+    },
+    {
+      "date": "2025-10-16",
+      "headline": "Q2 FY26 swing to Rs 639 cr profit; first cargo of Kuwait 'Hout' crude processed",
+      "summary": "EBITDA Rs 1,565 cr; throughput 4.43 MMT; Devangonthi terminal record 65.4 TKL dispatch in Sep-2025.",
+      "source_url": "https://www.businesstoday.in/markets/stocks/story/mrpl-shares-jump-9-as-company-swings-to-profit-in-q2-fy26-498371-2025-10-16"
+    },
+    {
+      "date": "2025-10-29",
+      "headline": "MRPL pauses Russian oil purchases after US sanctions on Rosneft/Lukoil",
+      "summary": "Executive cites difficulty tracing sanctioned entities; MRPL had bought ~3 mn bbl/month of Russian oil.",
+      "source_url": "https://www.hellenicshippingnews.com/indias-mrpl-pauses-russian-oil-buying-to-avoid-sanctions-risks-executive-says/"
+    },
+    {
+      "date": "2025-12-22",
+      "headline": "ICRA keeps [ICRA]AAA (Stable)/A1+ on Rs 28,548 cr limits",
+      "summary": "Change-in-limits rationale; issuer rating AAA (Stable).",
+      "source_url": "https://www.icra.in/Rating/GetRationalReportFilePdf?id=139791"
+    },
+    {
+      "date": "2026-01-14",
+      "headline": "Q3 FY26 PAT Rs 1,445 cr; borrowings cut to Rs 9,290 cr",
+      "summary": "Revenue Rs 29,720 cr; throughput 4.70 MMT; D/E 0.63.",
+      "source_url": "https://www.psuconnect.in/financial/mrpl-q3-and-9m-fy-2025-26-results-net-profit-rises-to-1445-crore-in-q3"
+    },
+    {
+      "date": "2026-01-20",
+      "headline": "MRPL scouts for Venezuelan oil as it halts Russian imports",
+      "summary": "Finance head: strict sanctions compliance, no Russian crude being imported; ~40% crude from Middle East.",
+      "source_url": "https://www.marketscreener.com/news/india-s-mrpl-scouts-for-venezuelan-oil-as-it-halts-russian-imports-ce7e58dfdf81ff2c"
+    },
+    {
+      "date": "2026-01-30",
+      "headline": "MRPL wins two FIPI awards at India Energy Week 2026",
+      "summary": "FIPI Innovator of the Year (Team) 2025; Young Achiever (Male) for R. Karthick.",
+      "source_url": "https://www.mangalorean.com/mrpl-wins-two-prestigious-innovation-awards-at-fipi-awards-during-india-energy-week-2026/"
+    },
+    {
+      "date": "2026-03-04",
+      "headline": "Reports that MRPL declared force majeure on March-April gasoline exports amid Gulf war",
+      "summary": "Reuters/traders reported FM as Hormuz shipping halted; MRPL later denied (see 2026-03-05).",
+      "source_url": "https://www.business-standard.com/economy/news/mrpl-declares-force-majeure-on-gasoline-exports-cargoes-amid-gulf-crisis-126030400480_1.html"
+    },
+    {
+      "date": "2026-03-05",
+      "headline": "MRPL shuts a 100,000-bpd CDU and secondary units (incl. hydrocracker) on crude shortage; clarifies no force majeure",
+      "summary": "West Asia conflict disrupted Middle East crude; company told exchanges it had not invoked force majeure.",
+      "source_url": "https://www.business-standard.com/amp/industry/news/mrpl-shuts-refinery-units-amid-crude-shortage-from-west-asia-conflict-126030500508_1.html"
+    },
+    {
+      "date": "2026-04-24",
+      "headline": "FY26 results: PAT Rs 1,931 cr, GRM US$9.22/bbl; Q4 PAT Rs 119 cr",
+      "summary": "Revenue Rs 1,05,155 cr; EBITDA Rs 6,449 cr; Rs 4/share dividend; 85 new HiQ outlets.",
+      "source_url": "https://www.psuconnect.in/financial/mrpl-q4-net-profit-at-119-cr-revenue-from-operations-at-28493-cr"
+    },
+    {
+      "date": "2026-04-27",
+      "headline": "ONGC board approves petrochemicals marketing JV of ONGC, MRPL and OPaL (50:25:25)",
+      "summary": "MRPL to invest Rs 12.5 cr; pending DIPAM approval.",
+      "source_url": "https://www.psuconnect.in/psu-news/mrpl-ongc-and-opal-to-form-petrochemicals-marketing-joint-venture"
+    },
+    {
+      "date": "2026-05-11",
+      "headline": "MRPL MD outlines AI 'REVEAL' suite for smart operations",
+      "summary": "PolyOptima, Power Optima, Rotary Sentinel AI, FLARE REVEAL; closed-loop PFCC optimiser.",
+      "source_url": "https://egov.eletsonline.com/2026/05/mrpls-blueprint-for-smart-operations/"
+    },
+    {
+      "date": "2026-05-19",
+      "headline": "PNGRB authorises MRPL ATF pipeline from Devangonthi to Bengaluru airport",
+      "summary": "2.5 MMTPA pipeline to KIA fuel farms, completion within 36 months.",
+      "source_url": "https://www.psuconnect.in/psu-news/mrpl-pipeline-project-approved-key-aviation-fuel-upgrade"
+    },
+    {
+      "date": "2026-06-05",
+      "headline": "Dr. Seema appointed Government nominee director",
+      "summary": "MoPNG board restructuring; D.K. Ojha later left board (10-Jul-2026).",
+      "source_url": "https://indianmasterminds.com/news/mrpl-board-restructuring-dk-ojha-dr-seema-government-nominee-directors-208900/"
+    },
+    {
+      "date": "2026-07-07",
+      "headline": "MRPL first state refiner to charter Iraqi crude since Hormuz blockade",
+      "summary": "Aframax Jasmin Joy to load Basrah crude 19-20 July.",
+      "source_url": "https://www.business-standard.com/amp/economy/news/mrpl-first-state-refiner-to-charter-iraqi-crude-cargo-since-hormuz-blockade-126070700322_1.html"
+    },
+    {
+      "date": "2026-07-15",
+      "headline": "Q1 FY27: consolidated PAT Rs 945.68 cr, revenue Rs 41,609 cr",
+      "summary": "Standalone PAT Rs 915 cr; EBITDA Rs 1,860 cr; throughput 4.43 MMT; includes Rs 471.76 cr exceptional income.",
+      "source_url": "https://indianmasterminds.com/news/mrpl-q1-fy27-results-net-profit-rs946-crore-revenue-rs41609-crore-217210/"
+    },
+    {
+      "date": "2026-07-23",
+      "headline": "FY26 Annual Report filed; 38th AGM set for 24-Aug-2026",
+      "summary": "Net-zero 2038, BRSR assured by Bureau Veritas; green H2 500 TPA by Mar-2027.",
+      "source_url": "https://www.bseindia.com/xml-data/corpfiling/AttachHis/f3ac9967-87b8-4e22-85a5-6bc0ccf8eb61.pdf"
+    },
+    {
+      "date": "2026-07-27",
+      "headline": "MRPL crude tender asks suppliers to avoid Red Sea and Strait of Hormuz",
+      "summary": "First Indian refiner to add such routing clause; deliveries 25 Aug-6 Sep.",
+      "source_url": "https://www.business-standard.com/economy/news/mrpl-asks-crude-suppliers-to-avoid-red-sea-strait-of-hormuz-routes-126072700557_1.html"
+    },
+    {
+      "date": "2026-07-28",
+      "headline": "ONGC approves US$500 mn parent guarantee for MRPL's Saudi Aramco crude imports",
+      "summary": "Guarantee valid 1-Sep-2026 to 31-Aug-2028.",
+      "source_url": "https://www.business-standard.com/markets/capital-market-news/ongc-backs-mrpl-s-crude-imports-from-saudi-aramco-with-500-million-guarantee-126072801039_1.html"
+    },
+    {
+      "date": "2026-08-21",
+      "headline": "MRPL wins GEEF Global WaterTech Award 2026",
+      "summary": "Water Efficiency Management Company of the Year.",
+      "source_url": "https://www.mangalorean.com/mrpl-wins-geef-global-watertech-award-2026/"
+    },
+    {
+      "date": "2026-09-09",
+      "headline": "MRPL director: Indian refineries running at 105-108% of capacity",
+      "summary": "Nandakumar Pillai at APPEC: diesel prioritised over jet; MRPL to run >100% until March 2027.",
+      "source_url": "https://www.hydrocarbonprocessing.com/news/2026/09/indias-refineries-operating-at-105-to-108-of-capacity/"
+    }
+  ]
+}

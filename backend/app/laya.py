@@ -19,7 +19,7 @@ from .db import ex, j, now_iso, q1
 
 MODEL_DIR = STORE / "laya"
 MODEL_DIR.mkdir(exist_ok=True)
-VERSION = "laya-0.2.0"
+VERSION = "laya-0.3.0"
 
 TAGS = ["A2", "A2B", "P-101", "E-310", "PSV-118", "V-105", "K-401", "B-02", "FE-221", "TR-03", "M-A2"]
 UNITS = ["CDU-1", "VDU-1", "HCU", "SRU", "UTIL", "NHT-CCR"]
@@ -70,17 +70,23 @@ T: dict[str, list[str]] = {
         "summarise today's shift log", "who is on call in electrical", "contact number of mechanical maintenance",
         "company history of CDU-1 commissioning", "explain what a mechanical seal plan 11 is", "what does NPSH mean",
     ],
+    "company_info": [
+        "what is MRPL refining capacity", "who is the managing director of MRPL", "MRPL GRM last financial year", "MRPL revenue and profit",
+        "Nelson complexity index of the refinery", "list MRPL products", "polypropylene grades made by MRPL", "how many retail outlets does MRPL have",
+        "MRPL shareholding pattern ONGC HPCL", "MRPL history and expansion phases", "which process units does MRPL have", "MRPL sustainability and CSR",
+        "MRPL ka turnover kitna hai", "latest news about MRPL", "MRPL crude throughput trend", "MRPL credit rating",
+    ],
     "smalltalk": ["hi", "hello", "thanks", "good morning", "who are you", "ok thank you", "namaste"],
 }
 DEPT = {
     "asset_dossier": "Electrical", "procedure_lookup": "Electrical", "doc_ingest": "Mechanical", "finding_review": "Mechanical",
     "access_request": "Management", "asset_expiry": "Instrumentation", "production_scenario": "Planning",
-    "process_chemistry": "Operations", "code_task": "IT", "general_chat": "Operations", "smalltalk": "none",
+    "process_chemistry": "Operations", "code_task": "IT", "company_info": "Corporate Communications", "general_chat": "Operations", "smalltalk": "none",
 }
 ROUTE = {
     "asset_dossier": "small_llm+dossier", "procedure_lookup": "small_llm+rag", "doc_ingest": "ocr_vlm", "finding_review": "small_llm+rag",
     "access_request": "workflow", "asset_expiry": "analytics", "production_scenario": "analytics+optimizer",
-    "process_chemistry": "domain_llm+guardrails", "code_task": "sandbox_code", "general_chat": "small_llm+rag", "smalltalk": "small_llm",
+    "process_chemistry": "domain_llm+guardrails", "code_task": "sandbox_code", "company_info": "small_llm+rag (public)", "general_chat": "small_llm+rag", "smalltalk": "small_llm",
 }
 URGENT = re.compile(r"\b(trip|tripped|fire|leak|h2s|gas|emergency|asap|urgent|abhi|immediately|alarm|explosion|injur)", re.I)
 
