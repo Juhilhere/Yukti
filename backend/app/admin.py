@@ -159,11 +159,31 @@ def reset_password(uid: str, ctx: Ctx = Depends(current)) -> dict[str, Any]:
     u = q1("SELECT * FROM users WHERE id=?", (uid,))
     if not u:
         raise err(404, "not_found", "User not found")
+    if uid == ctx.user["id"]:  # it would sign you out before you could read the new password
+        raise err(400, "invalid", "To change your own password, use Account & security. Another administrator can reset it for you.")
     pw = _temp_password()
     ex("UPDATE users SET password_hash=?, must_change_password=1, demo_password=NULL, locked_until=NULL WHERE id=?", (hash_password(pw), uid))
+    # earlier wrong guesses are forgiven, otherwise a single typo with the new password would lock the account again
+    ex("DELETE FROM login_attempts WHERE username=? AND success=0", (u["username"],))
     ex("UPDATE sessions SET revoked_at=?, revoke_reason='password_reset' WHERE user_id=? AND revoked_at IS NULL", (now_iso(), uid))
     audit.write(ctx.actor, "admin.user.password_reset", f"user:{u['username']}")
     return {"temp_password": pw}
+
+
+@router.post("/users/{uid}/reset-mfa")
+def reset_mfa(uid: str, ctx: Ctx = Depends(current)) -> dict[str, Any]:
+    """For a user who lost the phone with the authenticator app (and the recovery codes): turns two-step sign-in off,
+    so they can sign in with their password and set it up again on the new phone."""
+    ctx.require("users.manage")
+    u = q1("SELECT * FROM users WHERE id=?", (uid,))
+    if not u:
+        raise err(404, "not_found", "User not found")
+    if uid == ctx.user["id"]:  # otherwise a stolen admin session could remove the admin's own second step
+        raise err(400, "invalid", "You cannot reset your own two-step sign-in. Turn it off in Account & security, or ask another administrator.")
+    ex("UPDATE users SET mfa_enabled=0, mfa_secret=NULL, mfa_pending_secret=NULL, recovery_json=NULL WHERE id=?", (uid,))
+    n = ex("UPDATE sessions SET revoked_at=?, revoke_reason='mfa_reset' WHERE user_id=? AND revoked_at IS NULL", (now_iso(), uid)).rowcount
+    audit.write(ctx.actor, "admin.user.mfa_reset", f"user:{u['username']}", {"sessions_revoked": n})
+    return {"ok": True, "user": _user_out(q1("SELECT * FROM users WHERE id=?", (uid,)))}
 
 
 @router.post("/users/{uid}/unlock")

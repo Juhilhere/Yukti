@@ -34,6 +34,7 @@ export function ChangePasswordForm({ onDone, submitLabel }: { onDone?: () => voi
     onError: (e) => setErr(errMsg(e)),
   });
   const localErr = next && next.length < 12 ? t('account.pw.tooShort')
+    : next && !(/\p{L}/u.test(next) && /\p{Nd}/u.test(next)) ? t('account.pw.needsMix')
     : next && cur && next === cur ? t('account.pw.same')
       : conf && next !== conf ? t('account.pw.mismatch') : null;
   const submit = (e: FormEvent) => {
@@ -46,7 +47,7 @@ export function ChangePasswordForm({ onDone, submitLabel }: { onDone?: () => voi
       <Field label={t('account.currentPassword')}>
         <input className="input" type="password" autoComplete="current-password" value={cur} onChange={(e) => setCur(e.target.value)} />
       </Field>
-      <Field label={t('account.newPassword')} hint={t('account.pw.hint')}>
+      <Field label={t('account.newPassword')} hint={t('account.pw.rules')}>
         <input className="input" type="password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} />
       </Field>
       <Field label={t('account.confirmPassword')}>
@@ -145,15 +146,17 @@ function MfaCard() {
             <div className="min-w-0 flex-1 space-y-2">
               <div className="label">{t('account.mfa.secret')}</div>
               <div className="flex items-center gap-1 rounded-md border border-border bg-bg px-2 py-1">
-                <code className="flex-1 break-all font-mono text-[12px] text-cyan">{enroll.secret}</code>
+                {/* shown in groups of 4 so it can be typed into the phone without losing the place */}
+                <code className="flex-1 break-all font-mono text-[12px] text-cyan">{enroll.secret.replace(/(.{4})(?=.)/g, '$1 ')}</code>
                 <CopyButton text={enroll.secret} />
               </div>
             </div>
           </div>
           <div className="text-[12.5px] text-muted">{t('account.mfa.step2')}</div>
           <div className="flex items-center gap-2">
-            <input className="input !w-40 text-center font-mono tracking-[0.3em]" inputMode="numeric" maxLength={6} value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} placeholder="000000" />
+            {/* no maxLength: a pasted "123 456" would be cut to "123 45" before the space is removed */}
+            <input className="input !w-40 text-center font-mono tracking-[0.3em]" inputMode="numeric" autoComplete="one-time-code" value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="000000" />
             <button className="btn btn-primary" disabled={code.length !== 6 || verify.isPending} onClick={() => verify.mutate()}>
               {verify.isPending ? <Spinner className="!text-[#1a1204]" /> : <ShieldCheck size={13} />}{t('btn.verify')}
             </button>
@@ -163,7 +166,7 @@ function MfaCard() {
         </div>
       ) : enabled ? (
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex-1 text-[12.5px] text-muted">{t('account.mfa.onHint')}</div>
+          <div className="flex-1 space-y-1 text-[12.5px] text-muted"><div>{t('account.mfa.onHint')}</div><div className="text-[11.5px] text-faint">{t('account.mfa.lostHint')}</div></div>
           <button className="btn btn-danger btn-sm" onClick={() => { setPw(''); setOffCode(''); disable.reset(); setDisableOpen(true); }}><ShieldOff size={12} />{t('account.mfa.disable')}</button>
         </div>
       ) : (
@@ -195,6 +198,18 @@ function MfaCard() {
 /* ------------------------------------------------------------------ */
 /* Sessions                                                            */
 /* ------------------------------------------------------------------ */
+/** "Yukti desktop app" / "Chrome on Windows" instead of the raw browser identification string. */
+function deviceName(ua: string | null | undefined, t: ReturnType<typeof useT>): string {
+  if (!ua) return t('account.sess.unknown');
+  if (/Electron\//.test(ua)) return t('account.sess.desktopApp');
+  const browser = /Edg\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /Firefox\//.test(ua) ? 'Firefox'
+    : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : '';
+  const os = /Windows/.test(ua) ? 'Windows' : /Android/.test(ua) ? 'Android' : /iPhone|iPad/.test(ua) ? 'iOS'
+    : /Mac OS X/.test(ua) ? 'macOS' : /Linux/.test(ua) ? 'Linux' : '';
+  if (browser && os) return t('account.sess.browserOn', { browser, os });
+  return browser || `${t('account.sess.otherProgram')} (${ua.split(/[\s/]/)[0].slice(0, 30)})`;
+}
+
 function SessionsCard() {
   const t = useT();
   const { logout } = useAuth();
@@ -220,7 +235,7 @@ function SessionsCard() {
               <Monitor size={15} className={ss.current ? 'text-ok' : 'text-muted'} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="truncate text-[12.5px]">{ss.user_agent || t('account.sess.unknown')}</span>
+                  <span className="truncate text-[12.5px]" title={ss.user_agent || undefined}>{deviceName(ss.user_agent, t)}</span>
                   {ss.current && <Badge tone="ok">{t('account.sess.thisDevice')}</Badge>}
                 </div>
                 <div className="font-mono text-[11px] text-faint">{ss.ip || '—'} · {t('account.sess.started', { at: fmtTime(ss.created_at) })} · {t('account.sess.active', { ago: timeAgo(ss.last_seen_at) })}</div>

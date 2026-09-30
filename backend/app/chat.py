@@ -168,7 +168,7 @@ async def _run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | N
             shots.append(await asyncio.to_thread(attachments.analyse, ctx.subject, ctx.user["id"], aid))
         vision = engine.state.status == "ready" and engine.state.vision
         note = "" if vision else ("The loaded model cannot see photos, so Yukti answers only from the text it read on the photo. "
-                                  "An administrator can load a model that understands photos (for example Gemma 3).")
+                                  "An administrator can add the \"Ask with photos\" ability from the Yukti home screen on the server computer.")
         photo = {"images": shots, "vision": vision, "note": note}
         meta["photo"] = photo
         yield _sse("photo", {**photo, "note": tr(note) if note else ""})

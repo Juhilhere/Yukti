@@ -507,6 +507,17 @@ def get_photo(aid: str, thumb: int = 0, ctx: Ctx = Depends(current)) -> FileResp
     return FileResponse(p, media_type="image/jpeg", headers={"Cache-Control": "private, max-age=86400"})
 
 
+@app.get("/api/features")
+def features(ctx: Ctx = Depends(current)) -> dict[str, Any]:
+    """Optional abilities (downloaded later by the desktop app on the server computer): photos and voice."""
+    return {
+        "vision": {"installed": any(m.get("mmproj") for m in engine.scan_models()),
+                   "active": engine.state.status == "ready" and engine.state.vision},
+        "voice": {"installed": bool(speech.status().get("available"))},
+        "can_manage": "models.manage" in ctx.perms,
+    }
+
+
 @app.get("/api/speech/status")
 def speech_status(ctx: Ctx = Depends(current)) -> dict[str, Any]:
     st = speech.status()

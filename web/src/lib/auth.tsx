@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { api, ApiError, onForbidden, onPasswordChangeRequired, onUnauthorized, setCsrf } from './api';
 import type { Me } from './types';
@@ -27,13 +27,31 @@ function redirectToLogin() {
   window.dispatchEvent(new PopStateEvent('popstate'));
 }
 
+/**
+ * The session expiry times come from the server clock, but the idle countdown runs on this PC's clock. If the PC clock is
+ * wrong (common on plant PCs), the countdown would sign the user out at once or never warn. Shift the times onto the local
+ * clock using the server time sent with every /me answer.
+ */
+function onLocalClock(m: Me): Me {
+  const serverTime = (m as Me & { server_time?: string }).server_time;
+  const server = serverTime ? Date.parse(serverTime) : NaN;
+  if (!m.session || isNaN(server)) return m;
+  const skew = Date.now() - server;
+  if (Math.abs(skew) < 5000) return m;
+  const shift = (iso?: string) => (iso && !isNaN(Date.parse(iso)) ? new Date(Date.parse(iso) + skew).toISOString() : iso);
+  return { ...m, session: { ...m.session, idle_expires_at: shift(m.session.idle_expires_at)!, abs_expires_at: shift(m.session.abs_expires_at)! } };
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [me, setMe] = useState<Me | null>(null);
   const [status, setStatus] = useState<AuthCtx['status']>('loading');
   const [pwForced, setPwForced] = useState(false);
   const qc = useQueryClient();
+  const meRef = useRef<Me | null>(null);
+  meRef.current = me;
 
-  const apply = useCallback((m: Me | null) => {
+  const apply = useCallback((raw: Me | null) => {
+    const m = raw ? onLocalClock(raw) : null;
     setMe(m);
     setCsrf(m?.csrf_token ?? '');
     setStatus(m ? 'authed' : 'anon');
@@ -46,10 +64,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       apply(m);
       return m;
     } catch (e) {
-      if (e instanceof ApiError && (e.status === 401 || e.status === 403)) apply(null);
-      else if (e instanceof ApiError && e.status === 0) { apply(null); }
-      else apply(null);
-      return null;
+      // signed out only when the server says so; if the server is briefly unreachable (restarting, network blip), a
+      // signed-in user stays on the page instead of being thrown to the sign-in screen
+      const serverSaidNo = e instanceof ApiError && (e.status === 401 || e.status === 403);
+      if (serverSaidNo || !meRef.current) apply(null);
+      return serverSaidNo ? null : meRef.current;
     }
   }, [apply]);
 

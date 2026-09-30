@@ -25,6 +25,31 @@ The top bar shows your clearance level (e.g. `L1 INTERNAL`). Sessions end after 
    - **Withheld**: how many relevant documents exist that you are not allowed to see, and which departments hold them.
 3. Use **Stop** to end an answer early and **Regenerate** to try again. Rate answers with 👍 / 👎 and optionally add a comment. Administrators review this feedback.
 
+### Ask with a photo 📷
+
+1. Click **📷 Add photo** next to the question box, take a photo (for example of a pipe label, tag plate, nameplate or
+   gauge) or choose one. You can add up to 4, paste them, or drag them onto the chat.
+2. Type a question (or none: Yukti then describes the photo) and send.
+3. **What Yukti read in the photo** shows the writing it found and the equipment tags it recognised.
+
+Yukti names a line, a chemical or a piece of equipment **only from a tag or label it can read, matched with the plant's
+documents**. It never guesses from the colour of a pipe. If no tag is readable, it says so and asks for the line number.
+It points out rust, leaks and damage, but a photo is never proof that something is safe. Gauge readings from a photo are
+approximate: check the instrument. Your photos are visible only to you, have their location data removed, and are
+deleted when you delete the chat.
+
+### Speak instead of typing 🎙️
+
+1. Click **🎙️ Speak** and say your question in English, Hindi or Kannada. Click **Done** when you finish (at most 1 minute).
+2. The words appear in the question box. **Check and correct them**, then press Send. Nothing is sent by itself.
+
+Speak close to the microphone; background noise is handled, but a quiet voice may not be heard. Equipment tags such as
+*"pump A2"* or *"exchanger E-310"* are recognised best when you say the type of equipment before the tag.
+
+**Administrators:** photos and voice are optional abilities, downloaded once after installation. On the server
+computer, the home screen shows **New abilities for Yukti → Add**; they can also be added or removed under
+*Admin → New abilities*. Until the photo ability is added, Yukti can still read the writing on a photo but cannot see the picture.
+
 Good to know:
 
 - Yukti answers **only from documents you are allowed to read** and cites them. If something is missing, it says so rather than guessing.

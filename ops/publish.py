@@ -134,14 +134,14 @@ def main() -> None:
          "label": "llama.cpp CUDA 12.4 runtime", "members": [pkg / "llama" / "cuda"]},
         {"name": "llama-vulkan", "kind": "zip", "check": "llama/vulkan/llama-server.exe", "replace_dir": "llama/vulkan",
          "label": "llama.cpp Vulkan / CPU runtime", "members": [pkg / "llama" / "vulkan"]},
-        {"name": "speech-cuda", "kind": "zip", "check": "speech/cuda/whisper-server.exe", "requires": "nvidia", "replace_dir": "speech/cuda",
+        {"name": "speech-cuda", "kind": "zip", "check": "speech/cuda/whisper-server.exe", "requires": "nvidia", "replace_dir": "speech/cuda", "feature": "voice",
          "label": "Voice input (NVIDIA GPU)", "members": [pkg / "speech" / "cuda"]},
-        {"name": "speech-cpu", "kind": "zip", "check": "speech/cpu/whisper-server.exe", "replace_dir": "speech/cpu",
+        {"name": "speech-cpu", "kind": "zip", "check": "speech/cpu/whisper-server.exe", "replace_dir": "speech/cpu", "feature": "voice",
          "label": "Voice input", "members": [pkg / "speech" / "cpu"]},
     ] + [{"name": "voice-" + m.stem.lower(), "kind": "file", "dest": m.relative_to(pkg).as_posix(), "check": m.relative_to(pkg).as_posix(),
-          "label": f"Voice model {m.name}", "src": m, **({"requires": "nvidia"} if "turbo" in m.name else {})}
+          "label": f"Voice model {m.name}", "src": m, "feature": "voice", **({"requires": "nvidia"} if "turbo" in m.name else {})}
          for m in sorted((pkg / "speech" / "models").glob("*.bin"))] + [{"name": "model-" + m.stem.lower(), "kind": "file", "dest": m.relative_to(pkg).as_posix(), "check": m.relative_to(pkg).as_posix(),
-          "label": f"Model {m.name}", "src": m} for m in models]
+          "label": f"Model {m.name}", "src": m, **({"feature": "vision"} if "mmproj" in m.name.lower() else {})} for m in models]
     artifacts = []
     for s in specs:
         if s["kind"] == "zip":

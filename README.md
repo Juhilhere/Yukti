@@ -51,8 +51,8 @@ Yukti does it differently:
 | 📚 | **Policy-filtered retrieval** | SQLite FTS5 (BM25) over OCR'd and digital documents. Superseded revisions are down-weighted. Withheld documents are counted, never shown. |
 | ⚖️ | **Evidence, not vibes** | Facts are marked KNOWN / MISSING / CONFLICTING, with candidates, revisions and a recommended value. |
 | 🧠 | **Local LLM with citations** | Bundled llama.cpp (CUDA or Vulkan, chosen automatically). A watchdog restarts a crashed or hung engine. Every answer cites `[S#]` / `[F#]`. |
-| 📷 | **Ask with a photo** | Photograph a pipe stencil, tag plate, nameplate or gauge. The text on it is read offline (OCR) and matched to the asset register, and Gemma 3 looks at the picture. The line or chemical is named only from a readable tag and the plant's documents, never guessed from colour. Rust, leaks and damage are pointed out. Photos are stripped of location data and visible only to the sender. |
-| 🎙️ | **Speak instead of typing** | Offline Whisper speech recognition (large-v3-turbo on an NVIDIA GPU, small on the processor), hinted with the plant's own tags. The words land in the question box for checking; nothing is sent until you press Send. English, Hindi and Kannada. |
+| 📷 | **Ask with a photo** | Photograph a pipe stencil, tag plate, nameplate or gauge. The text on it is read offline (OCR) and matched to the asset register, and Gemma 3 looks at the picture. The line or chemical is named only from a readable tag and the plant's documents, never guessed from colour. Rust, leaks and damage are pointed out. Photos are stripped of location data and visible only to the sender. *Optional add-on, added from the home screen.* |
+| 🎙️ | **Speak instead of typing** | Offline Whisper speech recognition (large-v3-turbo on an NVIDIA GPU, small on the processor), hinted with the plant's own tags. The words land in the question box for checking; nothing is sent until you press Send. English, Hindi and Kannada. *Optional add-on, added from the home screen.* |
 | 🧾 | **Hash-chained audit** | Append-only SHA-256 chain with one-click verification and CSV/JSONL export. |
 | 📥 | **Governed knowledge** | Only Heads of Department add or remove documents, and only for their own department. Uploads are OCR'd, tagged, chunked and indexed. |
 | ✅ | **Access and findings workflows** | Time-bound access grants approved by the HOD. Inspection findings with per-role allowed actions and escalation. |
@@ -110,9 +110,13 @@ The full design is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 1. Download **[Yukti-Setup.exe](https://github.com/Juhilhere/Yukti/releases/latest/download/Yukti-Setup.exe)** — the only file you need.
 2. Double-click it. It installs in a few seconds (no questions, no admin rights) and opens Yukti. If Windows shows
    *“Windows protected your PC”*, choose **More info → Run anyway**.
-3. Yukti sets itself up: it downloads its AI once (about 3.4 GB — the server, the AI engine for your computer and the model),
-   checks every piece, and continues by itself if the internet drops. Then it starts and shows the sign-in page.
+3. Yukti sets itself up: it downloads what it needs to answer questions, once (2.7 GB, or 3.4 GB on a PC with an
+   NVIDIA graphics card: the server, the AI engine for your computer and the AI model). It checks every piece and
+   continues by itself if the internet drops. Then it starts and shows the sign-in page.
 4. Sign in. From now on Yukti works **without internet**. Choose English, हिंदी or ಕನ್ನಡ at any time.
+5. Optional, whenever you like: on the home screen, the administrator clicks **Add** under **📷 Ask with photos**
+   (about 800 MB) or **🎙️ Speak instead of typing** (0.3 GB, or 1 GB with an NVIDIA card). They are also under
+   *Admin → New abilities*, where they can be removed again. Keeping them separate keeps the first download small.
 
 Something not working? **Help → Report a problem** in Yukti fills in the technical details for you.
 Uninstall from *Windows Settings → Apps*; it asks before deleting your documents and chats.

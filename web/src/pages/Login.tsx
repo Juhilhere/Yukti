@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle, ArrowLeft, Eye, EyeOff, Lock, LogIn, ServerCog, ShieldCheck, Smartphone, User2, Users } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Eye, EyeOff, Lock, LogIn, ServerCog, ShieldCheck, Smartphone, User2, Users, Sparkles } from 'lucide-react';
+import { inDesktopApp } from '../components/FeatureOffers';
 import { api, ApiError } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import type { DemoUser } from '../lib/types';
@@ -19,7 +20,8 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<{ code: string; message: string } | null>(null);
+  // `key` errors are translated when shown, so they follow a language change made after the error appeared
+  const [error, setError] = useState<{ code: string; message?: string; key?: string; vars?: Record<string, number> } | null>(null);
   const [mfaStep, setMfaStep] = useState(false);
   const [totp, setTotp] = useState('');
   const t = useT();
@@ -43,10 +45,13 @@ export default function Login() {
     } catch (e) {
       if (e instanceof ApiError) {
         if (e.status === 401 && e.code === 'mfa_required') { setMfaStep(true); setTotp(''); }
-        else if (e.status === 401 && e.code === 'mfa_invalid') { setMfaStep(true); setError({ code: 'mfa_invalid', message: t('login.mfa.invalid') }); }
-        else if (e.status === 401) { setMfaStep(false); setError({ code: 'bad_credentials', message: t('login.badCredentials') }); }
-        else if (e.status === 423) setError({ code: 'locked', message: e.message || t('login.locked') });
-        else if (e.status === 0) setError({ code: 'network', message: t('login.network') });
+        else if (e.status === 401 && e.code === 'mfa_invalid') { setMfaStep(true); setTotp(''); setError({ code: 'mfa_invalid', key: 'login.mfa.wrongCode' }); }
+        else if (e.status === 401) { setMfaStep(false); setError({ code: 'bad_credentials', key: 'login.badCredentials' }); }
+        else if (e.status === 423) {
+          const n = Number(e.detail?.minutes);
+          setError(n > 0 ? { code: 'locked', key: n === 1 ? 'login.lockedFor1' : 'login.lockedFor', vars: { n } } : { code: 'locked', message: e.message || t('login.locked') });
+        }
+        else if (e.status === 0) setError({ code: 'network', key: 'login.network' });
         else setError({ code: e.code, message: e.message });
       } else setError({ code: 'error', message: String(e) });
     } finally {
@@ -56,6 +61,7 @@ export default function Login() {
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
+    // codes are sent as typed ("123 456", recovery codes with a dash); the server ignores spaces and dashes
     if (mfaStep) { if (totp.trim()) void doLogin(username, password, totp.trim()); return; }
     if (username && password) void doLogin(username, password);
   };
@@ -84,9 +90,10 @@ export default function Login() {
                 <div className="text-[12px] text-muted">{t('login.mfa.hint')}</div>
                 <label className="block space-y-1">
                   <span className="text-[12px] font-medium text-muted">{t('login.mfa.code')}</span>
-                  <input className="input !py-2 text-center font-mono tracking-[0.25em]" autoFocus autoComplete="one-time-code" inputMode="numeric"
-                    value={totp} onChange={(e) => setTotp(e.target.value.trim())} placeholder="000000" />
+                  <input className="input !py-2 text-center font-mono tracking-[0.25em]" autoFocus autoComplete="one-time-code" spellCheck={false}
+                    autoCapitalize="off" maxLength={40} value={totp} onChange={(e) => setTotp(e.target.value)} placeholder="000000" />
                 </label>
+                <div className="text-[11.5px] text-faint">{t('login.mfa.lost')}</div>
                 <button type="button" className="inline-flex items-center gap-1 text-[12px] text-muted hover:text-text"
                   onClick={() => { setMfaStep(false); setTotp(''); setError(null); }}><ArrowLeft size={12} />{t('btn.back')}</button>
               </div>
@@ -114,16 +121,24 @@ export default function Login() {
               <div className={cx('flex items-start gap-2 rounded-md border px-3 py-2 text-[12.5px]',
                 error.code === 'locked' ? 'border-amber/40 bg-amber/10 text-amber' : 'border-danger/40 bg-danger/10 text-red-200')}>
                 {error.code === 'locked' ? <Lock size={14} className="mt-0.5 shrink-0" /> : <AlertTriangle size={14} className="mt-0.5 shrink-0" />}
-                <span>{error.message}</span>
+                <span role="alert">{error.key ? t(error.key, error.vars) : error.message}</span>
               </div>
             )}
-            <button className="btn btn-primary w-full justify-center !py-2" disabled={busy || !username || !password || (mfaStep && !totp)}>
+            <button className="btn btn-primary w-full justify-center !py-2" disabled={busy || !username || !password || (mfaStep && !totp.trim())}>
               {busy ? <Spinner className="!text-[#1a1204]" /> : <LogIn size={14} />} {mfaStep ? t('btn.verify') : t('btn.signIn')}
             </button>
           </form>
           <div className="mt-6 flex items-center justify-center gap-1.5 text-[11px] text-faint">
             <ServerCog size={12} /> {t('login.footer')}
           </div>
+          {inDesktopApp() && (
+            // add-ons are downloaded by the desktop app on the server computer; reachable before signing in
+            <button type="button" onClick={() => window.location.assign('/desktop/features')}
+              className="mt-4 flex w-full items-center gap-2 rounded-md border border-cyan/30 bg-cyan/5 px-3 py-2 text-left text-[12.5px] hover:border-cyan/60">
+              <Sparkles size={14} className="shrink-0 text-cyan" />
+              <span><span className="font-medium text-cyan">{t('feat.login.title')}</span><br /><span className="text-muted">{t('feat.login.body')}</span></span>
+            </button>
+          )}
         </div>
 
         {demoUsers.length > 0 && (

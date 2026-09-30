@@ -24,6 +24,11 @@ if (location.protocol === 'file:') {
     setLang: (l) => ipcRenderer.invoke('yukti:setLang', l),
     report: (req) => ipcRenderer.invoke('yukti:report', req),
     onInstallProgress: on('install:progress'),
+    // add-ons page
+    featuresPlan: () => ipcRenderer.invoke('yukti:featuresPlan'),
+    featureInstall: (f) => ipcRenderer.invoke('yukti:featureInstall', f),
+    featureRemove: (f) => ipcRenderer.invoke('yukti:featureRemove', f),
+    featuresDone: (req) => ipcRenderer.invoke('yukti:featuresDone', req),
     // startup page
     splashInit: () => ipcRenderer.invoke('yukti:splashInit'),
     splashAction: (a) => ipcRenderer.invoke('yukti:splashAction', a),

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import FeatureOffers from '../components/FeatureOffers';
 import { ArrowRight, BookOpen, Camera, Eye, PanelRightOpen, ShieldCheck } from 'lucide-react';
 import { api, errMsg } from '../lib/api';
 import { streamSSE } from '../lib/sse';
@@ -326,6 +327,7 @@ function EmptyChat({ onPick }: { onPick: (prompt: string) => void }) {
         {t('chat.empty.body')}
       </p>
       <div className="mt-2 inline-flex items-center gap-1.5 text-[11.5px] text-ok"><ShieldCheck size={12} />{t('chat.empty.badge')}</div>
+      <FeatureOffers variant="home" />
       <div className="mt-6 grid w-full max-w-[760px] grid-cols-1 gap-2.5 sm:grid-cols-2">
         {SUGGESTIONS.map((s) => (
           <button key={s.prompt} onClick={() => onPick(t(s.prompt))}

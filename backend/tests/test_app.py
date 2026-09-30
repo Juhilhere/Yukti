@@ -552,3 +552,10 @@ def test_speech_endpoints_validate_audio(login):
 def test_microphone_allowed_for_the_app_only(app_client):
     pp = app_client.get("/api/health").headers["Permissions-Policy"]
     assert "microphone=(self)" in pp and "camera=()" in pp
+
+
+def test_features_status_for_home_screen(login):
+    a = login("admin").get("/api/features").json()
+    assert set(a) == {"vision", "voice", "can_manage"} and a["can_manage"] is True
+    assert isinstance(a["vision"]["installed"], bool) and isinstance(a["voice"]["installed"], bool)
+    assert login("ravi.e").get("/api/features").json()["can_manage"] is False  # employees are never offered downloads

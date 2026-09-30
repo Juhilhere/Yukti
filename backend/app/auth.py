@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import hashlib
+import math
 import os
+import re
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -19,6 +21,9 @@ from .policy import Subject
 ph = PasswordHasher(time_cost=3, memory_cost=65536, parallelism=4)  # argon2id, RFC 9106 second profile
 _DUMMY = ph.hash("dummy-password-for-timing")
 COOKIE = "yukti_sid"
+# TOTP codes are accepted up to 2 steps (60 s) either side of the server time: phone clocks are often a little off.
+TOTP_WINDOW = 2
+LOCK_MINUTES = 5
 
 ROLE_PERMS: dict[str, list[str]] = {
     "*": ["chat", "documents.view", "assets.view", "access.request", "notifications", "company.view", "feedback"],
@@ -148,10 +153,36 @@ def me_payload(ctx: Ctx) -> dict[str, Any]:
         "session": {"idle_expires_at": s["idle_expires_at"], "abs_expires_at": s["abs_expires_at"],
                     "idle_timeout_s": IDLE_TIMEOUT_S},
         "demo_mode": DEMO_MODE,
+        # lets the browser correct for a wrong PC clock when it counts down to the session expiry
+        "server_time": _now().isoformat(timespec="seconds"),
     }
 
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+
+def _recent_failures(username: str, since: str) -> tuple[int, str | None]:
+    """Failed sign-ins in the lockout window that came after the last successful sign-in (a success starts a fresh count)."""
+    r = q1("""SELECT COUNT(*) n, MAX(at) at FROM login_attempts WHERE username=? AND success=0 AND at>?
+              AND id > (SELECT COALESCE(MAX(id), 0) FROM login_attempts WHERE username=? AND success=1)""",
+           (username, since, username))
+    return (int(r["n"]), r["at"]) if r else (0, None)
+
+
+def _locked_error(until: datetime) -> HTTPException:
+    mins = max(1, math.ceil((until - _now()).total_seconds() / 60))
+    e = err(423, "locked", f"Too many failed sign-in attempts. Try again in {mins} minute{'s' if mins != 1 else ''}, "
+                           "or ask the administrator to unlock the account.")
+    e.detail["minutes"] = mins  # lets the sign-in page show the wait in whatever language is chosen later
+    return e
+
+
+def _record_failure(username: str, u: dict[str, Any] | None, ip: str, since: str) -> None:
+    ex("INSERT INTO login_attempts(username, ip, success, at) VALUES(?,?,0,?)", (username, ip, now_iso()))
+    if u and _recent_failures(username, since)[0] >= LOCK_THRESHOLD:
+        until = (_now() + timedelta(minutes=LOCK_MINUTES)).isoformat(timespec="seconds")
+        ex("UPDATE users SET locked_until=? WHERE id=?", (until, u["id"]))
+        audit.write(username, "auth.login.lock_started", f"user:{username}", {"ip": ip, "until": until})
 
 
 @router.post("/login")
@@ -165,40 +196,36 @@ def login(body: dict[str, Any], request: Request, response: Response) -> dict[st
     if u and u["locked_until"] and _utc(u["locked_until"]) > _now():
         until = _utc(u["locked_until"])
     elif not u:  # same behaviour for names that do not exist, so the lockout does not reveal which accounts exist
-        last = q1("SELECT COUNT(*) n, MAX(at) at FROM login_attempts WHERE username=? AND success=0 AND at>?", (username, since))
-        if last and last["n"] >= LOCK_THRESHOLD and last["at"]:
-            until = _utc(last["at"]) + timedelta(minutes=5)
+        n, last_at = _recent_failures(username, since)
+        if n >= LOCK_THRESHOLD and last_at:
+            until = _utc(last_at) + timedelta(minutes=LOCK_MINUTES)
             until = until if until > _now() else None
     if until:
         audit.write(username, "auth.login.locked", f"user:{username}", {"ip": ip})
-        mins = max(1, int((until - _now()).total_seconds() // 60) + 1)
-        raise err(423, "locked", f"Too many failed sign-in attempts. Try again in {mins} minute{'s' if mins != 1 else ''}, "
-                                 "or ask the administrator to unlock the account.")
+        raise _locked_error(until)
     ok = False
     try:
         ph.verify(u["password_hash"] if u else _DUMMY, password)
         ok = bool(u)
     except VerifyMismatchError:
         ok = False
-    ex("INSERT INTO login_attempts(username, ip, success, at) VALUES(?,?,?,?)", (username, ip, int(ok), now_iso()))
     if not ok:
-        if u:
-            fails = q1("SELECT COUNT(*) n FROM login_attempts WHERE username=? AND success=0 AND at>?", (username, since))["n"]
-            if fails >= LOCK_THRESHOLD:
-                until = (_now() + timedelta(minutes=5)).isoformat(timespec="seconds")
-                ex("UPDATE users SET locked_until=? WHERE id=?", (until, u["id"]))
+        _record_failure(username, u, ip, since)
         audit.write(username or "?", "auth.login.fail", f"user:{username}", {"ip": ip})
         raise err(401, "bad_credentials", "Invalid username or password.")
     if u["status"] != "active":
         audit.write(username, "auth.login.disabled", f"user:{username}", {"ip": ip})
         raise err(403, "account_disabled", "This account is disabled. Contact the administrator.")
     if u.get("mfa_enabled"):
-        code = str(body.get("totp") or "").strip()
-        if not code:
+        code = normalize_code(body.get("totp"))
+        if not code:  # password was right: ask for the second step (not counted as a failure)
             raise err(401, "mfa_required", "Enter the 6-digit code from your authenticator app.")
         if not _verify_totp(u, code):
+            # wrong codes count towards the lockout, so the 6-digit code cannot be found by trying many
+            _record_failure(username, u, ip, since)
             audit.write(username, "auth.mfa.fail", f"user:{username}", {"ip": ip})
-            raise err(401, "mfa_invalid", "Invalid authentication code.")
+            raise err(401, "mfa_invalid", MFA_INVALID)
+    ex("INSERT INTO login_attempts(username, ip, success, at) VALUES(?,?,1,?)", (username, ip, now_iso()))
     if ph.check_needs_rehash(u["password_hash"]):
         ex("UPDATE users SET password_hash=? WHERE id=?", (ph.hash(password), u["id"]))
     token = secrets.token_urlsafe(32)
@@ -214,7 +241,7 @@ def login(body: dict[str, Any], request: Request, response: Response) -> dict[st
     response.set_cookie(COOKIE, token, httponly=True, samesite="strict", secure=os.environ.get("YUKTI_TLS") == "1", path="/", max_age=ABS_TIMEOUT_S)
     audit.write(u["username"], "auth.login.success", f"session:{sid}", {"ip": ip})
     s = q1("SELECT * FROM sessions WHERE id=?", (sid,))
-    return me_payload(Ctx(u, s))
+    return me_payload(Ctx(q1("SELECT * FROM users WHERE id=?", (u["id"],)), s))
 
 
 @router.post("/logout")
@@ -255,23 +282,50 @@ def revoke_session(sid: str, ctx: Ctx = Depends(current)) -> dict[str, Any]:
     return {"ok": True}
 
 
-def _verify_totp(u: dict[str, Any], code: str) -> bool:
+MFA_INVALID = ("That code did not work. Type the newest 6-digit code from your authenticator app "
+               "and check that the time on your phone is correct.")
+
+
+def normalize_code(code: Any) -> str:
+    """A code as the user typed or pasted it: spaces and dashes removed, lower case ("123 456" -> "123456")."""
+    return re.sub(r"[\s\-\u2010-\u2015]", "", str(code or "")).lower()
+
+
+def _totp_step(secret: str, code: str) -> int | None:
+    """The 30-second time step whose code matches (within TOTP_WINDOW steps of now), or None."""
     import pyotp
-    if u.get("mfa_secret") and code.isdigit():
-        totp = pyotp.TOTP(u["mfa_secret"])
-        now_step = int(datetime.now(timezone.utc).timestamp() // 30)
-        for off in (-1, 0, 1):
-            step = now_step + off
-            if totp.at(step * 30) == code:
-                if u.get("mfa_last_step") and step <= int(u["mfa_last_step"]):
-                    return False  # replayed code
-                ex("UPDATE users SET mfa_last_step=? WHERE id=?", (step, u["id"]))
-                return True
+    if not (secret and len(code) == 6 and code.isdigit()):
+        return None
+    totp = pyotp.TOTP(secret)
+    now_step = int(_now().timestamp() // 30)
+    for off in sorted(range(-TOTP_WINDOW, TOTP_WINDOW + 1), key=abs):
+        if secrets.compare_digest(totp.at((now_step + off) * 30), code):
+            return now_step + off
+    return None
+
+
+def _recovery_hash(code: str) -> str:
+    """Recovery codes are shown as xxxxxxxx-xxxxxxxx; they are accepted with or without the dash, in any case."""
+    c = normalize_code(code)
+    if len(c) == 16:
+        c = c[:8] + "-" + c[8:]
+    return hashlib.sha256(c.encode()).hexdigest()
+
+
+def _verify_totp(u: dict[str, Any], code: str) -> bool:
+    code = normalize_code(code)
+    step = _totp_step(u.get("mfa_secret") or "", code)
+    if step is not None:
+        if u.get("mfa_last_step") is not None and step <= int(u["mfa_last_step"]):
+            return False  # this code (or an older one) was already used: refuse a replay
+        ex("UPDATE users SET mfa_last_step=? WHERE id=?", (step, u["id"]))
+        return True
     codes = uj(u.get("recovery_json"), [])
-    h = hashlib.sha256(code.encode()).hexdigest()
-    if h in codes:  # single-use recovery code
+    h = _recovery_hash(code)
+    if code and h in codes:  # single-use recovery code
         codes.remove(h)
         ex("UPDATE users SET recovery_json=? WHERE id=?", (j(codes), u["id"]))
+        audit.write(u["username"], "auth.mfa.recovery_code_used", f"user:{u['username']}", {"left": len(codes)})
         return True
     return False
 
@@ -313,6 +367,9 @@ def mfa_enroll(ctx: Ctx = Depends(current)) -> dict[str, Any]:
 
     import pyotp
     import segno
+    if ctx.user.get("mfa_enabled"):  # moving to a new phone must go through "turn off" (password + code) first
+        raise err(409, "mfa_already_on", "Two-step sign-in is already turned on. To move it to a new phone, turn it off first "
+                                         "(you need your password and a code), then set it up again.")
     secret = pyotp.random_base32()
     ex("UPDATE users SET mfa_pending_secret=? WHERE id=?", (secret, ctx.user["id"]))
     uri = pyotp.TOTP(secret).provisioning_uri(name=ctx.user["username"], issuer_name="Yukti")
@@ -324,14 +381,19 @@ def mfa_enroll(ctx: Ctx = Depends(current)) -> dict[str, Any]:
 
 @router.post("/mfa/verify")
 def mfa_verify(body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str, Any]:
-    import pyotp
     u = q1("SELECT * FROM users WHERE id=?", (ctx.user["id"],))
+    if u.get("mfa_enabled"):
+        raise err(409, "mfa_already_on", "Two-step sign-in is already turned on.")
     sec = u.get("mfa_pending_secret")
-    if not sec or not pyotp.TOTP(sec).verify(str(body.get("code", "")).strip(), valid_window=1):
+    if not sec:
+        raise err(400, "mfa_not_started", "The setup has not been started. Click the set-up button again and scan the new QR code.")
+    step = _totp_step(sec, normalize_code(body.get("code")))
+    if step is None:
         raise err(400, "mfa_invalid", "Code did not match. Check the time on your phone and try again.")
     codes = [secrets.token_hex(4) + "-" + secrets.token_hex(4) for _ in range(10)]
-    ex("UPDATE users SET mfa_enabled=1, mfa_secret=?, mfa_pending_secret=NULL, recovery_json=? WHERE id=?",
-       (sec, j([hashlib.sha256(c.encode()).hexdigest() for c in codes]), u["id"]))
+    # the time step used here is remembered, so the same code cannot be used again to sign in
+    ex("UPDATE users SET mfa_enabled=1, mfa_secret=?, mfa_pending_secret=NULL, mfa_last_step=?, recovery_json=? WHERE id=?",
+       (sec, step, j([hashlib.sha256(c.encode()).hexdigest() for c in codes]), u["id"]))
     audit.write(ctx.actor, "auth.mfa.enabled", f"user:{ctx.actor}")
     return {"ok": True, "recovery_codes": codes}
 
@@ -342,9 +404,9 @@ def mfa_disable(body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str, 
         ph.verify(ctx.user["password_hash"], str(body.get("password", "")))
     except VerifyMismatchError:
         raise err(400, "bad_password", "Password is incorrect.")
-    if ctx.user.get("mfa_enabled") and not _verify_totp(ctx.user, str(body.get("code", "")).strip()):
+    if ctx.user.get("mfa_enabled") and not _verify_totp(ctx.user, str(body.get("code", ""))):
         raise err(400, "bad_code", "Enter the current code from your authenticator app (or a recovery code).")
-    ex("UPDATE users SET mfa_enabled=0, mfa_secret=NULL, recovery_json=NULL WHERE id=?", (ctx.user["id"],))
+    ex("UPDATE users SET mfa_enabled=0, mfa_secret=NULL, mfa_pending_secret=NULL, recovery_json=NULL WHERE id=?", (ctx.user["id"],))
     audit.write(ctx.actor, "auth.mfa.disabled", f"user:{ctx.actor}")
     return {"ok": True}
 

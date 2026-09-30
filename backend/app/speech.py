@@ -23,12 +23,13 @@ from typing import Any
 import httpx
 
 from . import engine
-from .config import ROOT, has_nvidia_gpu
+from .config import FROZEN, ROOT, has_nvidia_gpu
 from .db import q
 from .policy import Subject
 from .scope import asset_visible
 
-_DEV = Path(os.environ.get("YUKTI_WHISPER_DEV") or r"E:\yukti-build\research\whisper")
+# a developer's whisper.cpp folder is used only when running from source (never by the packaged server)
+_DEV = ROOT / "speech" if FROZEN else Path(os.environ.get("YUKTI_WHISPER_DEV") or r"E:\yukti-build\research\whisper")
 BIN = {
     "gpu": [ROOT / "speech" / "cuda" / "whisper-server.exe", _DEV / "cublas" / "Release" / "whisper-server.exe"],
     "cpu": [ROOT / "speech" / "cpu" / "whisper-server.exe", _DEV / "blas" / "Release" / "whisper-server.exe"],
@@ -73,7 +74,7 @@ def choose() -> dict[str, Any]:
     if _first(BIN["cpu"]) and cpu_model:
         return {"device": "cpu", "binary": _first(BIN["cpu"]), "model": cpu_model,
                 "model_name": MODEL["cpu"][1] if cpu_model.name == MODEL["cpu"][0] else MODEL["gpu"][1]}
-    return {"reason": "Voice input is not installed on the server. Open Yukti's setup screen to add the Voice input component."}
+    return {"reason": "Voice input has not been added yet. An administrator can add it from the Yukti home screen on the server computer."}
 
 
 class _State:

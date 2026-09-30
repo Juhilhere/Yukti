@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  Ban, CheckCircle2, FileSpreadsheet, FileUp, KeyRound, Lock, LogOut, MoreHorizontal, Pencil, Search, ShieldCheck, Unlock, UserPlus, Users,
+  Ban, CheckCircle2, FileSpreadsheet, FileUp, KeyRound, Lock, LogOut, MoreHorizontal, Pencil, Search, ShieldCheck, ShieldOff, Unlock, UserPlus, Users,
 } from 'lucide-react';
 import { api, errMsg } from '../../lib/api';
 import type { AdminUser, ImportResult, Role } from '../../lib/types';
@@ -266,7 +266,13 @@ function RowActions({ u, onEdit, onTemp }: { u: AdminUser; onEdit: () => void; o
     mutationFn: () => api.post<{ revoked: number }>(`/api/admin/users/${encodeURIComponent(u.id)}/revoke-sessions`, {}),
     onSuccess: (r) => { toast.success(t('admin.users.revoked'), t('admin.users.revokedBody', { user: u.username, n: r?.revoked ?? 0 })); }, onError: fail,
   });
-  const busy = status.isPending || reset.isPending || unlock.isPending || revoke.isPending;
+  const resetMfa = useMutation({
+    mutationFn: () => api.post(`/api/admin/users/${encodeURIComponent(u.id)}/reset-mfa`, {}),
+    onSuccess: () => done(t('admin.users.mfaReset')), onError: fail,
+  });
+  // resetting a password or two-step sign-in signs the person out, so ask first
+  const [confirm, setConfirm] = useState<'pw' | 'mfa' | null>(null);
+  const busy = status.isPending || reset.isPending || unlock.isPending || revoke.isPending || resetMfa.isPending;
   const disabled = u.status === 'disabled';
   return (
     <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
@@ -275,7 +281,8 @@ function RowActions({ u, onEdit, onTemp }: { u: AdminUser; onEdit: () => void; o
         trigger={(_o, toggle) => <button className="btn btn-sm btn-ghost btn-icon" onClick={toggle} aria-label={t('admin.users.more')} disabled={busy}>{busy ? <Spinner size={12} /> : <MoreHorizontal size={14} />}</button>}>
         {(close) => (
           <div className="py-1">
-            <MenuItem icon={<KeyRound size={13} />} onClick={() => { close(); reset.mutate(); }}>{t('admin.users.a.reset')}</MenuItem>
+            {!self && <MenuItem icon={<KeyRound size={13} />} onClick={() => { close(); setConfirm('pw'); }}>{t('admin.users.a.reset')}</MenuItem>}
+            {!self && u.mfa_enabled && <MenuItem icon={<ShieldOff size={13} />} onClick={() => { close(); setConfirm('mfa'); }}>{t('admin.users.a.resetMfa')}</MenuItem>}
             {isLocked(u) && <MenuItem icon={<Unlock size={13} />} onClick={() => { close(); unlock.mutate(); }}>{t('admin.users.a.unlock')}</MenuItem>}
             <MenuItem icon={<LogOut size={13} />} onClick={() => { close(); revoke.mutate(); }}>{t('admin.users.a.revoke')}</MenuItem>
             {!self && (disabled
@@ -284,6 +291,18 @@ function RowActions({ u, onEdit, onTemp }: { u: AdminUser; onEdit: () => void; o
           </div>
         )}
       </Popover>
+      <Modal open={!!confirm} onClose={() => setConfirm(null)} width={440}
+        title={confirm === 'mfa' ? t('admin.users.a.resetMfa') : t('admin.users.a.reset')}
+        footer={<>
+          <button className="btn btn-ghost" onClick={() => setConfirm(null)}>{t('btn.cancel')}</button>
+          <button className="btn btn-danger" onClick={() => { const c = confirm; setConfirm(null); if (c === 'mfa') resetMfa.mutate(); else reset.mutate(); }}>
+            {confirm === 'mfa' ? <ShieldOff size={12} /> : <KeyRound size={12} />}{t('btn.confirm')}
+          </button>
+        </>}>
+        <div className="text-[12.5px] text-muted">
+          {confirm === 'mfa' ? t('admin.users.confirm.resetMfa', { user: u.display_name || u.username }) : t('admin.users.confirm.resetPw', { user: u.display_name || u.username })}
+        </div>
+      </Modal>
     </div>
   );
 }
@@ -322,7 +341,7 @@ export default function AdminUsers() {
     { key: 'clearance', header: t('admin.users.col.clearance'), sortValue: (u) => u.clearance, render: (u) => <Badge mono tone={u.clearance >= 3 ? 'amber' : 'cyan'}>L{u.clearance}{u.clearance_label ? ` ${u.clearance_label}` : ''}</Badge> },
     { key: 'roles', header: t('admin.users.col.roles'), sortValue: (u) => (u.roles ?? []).join(','), render: (u) => <div className="flex max-w-[200px] flex-wrap gap-1">{(u.roles ?? []).map((r) => <Badge key={r} tone="amber" mono title={r}>{roleLabel(r)}</Badge>)}{!(u.roles ?? []).length && '—'}</div> },
     { key: 'asset_scopes', header: t('admin.users.col.scopes'), sortValue: (u) => (u.asset_scopes ?? []).join(','), render: (u) => <div className="flex max-w-[180px] flex-wrap gap-1">{(u.asset_scopes ?? []).map((r) => <Badge key={r} tone="cyan" mono>{r}</Badge>)}{!(u.asset_scopes ?? []).length && '—'}</div> },
-    { key: 'mfa_enabled', header: 'MFA', sortValue: (u) => (u.mfa_enabled ? 1 : 0), render: (u) => (u.mfa_enabled ? <Badge tone="ok"><ShieldCheck size={10} />{t('admin.users.mfaOn')}</Badge> : <span className="text-faint">{t('admin.users.mfaOff')}</span>) },
+    { key: 'mfa_enabled', header: t('admin.users.col.mfa'), sortValue: (u) => (u.mfa_enabled ? 1 : 0), render: (u) => (u.mfa_enabled ? <Badge tone="ok"><ShieldCheck size={10} />{t('admin.users.mfaOn')}</Badge> : <span className="text-faint">{t('admin.users.mfaOff')}</span>) },
     { key: 'last_login_at', header: t('admin.users.col.lastLogin'), sortValue: (u) => u.last_login_at ?? '', render: (u) => u.last_login_at ? <span title={fmtTime(u.last_login_at)} className="text-[12px]">{timeAgo(u.last_login_at)}</span> : <span className="text-faint">{t('admin.users.never')}</span> },
     { key: 'locked', header: t('admin.users.col.locked'), sortValue: (u) => (isLocked(u) ? 1 : 0), render: (u) => isLocked(u) ? <Badge tone="danger" title={t('admin.users.lockedUntil', { time: fmtTime(u.locked_until) })}><Lock size={10} />{t('admin.users.lockedUntil', { time: fmtTime(u.locked_until) })}</Badge> : <span className="text-faint">—</span> },
     { key: 'actions', header: '', render: (u) => <RowActions u={u} onEdit={() => setEditing(u)} onTemp={(pw) => setTemp({ username: u.username, password: pw })} /> },

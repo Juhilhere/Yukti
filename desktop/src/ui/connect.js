@@ -81,6 +81,7 @@ function stateText(r) {
   switch (r.state) {
     case 'installed': return T('setup.state.installed');
     case 'skipped': return T('setup.state.skipped');
+    case 'optional': return T('setup.state.optional');
     case 'downloading': return T('setup.state.downloading', { pct: r.pct || 0 });
     case 'verifying': return T('setup.state.verifying');
     case 'installing': return T('setup.state.installing');
@@ -119,9 +120,10 @@ function renderChecklists(p) {
     const r = {
       size: a.size, partial: a.partialBytes, views: [],
       pct: old && installing ? old.pct : a.partialBytes ? Math.floor((100 * a.partialBytes) / a.size) : 0,
-      state: old && installing ? old.state : !a.needed ? 'skipped' : a.installed ? 'installed' : 'waiting',
+      state: old && installing ? old.state : !a.needed ? (a.feature ? 'optional' : 'skipped') : a.installed ? 'installed' : 'waiting',
     };
     if (a.needed) r.views.push(buildRow($('s-checklist'), a, true));   // normal users only see what their PC needs
+    show($('s-later-hint'), p.artifacts.some((x) => x.feature && !x.needed));
     r.views.push(buildRow($('checklist'), a, false));
     rows.set(a.name, r);
     paintRow(r);

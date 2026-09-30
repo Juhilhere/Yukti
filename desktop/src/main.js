@@ -15,6 +15,8 @@ const path = require('path');
 const installer = require('./installer');
 
 const DEBUG = process.env.YUKTI_DEBUG === '1';
+// testing only: run with a separate settings folder so a test never touches a real installation's settings
+if (process.env.YUKTI_PROFILE_DIR) app.setPath('userData', path.resolve(process.env.YUKTI_PROFILE_DIR));
 const ROOT = path.join(__dirname, '..');
 const UI = (f) => path.join(__dirname, 'ui', f);
 const ICON_PNG = path.join(ROOT, 'build', 'icon.png');
@@ -75,6 +77,8 @@ app.setAppUserModelId('in.uniminds.yukti');
 // Keep Chromium quiet on the network: no component updates / background pings.
 app.commandLine.appendSwitch('disable-background-networking');
 app.commandLine.appendSwitch('disable-component-update');
+// lets the Yukti page know it runs inside this app (it then offers "Add" buttons that open the desktop add-on screen)
+app.userAgentFallback = `${app.userAgentFallback} YuktiDesktop/${app.getVersion()}`;
 
 let config = { ...DEFAULTS };
 let win = null, tray = null;
@@ -432,6 +436,13 @@ function showSetup(notice) {
   showWin();
   buildMenu();
 }
+function showFeatures(add) {
+  page = 'features';
+  ensureWin().loadFile(UI('features.html'), { query: { add: ['vision', 'voice'].includes(add) ? add : '' } });
+  win.setProgressBar(-1);
+  showWin();
+  buildMenu();
+}
 function showSplash() {
   page = 'splash';
   ensureWin().loadFile(UI('splash.html'));
@@ -462,7 +473,16 @@ function lockDown(wc) {
   // Page switches are done by the main process (loadFile/loadURL → no will-navigate). Renderer-initiated navigation is
   // only allowed inside the Yukti app's own origin; nothing may navigate into file://.
   const allowed = (u) => page === 'app' && isHttp(u) && sameOrigin(u, activeUrl);
+  // <server>/desktop/features?add=vision|voice from the Yukti page opens the desktop's own add-on screen (file://);
+  // the page itself never gets access to the installer
+  const featureLink = (u) => {
+    if (!allowed(u)) return null;
+    const x = new URL(u);
+    return x.pathname === '/desktop/features' ? (x.searchParams.get('add') || '') : null;
+  };
   wc.on('will-navigate', (e, url) => {
+    const add = featureLink(url);
+    if (add !== null) { e.preventDefault(); showFeatures(add); return; }
     if (allowed(url)) return;
     e.preventDefault();
     if (isHttp(url)) shell.openExternal(url); // user-clicked link to another host (e.g. a source citation)
@@ -470,6 +490,8 @@ function lockDown(wc) {
   });
   wc.on('will-redirect', (e, url) => { if (isHttp(url) && page === 'app' && !sameOrigin(url, activeUrl)) e.preventDefault(); });
   wc.setWindowOpenHandler(({ url }) => {
+    const add = featureLink(url);
+    if (add !== null) { showFeatures(add); return { action: 'deny' }; }
     if (allowed(url)) {
       return { action: 'allow', overrideBrowserWindowOptions: { icon: winIcon(), autoHideMenuBar: true, backgroundColor: BG,
         webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true } } };
@@ -557,6 +579,7 @@ function buildMenu() {
   const tpl = [
     { label: T('menu.file'), submenu: [
       { label: T('menu.switch'), accelerator: 'CmdOrCtrl+Shift+S', enabled: page !== 'setup', click: () => { bootSeq++; showSetup(); } },
+      { label: T('menu.addons'), enabled: !['setup', 'features'].includes(page) && !installAbort, click: () => showFeatures('') },
       { label: T('menu.reload'), accelerator: 'CmdOrCtrl+R', click: () => win && win.webContents.reload() },
       { type: 'separator' },
       { label: T('menu.quit'), accelerator: 'CmdOrCtrl+Q', click: () => quitApp() },
@@ -687,6 +710,66 @@ handle('yukti:plan', async (_e, req = {}) => {
     return { ok: true, dest, installed, plan: p, updateAvailable: !!(installed && installed.version && installed.version !== p.version) };
   } catch (e) { return { ok: false, dest, installed, error: e.message }; }
 });
+// ------------------------------------------------------------ add-ons (photos, voice): downloaded later, on request
+const FEATURES = ['vision', 'voice'];
+const localInstall = () => config.mode === 'local' && config.installRoot && fs.existsSync(path.join(config.installRoot, 'installed.json'));
+handle('yukti:featuresPlan', async () => {
+  if (config.mode !== 'local') return { ok: true, local: false, serverUrl: config.serverUrl };
+  if (!localInstall()) return { ok: true, local: false, bundled: true };
+  try {
+    gpuPromise = gpuPromise || installer.hasNvidiaGpu();
+    const p = await installer.plan({ manifestUrl: manifestUrl(), publicKey: distribution().publicKey || null, dest: config.installRoot, forceGpu: await gpuPromise });
+    return { ok: true, local: true, features: p.features, freeBytes: p.freeBytes, updatePending: !!(p.installed && p.installed.version !== p.version) };
+  } catch (e) { return { ok: false, local: true, error: e.message }; }
+});
+handle('yukti:featureInstall', async (_e, feature) => {
+  if (!FEATURES.includes(feature) || !localInstall()) return { ok: false, error: 'Not available on this computer' };
+  if (installAbort) return { ok: false, error: T('main.installRunning') };
+  installAbort = new AbortController();
+  const dest = config.installRoot;
+  const send = (p) => { if (p.message && p.phase !== 'download') log(`[add-on] ${p.message}`); sendUi('features', 'install:progress', p);
+    if (p.pct !== undefined && win && !win.isDestroyed()) win.setProgressBar(p.pct / 100); };
+  try {
+    const cur = ((await installer.installedVersion(dest)) || {}).features || [];
+    const features = [...new Set([...cur, feature])];
+    gpuPromise = gpuPromise || installer.hasNvidiaGpu();
+    const opts = { manifestUrl: manifestUrl(), publicKey: distribution().publicKey || null, dest, forceGpu: await gpuPromise, features };
+    const pl = await installer.plan(opts);
+    // parts of Yukti itself are also out of date (e.g. a newer release): those must not be replaced while it runs
+    const core = pl.artifacts.some((a) => a.needed && !a.installed && !a.feature);
+    // the photo add-on is used by the AI model only after a restart; the voice add-on is picked up by itself
+    const restart = core || feature === 'vision';
+    if (core && serverAlive()) await stopLocalServer();
+    await installer.install({ ...opts, signal: installAbort.signal, onProgress: send });
+    log(`[add-on] ${feature} installed`);
+    return { ok: true, restart };
+  } catch (e) {
+    log(`[add-on] ${feature} failed: ${e.message}`);
+    return { ok: false, error: e.message, cancelled: installAbort && installAbort.signal.aborted };
+  } finally {
+    installAbort = null;
+    if (win && !win.isDestroyed()) win.setProgressBar(-1);
+  }
+});
+handle('yukti:featureRemove', async (_e, feature) => {
+  if (!FEATURES.includes(feature) || !localInstall()) return { ok: false, error: 'Not available on this computer' };
+  try {
+    if (serverAlive()) await stopLocalServer();   // the files are in use while Yukti runs
+    await installer.removeFeature(config.installRoot, feature);
+    log(`[add-on] ${feature} removed`);
+    return { ok: true, restart: true };
+  } catch (e) { return { ok: false, error: e.message }; }
+});
+handle('yukti:featuresDone', async (_e, req = {}) => {
+  // back to Yukti; restart it when an add-on needs that (or it was stopped for the change)
+  if (config.mode === 'local' && (req.restart || !serverAlive())) {
+    if (req.restart && serverAlive()) await stopLocalServer();
+    setImmediate(bootLocal);
+  } else if (activeUrl) openApp(activeUrl);
+  else setImmediate(bootLocal);
+  return { ok: true };
+});
+
 handle('yukti:install', async (_e, req = {}) => {
   const url = String(req.manifestUrl || '').trim();
   const dest = String(req.dest || '').trim() || DEFAULT_DEST;
@@ -760,10 +843,19 @@ if (!app.requestSingleInstanceLock()) {
     if (!bundle && config.mode === 'local' && serverKind(config.installRoot) && manifestUrl() && config.updateOffered !== app.getVersion()) {
       const inst = await installer.installedVersion(config.installRoot);
       if (inst && inst.version && inst.version !== app.getVersion()) {
-        config.updateOffered = app.getVersion(); saveConfig();
-        log(`[setup] installed Yukti ${inst.version}, this app is ${app.getVersion()}: offering the update`);
-        showSetup();
-        return;
+        // offer it only when the new parts can actually be downloaded now (plant PCs are often offline): otherwise
+        // start the installed version as usual and offer again next time
+        let latest = null;
+        try {
+          latest = await Promise.race([installer.fetchManifest(manifestUrl(), distribution().publicKey || null),
+            new Promise((_r, j) => setTimeout(() => j(new Error('timeout')), 6000))]);
+        } catch (e) { log(`[setup] update check skipped: ${e.message}`); }
+        if (latest && latest.version !== inst.version) {
+          config.updateOffered = app.getVersion(); saveConfig();
+          log(`[setup] installed Yukti ${inst.version}, available ${latest.version}: offering the update`);
+          showSetup();
+          return;
+        }
       }
     }
     if (config.mode === 'local' && serverKind(config.installRoot)) bootLocal();

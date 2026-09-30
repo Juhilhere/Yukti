@@ -32,7 +32,12 @@ const assert = (c, m) => { if (!c) { console.error('FAIL:', m); process.exit(1);
     fs.writeFileSync(path.join(files, `model.part0${i}`), b);
     parts.push({ url: `files/model.part0${i}`, size: b.length, sha256: sha(b) });
   }
+  // optional add-on (downloaded only when switched on)
+  const voice = crypto.randomBytes(200 * 1024);
+  fs.writeFileSync(path.join(files, 'voice.part00'), voice);
   const manifest = { product: 'yukti-server', version: '9.9.9', artifacts: [
+    { name: 'voice-model', kind: 'file', feature: 'voice', dest: 'speech/models/v.bin', check: 'speech/models/v.bin', size: voice.length, sha256: sha(voice),
+      parts: [{ url: 'files/voice.part00', size: voice.length, sha256: sha(voice) }] },
     { name: 'server-core', kind: 'zip', check: 'yukti-server.exe', size: zipBuf.length, sha256: sha(zipBuf), parts: [{ url: 'files/server-core.part00', size: zipBuf.length, sha256: sha(zipBuf) }] },
     { name: 'llama-cuda', kind: 'zip', check: 'llama/cuda/x', requires: 'nvidia', size: 1, sha256: 'X', parts: [] },
     { name: 'model', kind: 'file', dest: 'models/m.gguf', check: 'models/m.gguf', size: model.length, sha256: sha(model), parts },
@@ -55,6 +60,8 @@ const assert = (c, m) => { if (!c) { console.error('FAIL:', m); process.exit(1);
   const pl = await installer.plan({ manifestUrl: url, dest, forceGpu: false });
   assert(pl.todoCount === 2 && pl.wantedCount === 2 && pl.totalBytes === zipBuf.length + model.length, 'plan: 2 components, correct size');
   assert(pl.artifacts.find((x) => x.name === 'llama-cuda').needed === false, 'plan: NVIDIA-only component marked not needed');
+  assert(pl.artifacts.find((x) => x.name === 'voice-model').needed === false && pl.features.voice.size === voice.length && !pl.features.voice.on,
+    'plan: optional add-on left out of the first download, with its size');
   // pause (abort) mid-download, then resume from the partial file
   const ctl = new AbortController();
   let paused = false;
@@ -76,6 +83,16 @@ const assert = (c, m) => { if (!c) { console.error('FAIL:', m); process.exit(1);
   let plan = '';
   await installer.install({ manifestUrl: url, dest, forceGpu: false, onProgress: (p) => { if (p.phase === 'plan') plan = p.message; } });
   assert(/0 of 2 components/.test(plan), 'second run downloads nothing');
+  // add-on: switched on later, kept on across later runs, removable
+  plan = '';
+  await installer.install({ manifestUrl: url, dest, forceGpu: false, features: ['voice'], onProgress: (p) => { if (p.phase === 'plan') plan = p.message; } });
+  assert(/1 of 3 components/.test(plan) && fs.existsSync(path.join(dest, 'speech', 'models', 'v.bin')), 'add-on downloaded on request (only the add-on)');
+  const pf = await installer.plan({ manifestUrl: url, dest, forceGpu: false });
+  assert(pf.todoCount === 0 && pf.features.voice.on && pf.features.voice.installed, 'add-on stays on for later updates');
+  await installer.removeFeature(dest, 'voice');
+  const pr = await installer.plan({ manifestUrl: url, dest, forceGpu: false });
+  assert(!fs.existsSync(path.join(dest, 'speech', 'models', 'v.bin')) && !pr.features.voice.on && pr.todoCount === 0, 'add-on removed and switched off');
+  assert(fs.existsSync(path.join(dest, 'yukti-server.exe')), 'removing an add-on keeps Yukti itself');
   fs.writeFileSync(path.join(files, 'model.part02'), Buffer.from('tampered'));
   fs.rmSync(path.join(dest, 'models', 'm.gguf'));
   let failed = false;

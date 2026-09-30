@@ -22,6 +22,7 @@ import FeedbackAdmin from './pages/admin/Feedback';
 import BackupExport from './pages/admin/Backup';
 import PoliciesLaya from './pages/admin/Policies';
 import ModelsAdmin from './pages/admin/ModelsAdmin';
+import FeatureOffers from './components/FeatureOffers';
 import Developer from './pages/Developer';
 import { Forbidden, NotFound } from './pages/Errors';
 import { Logo } from './components/Logo';
@@ -75,6 +76,7 @@ export default function App() {
           <Route path="backup" element={<Perm perm={['backup.manage', 'audit.export']}><BackupExport /></Perm>} />
           <Route path="policies" element={<Perm perm="admin"><PoliciesLaya /></Perm>} />
           <Route path="models" element={<Perm perm="models.manage"><ModelsAdmin /></Perm>} />
+          <Route path="features" element={<Perm perm="models.manage"><div className="p-4"><FeatureOffers variant="panel" /></div></Perm>} />
           <Route path="developer" element={<Perm perm="developer"><Developer /></Perm>} />
           <Route path="*" element={<NotFound />} />
         </Route>

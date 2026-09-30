@@ -19,7 +19,25 @@ All notable changes to Yukti are documented here. The format follows [Keep a Cha
   - It is hinted with the plant's own tags ("pump A2", "exchanger E-310").
   - Silence never turns into words.
   - The transcript goes into the question box for checking and is never sent automatically.
-- **Setup:** new components *Voice input* and *Voice model*. The GPU version is downloaded only on PCs with an NVIDIA GPU.
+- **Photos and voice are optional add-ons, downloaded later.** The first download stays small: 2.7 GB, or 3.4 GB with an NVIDIA GPU.
+  - Administrators see **New abilities for Yukti → Add** on the home screen of the server computer, and *Admin → New abilities*.
+  - Photos cost about 800 MB. Voice costs 0.3 GB, or 1 GB with an NVIDIA GPU.
+  - The Yukti page only opens the desktop app's own add-on screen; the signed, checksummed download, pause and resume, and removal all happen there.
+  - Yukti restarts by itself when needed. Add-ons stay on across updates.
+  - On an employee PC connected to a plant server, it explains that add-ons are added on the server computer.
+
+### Fixed (sign-in and two-step sign-in)
+- Wrong two-step codes now count towards the account lockout (before, a code could be guessed without limit).
+- Codes are accepted as the phone shows them (`028 742`), pasting works, recovery codes work in any case and without the dash.
+- Phone clocks up to 60 s off are accepted; the wrong-code message suggests checking the phone's time.
+- One typo after a successful sign-in no longer locks the account; an admin password reset clears old failures.
+- Admins can no longer reset their own password (it signed them out with no way back); new **Reset two-step sign-in**
+  for a user who lost their phone (signs them out everywhere, audited).
+- The code used to finish setting up two-step sign-in cannot be reused; two-step sign-in cannot be moved to another phone
+  without turning it off first (password + code).
+- A PC clock that is off no longer signs people out right after signing in; a short server outage no longer throws
+  signed-in users back to the sign-in page.
+- Lockout messages say how many minutes to wait, in the chosen language; the sessions list shows plain device names.
 
 ### Changed
 - **Updating:** running a newer `Yukti-Setup.exe` over an existing installation now offers the update once

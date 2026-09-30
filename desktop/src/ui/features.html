@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file:; style-src 'self'; script-src 'self'">
+<title>Yukti</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="wrap">
+  <header class="brand">
+    <img src="../../build/icon.png" alt="Yukti">
+    <div><h1 data-i18n="feat.title">Add new abilities to Yukti</h1><small data-i18n="feat.sub">Downloaded once, then they work without internet.</small></div>
+  </header>
+
+  <div class="banner info hidden" id="note"></div>
+
+  <div class="opts" id="list">
+    <section class="card feat" id="f-vision">
+      <h2><span class="emoji">📷</span><span data-i18n="feat.vision.title">Ask with photos</span><span class="state"></span></h2>
+      <p class="muted" data-i18n="feat.vision.body">Take a photo of a pipe label, tag plate, nameplate or gauge and ask about it. Yukti reads the writing and looks at the picture.</p>
+      <div class="progress hidden"><div class="bar"><div></div></div><div class="stats"><span class="l"></span><span class="r"></span></div></div>
+      <div class="msg"></div>
+      <div class="actions"><button class="primary big add"></button><button class="cancel hidden" data-i18n="feat.pause">Pause</button><button class="link remove hidden" data-i18n="feat.remove">Remove</button></div>
+    </section>
+    <section class="card feat" id="f-voice">
+      <h2><span class="emoji">🎙️</span><span data-i18n="feat.voice.title">Speak instead of typing</span><span class="state"></span></h2>
+      <p class="muted" data-i18n="feat.voice.body">Ask your questions by speaking English, Hindi or Kannada. Yukti writes down what you say, and you check it before sending.</p>
+      <div class="progress hidden"><div class="bar"><div></div></div><div class="stats"><span class="l"></span><span class="r"></span></div></div>
+      <div class="msg"></div>
+      <div class="actions"><button class="primary big add"></button><button class="cancel hidden" data-i18n="feat.pause">Pause</button><button class="link remove hidden" data-i18n="feat.remove">Remove</button></div>
+    </section>
+  </div>
+
+  <footer class="foot">
+    <span class="muted" id="free"></span>
+    <span class="actions"><button class="big" id="back" data-i18n="feat.back">Back to Yukti</button></span>
+  </footer>
+</main>
+<script src="i18n.js"></script>
+<script src="features.js"></script>
+</body>
+</html>

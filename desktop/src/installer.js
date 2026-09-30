@@ -114,9 +114,11 @@ async function plan(o) {
   const nvidia = o.forceGpu !== undefined ? o.forceGpu : await hasNvidiaGpu();
   const state = await readState(dest);
   state.artifacts = state.artifacts || {};
+  // optional add-ons (photos, voice) are downloaded only when switched on; the ones already on stay on across updates
+  const features = new Set(o.features || state.features || []);
   const artifacts = [];
   for (const a of m.artifacts) {
-    const needed = !(a.requires === 'nvidia' && !nvidia);
+    const needed = !(a.requires === 'nvidia' && !nvidia) && (!a.feature || features.has(a.feature));
     const installed = needed && state.artifacts[a.name] === a.sha256 && fs.existsSync(path.join(dest, a.check || a.dest));
     let partialBytes = 0;
     if (needed && !installed) {
@@ -124,14 +126,23 @@ async function plan(o) {
         try { partialBytes += Math.min((await fsp.stat(path.join(tmp, `${a.name}.part${i}`))).size, a.parts[i].size); } catch { /* none */ }
       }
     }
-    artifacts.push({ name: a.name, label: a.label || a.name, size: a.size, requires: a.requires || null, needed, installed, partialBytes });
+    artifacts.push({ name: a.name, label: a.label || a.name, size: a.size, requires: a.requires || null, feature: a.feature || null,
+      needed, installed, partialBytes });
+  }
+  // per add-on: what it costs on THIS computer (GPU-only parts are left out without an NVIDIA GPU)
+  const featureInfo = {};
+  for (const a of m.artifacts) {
+    if (!a.feature || (a.requires === 'nvidia' && !nvidia)) continue;
+    const f = featureInfo[a.feature] || (featureInfo[a.feature] = { size: 0, on: features.has(a.feature), installed: true });
+    f.size += a.size;
+    if (!(state.artifacts[a.name] === a.sha256 && fs.existsSync(path.join(dest, a.check || a.dest)))) f.installed = false;
   }
   const todo = artifacts.filter((a) => a.needed && !a.installed);
   const totalBytes = todo.reduce((s, a) => s + a.size, 0);
   let probe = dest;
   while (!fs.existsSync(probe) && path.dirname(probe) !== probe) probe = path.dirname(probe);
   return {
-    manifest: m, version: m.version, dest, nvidia, installed: state.version ? state : null, artifacts,
+    manifest: m, version: m.version, dest, nvidia, installed: state.version ? state : null, artifacts, features: featureInfo,
     todoCount: todo.length, wantedCount: artifacts.filter((a) => a.needed).length,
     totalBytes, partialBytes: todo.reduce((s, a) => s + a.partialBytes, 0),
     freeBytes: await freeBytes(probe), needBytes: Math.ceil(totalBytes * 2.1),
@@ -153,7 +164,7 @@ async function install(o) {
   const dest = path.resolve(o.dest);
   const tmp = path.join(dest, '.download');
   await fsp.mkdir(tmp, { recursive: true });
-  const pl = await plan({ manifest: m, dest, forceGpu: o.forceGpu });
+  const pl = await plan({ manifest: m, dest, forceGpu: o.forceGpu, features: o.features });
   const nvidia = pl.nvidia;
   const stateFile = path.join(dest, 'installed.json');
   const state = await readState(dest);
@@ -161,7 +172,8 @@ async function install(o) {
 
   const todoNames = new Set(pl.artifacts.filter((a) => a.needed && !a.installed).map((a) => a.name));
   for (const a of pl.artifacts) report({ phase: 'artifact', artifact: a.name, state: !a.needed ? 'skipped' : a.installed ? 'installed' : 'waiting' });
-  const wanted = m.artifacts.filter((a) => !(a.requires === 'nvidia' && !nvidia));
+  const wantedNames = new Set(pl.artifacts.filter((a) => a.needed).map((a) => a.name));
+  const wanted = m.artifacts.filter((a) => wantedNames.has(a.name));
   const todo = m.artifacts.filter((a) => todoNames.has(a.name));
   const total = pl.totalBytes;
   report({ phase: 'plan', dest, message: `Yukti ${m.version} → ${dest}: ${todo.length} of ${wanted.length} components to download (${(total / 2 ** 30).toFixed(2)} GB)` +
@@ -235,6 +247,13 @@ async function install(o) {
       await fsp.rename(whole, target);
     }
     state.artifacts[a.name] = a.sha256;
+    if (a.feature) {   // remember which files belong to an add-on, so it can be removed again
+      state.featureArtifacts = { ...(state.featureArtifacts || {}), [a.name]: a.feature };
+      state.featureFiles = state.featureFiles || {};
+      const list = new Set(state.featureFiles[a.feature] || []);
+      list.add(a.kind === 'zip' ? (a.replace_dir || a.check) : a.dest);
+      state.featureFiles[a.feature] = [...list];
+    }
     await fsp.writeFile(stateFile, JSON.stringify(state, null, 2));
     } catch (e) {
       report({ phase: 'artifact', artifact: a.name, state: (o.signal && o.signal.aborted) ? 'paused' : 'error', message: e.message });
@@ -243,6 +262,7 @@ async function install(o) {
     report({ phase: 'artifact', artifact: a.name, state: 'installed' });
   }
   state.version = m.version;
+  state.features = [...new Set(pl.artifacts.filter((a) => a.feature && a.needed).map((a) => a.feature))];
   state.installed_at = new Date().toISOString();
   state.gpu = nvidia ? 'nvidia' : 'other';
   await fsp.writeFile(stateFile, JSON.stringify(state, null, 2));
@@ -252,8 +272,28 @@ async function install(o) {
   return { version: m.version, dest, gpu: state.gpu };
 }
 
+/** Switch an add-on off: delete its files (the server must be stopped) and forget it. */
+async function removeFeature(dest, feature) {
+  checkDest(dest);
+  dest = path.resolve(dest);
+  const stateFile = path.join(dest, 'installed.json');
+  const state = await readState(dest);
+  for (const rel of (state.featureFiles || {})[feature] || []) {
+    const target = path.resolve(dest, rel);
+    if (!target.startsWith(dest + path.sep)) continue;   // never outside the install folder
+    await fsp.rm(target, { recursive: true, force: true });
+  }
+  state.features = (state.features || []).filter((f) => f !== feature);
+  if (state.featureFiles) delete state.featureFiles[feature];
+  // forget the component hashes so switching the add-on on again downloads it again
+  for (const name of Object.keys(state.artifacts || {})) {
+    if ((state.featureArtifacts || {})[name] === feature) delete state.artifacts[name];
+  }
+  await fsp.writeFile(stateFile, JSON.stringify(state, null, 2));
+}
+
 async function installedVersion(dest) {
   try { return JSON.parse(await fsp.readFile(path.join(dest, 'installed.json'), 'utf8')); } catch { return null; }
 }
 
-module.exports = { install, plan, fetchManifest, installedVersion, hasNvidiaGpu, freeBytes, sha256File };
+module.exports = { install, plan, removeFeature, fetchManifest, installedVersion, hasNvidiaGpu, freeBytes, sha256File };

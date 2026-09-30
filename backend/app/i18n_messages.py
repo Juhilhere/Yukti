@@ -540,20 +540,20 @@ M("This file is not a supported photo. Please send a JPG, PNG or WEBP photo.",
 M("Photo not found", "फ़ोटो नहीं मिली", "ಫೋಟೋ ಸಿಗಲಿಲ್ಲ")
 M("Photo", "फ़ोटो", "ಫೋಟೋ")
 M("The loaded model cannot see photos, so Yukti answers only from the text it read on the photo. "
-  "An administrator can load a model that understands photos (for example Gemma 3).",
+  "An administrator can add the \"Ask with photos\" ability from the Yukti home screen on the server computer.",
   "अभी चल रहा AI मॉडल फ़ोटो नहीं देख सकता, इसलिए युक्ति केवल फ़ोटो पर पढ़े गए लिखे हुए शब्दों से जवाब देगा। "
-  "एडमिन ऐसा मॉडल लोड कर सकते हैं जो फ़ोटो समझता है (जैसे Gemma 3)।",
+  "एडमिन सर्वर वाले कंप्यूटर पर Yukti की होम स्क्रीन से \"फ़ोटो से पूछें\" सुविधा जोड़ सकते हैं।",
   "ಈಗ ಲೋಡ್ ಆಗಿರುವ AI ಮಾದರಿ ಫೋಟೋವನ್ನು ನೋಡಲಾರದು, ಆದ್ದರಿಂದ ಯುಕ್ತಿ ಫೋಟೋದಲ್ಲಿ ಓದಿದ ಬರಹದಿಂದ ಮಾತ್ರ ಉತ್ತರಿಸುತ್ತದೆ. "
-  "ಫೋಟೋ ಅರ್ಥಮಾಡಿಕೊಳ್ಳುವ ಮಾದರಿಯನ್ನು (ಉದಾ. Gemma 3) ಆಡ್ಮಿನ್ ಲೋಡ್ ಮಾಡಬಹುದು.")
+  "ಆಡ್ಮಿನ್ ಸರ್ವರ್ ಕಂಪ್ಯೂಟರ್‌ನಲ್ಲಿ Yukti ಮುಖಪುಟದಿಂದ \"ಫೋಟೋ ಮೂಲಕ ಕೇಳಿ\" ಸಾಮರ್ಥ್ಯವನ್ನು ಸೇರಿಸಬಹುದು.")
 M("images must be a list of photo ids", "फ़ोटो की सूची सही नहीं है।", "ಫೋಟೋಗಳ ಪಟ್ಟಿ ಸರಿಯಾಗಿಲ್ಲ.")
 M("At most 4 photos per question", "एक सवाल के साथ ज़्यादा से ज़्यादा 4 फ़ोटो भेजी जा सकती हैं",
   "ಒಂದು ಪ್ರಶ್ನೆಗೆ ಗರಿಷ್ಠ 4 ಫೋಟೋಗಳನ್ನು ಕಳುಹಿಸಬಹುದು")
 M("Type a question or attach a photo", "सवाल लिखें या फ़ोटो जोड़ें", "ಪ್ರಶ್ನೆ ಬರೆಯಿರಿ ಅಥವಾ ಫೋಟೋ ಸೇರಿಸಿ")
 
 # ============================================================== voice input (speech.py)
-M("Voice input is not installed on the server. Open Yukti's setup screen to add the Voice input component.",
-  "सर्वर पर आवाज़ से लिखने की सुविधा (Voice input) इंस्टॉल नहीं है। इसे जोड़ने के लिए युक्ति की सेटअप स्क्रीन खोलें।",
-  "ಸರ್ವರ್‌ನಲ್ಲಿ ಧ್ವನಿ ಇನ್‌ಪುಟ್ (Voice input) ಅನುಸ್ಥಾಪಿಸಿಲ್ಲ. ಇದನ್ನು ಸೇರಿಸಲು ಯುಕ್ತಿಯ ಸೆಟಪ್ ಪರದೆಯನ್ನು ತೆರೆಯಿರಿ.")
+M("Voice input has not been added yet. An administrator can add it from the Yukti home screen on the server computer.",
+  "आवाज़ से लिखने की सुविधा अभी नहीं जोड़ी गई है। एडमिन इसे सर्वर वाले कंप्यूटर पर Yukti की होम स्क्रीन से जोड़ सकते हैं।",
+  "ಧ್ವನಿ ಇನ್‌ಪುಟ್ ಇನ್ನೂ ಸೇರಿಸಲಾಗಿಲ್ಲ. ಆಡ್ಮಿನ್ ಇದನ್ನು ಸರ್ವರ್ ಕಂಪ್ಯೂಟರ್‌ನಲ್ಲಿ Yukti ಮುಖಪುಟದಿಂದ ಸೇರಿಸಬಹುದು.")
 M("The voice recogniser could not start. Details are in the server log (speech.log).",
   "आवाज़ पहचानने वाला प्रोग्राम शुरू नहीं हो सका। विवरण सर्वर लॉग (speech.log) में है।",
   "ಧ್ವನಿ ಗುರುತಿಸುವ ಪ್ರೋಗ್ರಾಂ ಪ್ರಾರಂಭವಾಗಲಿಲ್ಲ. ವಿವರಗಳು ಸರ್ವರ್ ಲಾಗ್‌ನಲ್ಲಿ (speech.log) ಇವೆ.")
@@ -571,3 +571,22 @@ M("The recording is too short. Hold the microphone button and speak.", "रि�
   "ರೆಕಾರ್ಡಿಂಗ್ ತುಂಬಾ ಚಿಕ್ಕದಾಗಿದೆ. ಮೈಕ್ ಬಟನ್ ಒತ್ತಿ ಮಾತನಾಡಿ.")
 M("The recording could not be converted to text. Please try again.", "रिकॉर्डिंग को लिखे हुए शब्दों में नहीं बदला जा सका। कृपया फिर से कोशिश करें।",
   "ರೆಕಾರ್ಡಿಂಗ್ ಅನ್ನು ಬರಹಕ್ಕೆ ಪರಿವರ್ತಿಸಲಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.")
+
+# ============================================================== sign-in: two-step codes, lockout, admin resets (auth.py, admin.py)
+M("That code did not work. Type the newest 6-digit code from your authenticator app and check that the time on your phone is correct.",
+  "यह कोड सही नहीं निकला। authenticator ऐप में अभी दिख रहा नया 6 अंकों का कोड डालें, और देख लें कि आपके फ़ोन का समय सही है।",
+  "ಈ ಕೋಡ್ ಸರಿಯಾಗಲಿಲ್ಲ. authenticator ಆ್ಯಪ್‌ನಲ್ಲಿ ಈಗ ಕಾಣುತ್ತಿರುವ ಹೊಸ 6-ಅಂಕಿಯ ಕೋಡ್ ನಮೂದಿಸಿ, ಮತ್ತು ನಿಮ್ಮ ಫೋನ್‌ನ ಸಮಯ ಸರಿಯಾಗಿದೆಯೇ ಎಂದು ನೋಡಿ.")
+M("Two-step sign-in is already turned on. To move it to a new phone, turn it off first (you need your password and a code), "
+  "then set it up again.",
+  "दो-चरणीय साइन-इन पहले से चालू है। इसे नए फ़ोन पर ले जाने के लिए पहले इसे बंद करें (इसके लिए पासवर्ड और एक कोड चाहिए), फिर दोबारा सेट करें।",
+  "ಎರಡು-ಹಂತದ ಸೈನ್ ಇನ್ ಈಗಾಗಲೇ ಆನ್ ಆಗಿದೆ. ಹೊಸ ಫೋನ್‌ಗೆ ಬದಲಾಯಿಸಲು ಮೊದಲು ಅದನ್ನು ಆಫ್ ಮಾಡಿ (ಪಾಸ್‌ವರ್ಡ್ ಮತ್ತು ಒಂದು ಕೋಡ್ ಬೇಕು), ನಂತರ ಮತ್ತೆ ಹೊಂದಿಸಿ.")
+M("Two-step sign-in is already turned on.", "दो-चरणीय साइन-इन पहले से चालू है।", "ಎರಡು-ಹಂತದ ಸೈನ್ ಇನ್ ಈಗಾಗಲೇ ಆನ್ ಆಗಿದೆ.")
+M("The setup has not been started. Click the set-up button again and scan the new QR code.",
+  "सेटअप शुरू नहीं हुआ है। सेट करने वाला बटन फिर से दबाएँ और नया QR कोड स्कैन करें।",
+  "ಸೆಟಪ್ ಪ್ರಾರಂಭವಾಗಿಲ್ಲ. ಹೊಂದಿಸುವ ಬಟನ್ ಅನ್ನು ಮತ್ತೆ ಒತ್ತಿ ಹೊಸ QR ಕೋಡ್ ಸ್ಕ್ಯಾನ್ ಮಾಡಿ.")
+M("To change your own password, use Account & security. Another administrator can reset it for you.",
+  "अपना पासवर्ड बदलने के लिए 'खाता और सुरक्षा' खोलें। कोई दूसरा एडमिन भी इसे रीसेट कर सकता है।",
+  "ನಿಮ್ಮ ಸ್ವಂತ ಪಾಸ್‌ವರ್ಡ್ ಬದಲಾಯಿಸಲು 'ಖಾತೆ ಮತ್ತು ಭದ್ರತೆ' ತೆರೆಯಿರಿ. ಇನ್ನೊಬ್ಬ ಆಡ್ಮಿನ್ ಕೂಡ ಅದನ್ನು ಮರುಹೊಂದಿಸಬಹುದು.")
+M("You cannot reset your own two-step sign-in. Turn it off in Account & security, or ask another administrator.",
+  "आप अपना खुद का दो-चरणीय साइन-इन रीसेट नहीं कर सकते। इसे 'खाता और सुरक्षा' में बंद करें, या किसी दूसरे एडमिन से कहें।",
+  "ನಿಮ್ಮ ಸ್ವಂತ ಎರಡು-ಹಂತದ ಸೈನ್ ಇನ್ ಅನ್ನು ನೀವೇ ಮರುಹೊಂದಿಸಲು ಆಗದು. 'ಖಾತೆ ಮತ್ತು ಭದ್ರತೆ'ಯಲ್ಲಿ ಅದನ್ನು ಆಫ್ ಮಾಡಿ, ಅಥವಾ ಇನ್ನೊಬ್ಬ ಆಡ್ಮಿನ್‌ಗೆ ಕೇಳಿ.")

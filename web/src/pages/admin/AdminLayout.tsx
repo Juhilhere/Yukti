@@ -17,6 +17,7 @@ export const ADMIN_TABS: { to: string; label: string; perm: string | string[] }[
   { to: 'backup', label: 'Backup & export', perm: ['backup.manage', 'audit.export'] },
   { to: 'policies', label: 'Policies & Laya', perm: 'admin' },
   { to: 'models', label: 'Models', perm: 'models.manage' },
+  { to: 'features', label: 'New abilities', perm: 'models.manage' },
   { to: 'developer', label: 'Developer', perm: 'developer' },
 ];
 
@@ -51,6 +52,7 @@ export default function AdminLayout() {
     backup: t('admin.tab.backup'),
     policies: t('admin.tab.policies'),
     models: t('admin.tab.models'),
+    features: t('admin.tab.features'),
     developer: t('admin.tab.developer'),
   };
   return (
