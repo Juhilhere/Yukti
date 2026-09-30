@@ -24,7 +24,7 @@ from app.main import app  # noqa: E402
 
 PASSWORDS = {"admin": "Admin@2026", "ravi.e": "Ravi@2026", "anil.u": "Anil@2026", "kavita.fm": "Kavita@2026",
              "meera.me": "Meera@2026", "suresh.em": "Suresh@2026", "rajesh.mm": "Rajesh@2026", "vikram.op": "Vikram@2026",
-             "contractor.x": "Vendor@2026", "arjun.pl": "Arjun@2026", "deepa.au": "Deepa@2026", "priya.hse": "Priya@2026"}
+             "contractor.x": "Vendor@2026", "arjun.pl": "Arjun@2026", "deepa.au": "Deepa@2026", "priya.hse": "Priya@2026", "director.md": "Kavya@2026", "ramesh.pm": "Ramesh@2026", "sunita.hse": "Sunita@2026"}
 
 
 @pytest.fixture(scope="session")

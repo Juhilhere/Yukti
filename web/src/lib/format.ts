@@ -61,7 +61,7 @@ export function cx(...c: (string | false | null | undefined)[]): string {
 
 /** Human label for a role code (e.g. dept_manager → Head of Department (HOD)). */
 export function roleLabel(role: string): string {
-  return role === 'dept_manager' ? tr('common.role.dept_manager') : role;
+  return role === 'dept_manager' ? tr('common.role.dept_manager') : role === 'executive' ? tr('common.role.executive') : role;
 }
 
 /** Human label for a policy document type (values match policies/core.yaml). */

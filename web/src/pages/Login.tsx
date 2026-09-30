@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, ArrowLeft, Eye, EyeOff, Lock, LogIn, ServerCog, ShieldCheck, Smartphone, User2, Users, Sparkles } from 'lucide-react';
-import { inDesktopApp } from '../components/FeatureOffers';
+import { canAddHere } from '../components/FeatureOffers';
 import { api, ApiError } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import type { DemoUser } from '../lib/types';
@@ -131,7 +131,7 @@ export default function Login() {
           <div className="mt-6 flex items-center justify-center gap-1.5 text-[11px] text-faint">
             <ServerCog size={12} /> {t('login.footer')}
           </div>
-          {inDesktopApp() && (
+          {canAddHere() && (
             // add-ons are downloaded by the desktop app on the server computer; reachable before signing in
             <button type="button" onClick={() => window.location.assign('/desktop/features')}
               className="mt-4 flex w-full items-center gap-2 rounded-md border border-cyan/30 bg-cyan/5 px-3 py-2 text-left text-[12.5px] hover:border-cyan/60">

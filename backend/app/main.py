@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import re
 import os
 import hashlib
@@ -18,9 +19,9 @@ from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import admin, attachments, audit, chat, engine, laya, mrpl, production, rag, seed, speech
+from . import admin, attachments, audit, chat, engine, journal, laya, mrpl, production, rag, seed, speech
 from .auth import Ctx, current, err, notify, router as auth_router, user_by_id
-from .config import CLEARANCE_LABELS, CLEARANCE_BY_LABEL, DEMO_MODE, REPORTS, VERSION, WEB_DIST
+from .config import CLEARANCE_LABELS, CLEARANCE_BY_LABEL, DEMO_MODE, REPORTS, ROOT, VERSION, WEB_DIST, has_nvidia_gpu
 from . import scope
 from .db import ex, get_setting, init_db, j, new_id, now_iso, q, q1, set_setting, uj
 from .llm_params import DEFAULT_PREDICTION, schema, vllm_command
@@ -119,6 +120,8 @@ def _prepare_knowledge() -> None:
 
 
 def startup() -> None:
+    journal.install_hooks()
+    journal.event("server", "starting", version=VERSION, tier="demo" if DEMO_MODE else "production")
     if admin.apply_pending_restore():
         engine.log("Restored database and documents from staged backup.")
     init_db()
@@ -173,7 +176,19 @@ app.router.lifespan_context = _lifespan
 @app.exception_handler(HTTPException)
 async def http_exc(request: Request, exc: HTTPException) -> JSONResponse:
     d = exc.detail if isinstance(exc.detail, dict) else {"code": "error", "message": str(exc.detail)}
+    if exc.status_code >= 500:
+        journal.warn("api", f"{request.method} {request.url.path} answered {exc.status_code}", code=d.get("code"), message=d.get("message"))
     return JSONResponse(status_code=exc.status_code, content={"detail": d})
+
+
+def _server_error(ref: str) -> JSONResponse:
+    msg = tr("Something went wrong on the server. Please try again. If it keeps happening, give your administrator this reference:")
+    return JSONResponse(status_code=500, content={"detail": {"code": "internal", "message": f"{msg} {ref}", "ref": ref}})
+
+
+@app.exception_handler(Exception)
+async def unhandled_exc(request: Request, exc: Exception) -> JSONResponse:
+    return _server_error(journal.error("api", f"{request.method} {request.url.path} failed", exc))
 
 
 # ------------------------------------------------------------------ system
@@ -507,13 +522,52 @@ def get_photo(aid: str, thumb: int = 0, ctx: Ctx = Depends(current)) -> FileResp
     return FileResponse(p, media_type="image/jpeg", headers={"Cache-Control": "private, max-age=86400"})
 
 
+_CLIENT_ERR: dict[str, list[float]] = {}
+
+
+@app.post("/api/diagnostics/client-error")
+async def client_error(request: Request) -> dict[str, Any]:
+    """Problems met by the web page (script errors, crashes, failed requests) go into the server's local journal.
+    JSON only (other web sites cannot send it), small, and limited per computer so it cannot flood the log."""
+    if "application/json" not in (request.headers.get("content-type") or ""):
+        raise err(415, "invalid", "JSON expected")
+    ip = request.client.host if request.client else "?"
+    now = time.time()
+    hits = [t for t in _CLIENT_ERR.get(ip, []) if now - t < 60]
+    if len(hits) >= 30:
+        return {"ok": False}
+    _CLIENT_ERR[ip] = hits + [now]
+    raw = (await request.body())[:4096]
+    try:
+        body = json.loads(raw or b"{}")
+    except Exception:  # noqa: BLE001
+        body = {}
+    kind = str(body.get("kind") or "script")[:20]
+    journal.warn("web", f"{kind}: {str(body.get('text') or '')[:600]}", page=str(body.get("page") or "")[:120],
+                 app=str(body.get("app") or "")[:40], ip=ip)
+    return {"ok": True}
+
+
+@app.get("/api/admin/problems")
+def recent_problems(level: str = "WARNING", ctx: Ctx = Depends(current)) -> dict[str, Any]:
+    """Recent warnings and errors from the local journal (Admin > Usage & health), newest first."""
+    ctx.require("usage.view")
+    from .config import LOG_DIR
+    return {"items": journal.recent(level), "folder": str(LOG_DIR)}
+
+
 @app.get("/api/features")
-def features(ctx: Ctx = Depends(current)) -> dict[str, Any]:
-    """Optional abilities (downloaded later by the desktop app on the server computer): photos and voice."""
+async def features(ctx: Ctx = Depends(current)) -> dict[str, Any]:
+    """Optional abilities (downloaded later by the desktop app on the server computer): photos and voice.
+    The web page never offers to download something that is already on this computer or already working."""
+    vision = await engine.vision_status()
     return {
-        "vision": {"installed": any(m.get("mmproj") for m in engine.scan_models()),
-                   "active": engine.state.status == "ready" and engine.state.vision},
-        "voice": {"installed": bool(speech.status().get("available"))},
+        "vision": vision if "models.manage" in ctx.perms else {k: vision[k] for k in ("installed", "active", "loaded")},
+        "voice": {"installed": bool((await asyncio.to_thread(speech.status)).get("available"))},
+        "gpu": has_nvidia_gpu(),   # the voice add-on is larger with an NVIDIA graphics card (faster recogniser)
+        # installed by Yukti-Setup (installed.json): the desktop app on this computer can download add-ons. A complete
+        # package (single zip) or a developer copy cannot - the home screen must not offer an "Add" that leads nowhere
+        "downloadable": (ROOT / "installed.json").exists(),
         "can_manage": "models.manage" in ctx.perms,
     }
 
@@ -1039,6 +1093,8 @@ async def prod_scenario(body: dict[str, Any], ctx: Ctx = Depends(current)) -> di
 # ------------------------------------------------------------------ MRPL public intelligence & departments
 @app.get("/api/company")
 def company(ctx: Ctx = Depends(current)) -> dict[str, Any]:
+    """Company-level information (finances, strategy, company-wide figures): top management only (need-to-know)."""
+    ctx.require("company.view")
     return mrpl.load()
 
 
@@ -1247,6 +1303,23 @@ async def request_language(request: Request, call_next):  # type: ignore[no-unty
     from .i18n import set_lang
     set_lang(request.headers.get("x-lang") or request.query_params.get("lang"))
     return await call_next(request)
+
+
+@app.middleware("http")
+async def activity_journal(request: Request, call_next):  # type: ignore[no-untyped-def]
+    """What was done (every change request, with its result and duration) and every server error — into the local journal."""
+    t0 = time.perf_counter()
+    path = request.url.path
+    try:
+        resp = await call_next(request)
+    except Exception as e:  # noqa: BLE001
+        return _server_error(journal.error("api", f"{request.method} {path} failed", e))
+    ms = round((time.perf_counter() - t0) * 1000)
+    if resp.status_code >= 500:
+        journal.warn("api", f"{request.method} {path} -> {resp.status_code}", ms=ms)
+    elif request.method not in ("GET", "HEAD", "OPTIONS") and path.startswith("/api/") and path != "/api/diagnostics/client-error":
+        journal.event("api", f"{request.method} {path} -> {resp.status_code}", ms=ms)
+    return resp
 
 
 @app.middleware("http")

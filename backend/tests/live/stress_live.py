@@ -16,7 +16,7 @@ import time
 import httpx
 import psutil
 
-B = "http://127.0.0.1:8000"
+B = os.environ.get("YUKTI_TEST_URL", "http://127.0.0.1:8000")
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 PROBLEMS: list[str] = []
 LOCK = threading.Lock()

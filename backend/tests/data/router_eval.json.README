@@ -1,0 +1,3 @@
+router_eval.json: 130 routing questions (English, Hinglish, Hindi, Kannada), written fresh for evaluation (not copied from
+Laya's training templates). Used by tests/test_off_topic.py as a regression check: plant questions must never be
+declined as off-topic. Source: E:\yukti-build\research\embeddings\data\router_eval.json (embedding evaluation).

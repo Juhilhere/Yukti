@@ -12,7 +12,7 @@ from typing import Any
 from .policy import Subject, pdp
 
 # who sees plant-wide operational data (not document contents): refinery management, audit, HSE oversight
-PLANT_WIDE_ROLES = {"plant_manager", "auditor", "hse"}
+PLANT_WIDE_ROLES = {"executive", "plant_manager", "auditor", "hse"}
 
 # finding discipline -> owning department
 DISCIPLINE_DEPT = {

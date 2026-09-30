@@ -19,19 +19,23 @@ from .db import ex, j, now_iso, q1
 
 MODEL_DIR = STORE / "laya"
 MODEL_DIR.mkdir(exist_ok=True)
-VERSION = "laya-0.3.0"
+VERSION = "laya-0.4.0"
+# words in Latin, Devanagari (Hindi) and Kannada script
+TOKEN_PATTERN = r"[a-zA-Z0-9]+|[ऀ-ॿ]+|[ಀ-೿]+"
 
 TAGS = ["A2", "A2B", "P-101", "E-310", "PSV-118", "V-105", "K-401", "B-02", "FE-221", "TR-03", "M-A2"]
 UNITS = ["CDU-1", "VDU-1", "HCU", "SRU", "UTIL", "NHT-CCR"]
 
 T: dict[str, list[str]] = {
     "asset_dossier": [
+        "{tag} ट्रिप हो गया, पूरी जानकारी दो", "{tag} ಟ್ರಿಪ್ ಆಗಿದೆ, ವಿವರಗಳನ್ನು ನೀಡಿ", "{tag} मोटर की रेटिंग क्या है", "{tag} ಮೋಟಾರ್ ರೇಟಿಂಗ್ ಏನು",
         "{tag} tripped at 02:15 give me the isolation and restart dossier", "{tag} trip — ratings, failure history, open work orders and wiring",
         "full dossier for {tag}", "everything about pump {tag} please", "{tag} ka poora detail chahiye, trip hua hai",
         "what is the rated power and FLA of {tag}", "history of {tag} failures and open WOs", "wiring and feeder of {tag}",
         "{tag} tripped again, need details asap", "show me {tag} datasheet values and isolation points",
     ],
     "procedure_lookup": [
+        "पंप को आइसोलेट कैसे करें", "ಪಂಪ್ ಅನ್ನು ಐಸೋಲೇಟ್ ಮಾಡುವುದು ಹೇಗೆ", "वाल्व बंद करने की प्रक्रिया", "ಮೋಟಾರ್ ಮರುಪ್ರಾರಂಭ ವಿಧಾನ",
         "procedure to isolate {tag}", "LOTO steps for {tag} motor", "restart procedure after {tag} trip",
         "SOP for electrical isolation of LT motors", "how to do lockout tagout on {tag}", "{tag} restart ka SOP batao",
         "approved troubleshooting procedure for pump trip", "steps to rack out breaker for {tag}",
@@ -49,6 +53,7 @@ T: dict[str, list[str]] = {
         "how do I get permission to view restricted documents", "mujhe finance report ka access chahiye",
     ],
     "asset_expiry": [
+        "कौन से प्रमाणपत्र इस महीने खत्म हो रहे हैं", "ಯಾವ ಪ್ರಮಾಣಪತ್ರಗಳು ಈ ತಿಂಗಳು ಮುಗಿಯುತ್ತವೆ",
         "which certificates expire in the next 30 days", "calibration due list", "when is {tag} calibration due",
         "expired fire extinguishers", "upcoming inspection due dates in {unit}", "PSV ka calibration kab due hai",
         "warranty expiry for {tag}", "licences expiring this month",
@@ -58,6 +63,7 @@ T: dict[str, list[str]] = {
         "optimise product slate for november", "petchem margins are weak, should we shift to diesel", "production plan scenario with crude price up",
     ],
     "process_chemistry": [
+        "अमाइन की सांद्रता कितनी होनी चाहिए", "ಅಮೈನ್ ಸಾಂದ್ರತೆ ಎಷ್ಟು ಇರಬೇಕು", "H2S सुरक्षा सीमा क्या है", "ಪೈಪ್‌ನಲ್ಲಿ ಯಾವ ರಾಸಾಯನಿಕ ಹರಿಯುತ್ತದೆ",
         "what is the lean MDEA amine strength limit", "caustic wash concentration for LPG treating", "DMDS dosing for catalyst sulphiding",
         "antifoam dosing ppm in amine unit", "H2S loading limit for rich amine", "corrosion inhibitor dosing rate in overhead",
         "amine ka concentration kitna rakhna hai", "safe handling of H2S and exposure limits",
@@ -67,6 +73,8 @@ T: dict[str, list[str]] = {
         "make a pandas script for monthly diesel demand",
     ],
     "general_chat": [
+        "आज की शिफ्ट लॉग का सारांश", "ಇಂದಿನ ಶಿಫ್ಟ್ ಲಾಗ್ ಸಾರಾಂಶ", "पाइप में जंग लगी है क्या करें", "ಪೈಪ್‌ನಲ್ಲಿ ತುಕ್ಕು ಇದೆ ಏನು ಮಾಡಬೇಕು",
+        "which chemical flows in this pipe", "what is this equipment", "there is rust on this pipe, what should I do",
         "summarise today's shift log", "who is on call in electrical", "contact number of mechanical maintenance",
         "company history of CDU-1 commissioning", "explain what a mechanical seal plan 11 is", "what does NPSH mean",
     ],
@@ -76,17 +84,33 @@ T: dict[str, list[str]] = {
         "MRPL shareholding pattern ONGC HPCL", "MRPL history and expansion phases", "which process units does MRPL have", "MRPL sustainability and CSR",
         "MRPL ka turnover kitna hai", "latest news about MRPL", "MRPL crude throughput trend", "MRPL credit rating",
     ],
-    "smalltalk": ["hi", "hello", "thanks", "good morning", "who are you", "ok thank you", "namaste"],
+    "smalltalk": ["hi", "hello", "thanks", "good morning", "who are you", "ok thank you", "namaste", "नमस्ते", "धन्यवाद",
+                  "ನಮಸ್ಕಾರ", "ಧನ್ಯವಾದಗಳು", "what can you do", "how can you help me"],
+    # not plant work: answered with a short polite note instead of the AI (see chat.py, is_off_topic)
+    "off_topic": [
+        "write a poem about love", "tell me a joke", "who won the cricket match yesterday", "IPL score today", "recipe for chicken biryani",
+        "best movies to watch this weekend", "solve 2x + 5 = 15 for my homework", "what is the capital of france",
+        "who is the prime minister of india", "write an essay on global warming for school", "give me stock market tips",
+        "should i buy bitcoin", "weather in bangalore tomorrow", "plan my holiday trip to goa", "give me relationship advice",
+        "write a cover letter for my job application", "which mobile phone should i buy", "tell me a story for my kids",
+        "play a song", "koi gaana sunao", "ek shayari likho", "cricket ka score kya hai", "biryani kaise banate hain",
+        "write python code for a snake game", "help me with my college assignment", "who is shah rukh khan",
+        "who won the football world cup", "horoscope for today", "suggest a good restaurant nearby", "translate this love letter",
+        "मुझे एक कविता लिखो", "आज मौसम कैसा है", "क्रिकेट का स्कोर बताओ", "एक चुटकुला सुनाओ", "फिल्म के बारे में बताओ",
+        "ಒಂದು ಕವನ ಬರೆಯಿರಿ", "ಇಂದಿನ ಕ್ರಿಕೆಟ್ ಸ್ಕೋರ್ ಏನು", "ಬಿರಿಯಾನಿ ಮಾಡುವುದು ಹೇಗೆ", "ಒಂದು ಜೋಕ್ ಹೇಳಿ", "ಸಿನಿಮಾ ಬಗ್ಗೆ ಹೇಳಿ",
+    ],
 }
 DEPT = {
     "asset_dossier": "Electrical", "procedure_lookup": "Electrical", "doc_ingest": "Mechanical", "finding_review": "Mechanical",
     "access_request": "Management", "asset_expiry": "Instrumentation", "production_scenario": "Planning",
     "process_chemistry": "Operations", "code_task": "IT", "company_info": "Corporate Communications", "general_chat": "Operations", "smalltalk": "none",
+    "off_topic": "none",
 }
 ROUTE = {
     "asset_dossier": "small_llm+dossier", "procedure_lookup": "small_llm+rag", "doc_ingest": "ocr_vlm", "finding_review": "small_llm+rag",
     "access_request": "workflow", "asset_expiry": "analytics", "production_scenario": "analytics+optimizer",
     "process_chemistry": "domain_llm+guardrails", "code_task": "sandbox_code", "company_info": "small_llm+rag (public)", "general_chat": "small_llm+rag", "smalltalk": "small_llm",
+    "off_topic": "polite_decline",
 }
 URGENT = re.compile(r"\b(trip|tripped|fire|leak|h2s|gas|emergency|asap|urgent|abhi|immediately|alarm|explosion|injur)", re.I)
 
@@ -130,7 +154,7 @@ class Laya:
             from sklearn.linear_model import LogisticRegression
             from sklearn.pipeline import Pipeline
             X, y = _expand()
-            self.pipe = Pipeline([("tfidf", TfidfVectorizer(analyzer="word", ngram_range=(1, 2), token_pattern=r"[a-zA-Z0-9]+", sublinear_tf=True)),
+            self.pipe = Pipeline([("tfidf", TfidfVectorizer(analyzer="word", ngram_range=(1, 2), token_pattern=TOKEN_PATTERN, sublinear_tf=True)),
                                   ("clf", LogisticRegression(max_iter=2000, C=8.0))])
             self.pipe.fit([x.lower() for x in X], y)
             pk.write_bytes(pickle.dumps(self.pipe))
@@ -216,6 +240,45 @@ CG_PATTERNS: list[tuple[str, str]] = [
     ("safety_procedure", r"\b(loto|lockout|isolation|permit|restart|procedure|sop)\b"),
     ("asset_info", r"\b(pump|motor|feeder|datasheet|rated|fla|wiring|work order)\b"),
 ]
+
+
+PLANT_WORDS = re.compile(
+    r"\b(pump|valve|motor|pipe|pipeline|line|tank|vessel|drum|exchanger|compressor|turbine|boiler|furnace|heater|column|reactor|"
+    r"refinery|plant|unit|crude|diesel|petrol|lpg|naphtha|kerosene|atf|sulphur|sulfur|polypropylene|mrpl|ongc|hpcl|safety|permit|loto|"
+    r"isolation|isolate|shift|maintenance|work ?orders?|wos?|inspections?|corrosion|rust|leaks?|gauges?|pressure|temperature|flow|level|sops?|"
+    r"procedures?|documents?|drawings?|p&id|datasheets?|reports?|equipment|assets?|tags?|certificates?|calibration|hse|fire|gas|alarms?|trips?|breakers?|"
+    r"feeders?|mcc|transformers?|cables?|instruments?|instrumentation|transmitters?|psv|relief|flanges?|gaskets?|weld|thickness|vibration|"
+    r"bearings?|seals?|chemicals?|amine|caustic|h2s|catalyst|operators?|engineers?|departments?|team|hod|audit|yukti|laya|"
+    # people, contacts and access at work
+    r"on-?call|contact|extension|phone number|who to call|access|permission|approval|"
+    # data and code about plant records (Laya's code_task / production intents)
+    r"sql|query|database|dataset|python|pandas|script|excel|spreadsheet|graph|plot|chart|trend|data|production|product mix|"
+    r"planning|forecast|demand|margins?|slate|throughput)\b"
+    r"|पंप|वाल्व|मोटर|पाइप|टैंक|रिफाइनरी|प्लांट|सुरक्षा|रिसाव|जंग|दबाव|तापमान|शिफ्ट|रखरखाव|उपकरण|रसायन|गैस|आग"
+    r"|कंपन|डेटा|कोड|ग्राफ|उत्पाद|मिश्रण|ऑडिट|रिपोर्ट|दस्तावेज़|विभाग|प्रवेश|अनुमति|संपर्क|ऑन-कॉल|प्रमाणपत्र|निरीक्षण"
+    r"|ಪಂಪ್|ವಾಲ್ವ್|ಮೋಟಾರ್|ಪೈಪ್|ಟ್ಯಾಂಕ್|ರಿಫೈನರಿ|ಸ್ಥಾವರ|ಸುರಕ್ಷತೆ|ಸೋರಿಕೆ|ತುಕ್ಕು|ಒತ್ತಡ|ತಾಪಮಾನ|ಶಿಫ್ಟ್|ನಿರ್ವಹಣೆ|ಉಪಕರಣ|ರಾಸಾಯನಿಕ|ಅನಿಲ|ಬೆಂಕಿ"
+    r"|ಕಂಪನ|ಡೇಟಾ|ಕೋಡ್|ಗ್ರಾಫ್|ಉತ್ಪಾದನೆ|ಉತ್ಪನ್ನ|ಆಡಿಟ್|ವರದಿ|ದಾಖಲೆ|ವಿಭಾಗ|ಪ್ರವೇಶ|ಅನುಮತಿ|ಸಂಪರ್ಕ|ಆನ್-ಕಾಲ್|ಪ್ರಮಾಣಪತ್ರ|ತಪಾಸಣೆ",
+    re.I)
+# greetings are answered kindly, never "declined"
+SMALLTALK = re.compile(r"^\s*(hi|hello|hey|namaste|namaskar|thanks|thank you|ok|okay|good (morning|afternoon|evening)|"
+                       r"how are you|kaise ho|kya haal|kaisa hai|नमस्ते|धन्यवाद|कैसे हो|ನಮಸ್ಕಾರ|ಧನ್ಯವಾದ|ಹೇಗಿದ್ದೀರಾ)\b", re.I)
+
+
+def plant_related(text: str) -> bool:
+    """Any sign that a question is about plant work (a word, an equipment tag, a guarded topic)."""
+    if PLANT_WORDS.search(text) or guard_category(text) != "general":
+        return True
+    try:
+        from .rag import detect_tags
+        return bool(detect_tags(text))
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def is_off_topic(route: dict[str, Any], text: str) -> bool:
+    """Clearly unrelated to plant work (poems, sport, recipes, homework …): Laya is confident and nothing plant-related is in it."""
+    return (route.get("intent") == "off_topic" and float(route.get("confidence") or 0) >= 0.5 and not plant_related(text)
+            and not SMALLTALK.search(text))
 
 
 def guard_category(text: str) -> str:

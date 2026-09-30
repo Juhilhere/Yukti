@@ -1,6 +1,6 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
-import { useAuth } from './lib/auth';
+import { INBOX_PERMS, useAuth } from './lib/auth';
 import { AppShell } from './layout/AppShell';
 import Login from './pages/Login';
 import Chat from './pages/Chat';
@@ -48,9 +48,11 @@ function RequireAuth({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-function Perm({ perm, children }: { perm: string | string[]; children: ReactNode }) {
-  const { can } = useAuth();
-  return can(perm) ? <>{children}</> : <Forbidden />;
+/** Page guard: pages a user may not use are unreachable by URL too (friendly 403 page).
+ *  strict: need-to-know pages that the IT 'admin' role does not open by itself (see useAuth().has). */
+function Perm({ perm, strict, children }: { perm: string | string[]; strict?: boolean; children: ReactNode }) {
+  const { can, has } = useAuth();
+  return (strict ? has(perm) : can(perm)) ? <>{children}</> : <Forbidden />;
 }
 
 export default function App() {
@@ -59,12 +61,12 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route element={<RequireAuth><AppShell /></RequireAuth>}>
         <Route index element={<Navigate to="/chat" replace />} />
-        <Route path="/chat/:chatId?" element={<Chat />} />
-        <Route path="/company" element={<Company />} />
-        <Route path="/knowledge" element={<Knowledge />} />
-        <Route path="/knowledge/:id" element={<DocumentView />} />
-        <Route path="/inbox" element={<Inbox />} />
-        <Route path="/assets" element={<Assets />} />
+        <Route path="/chat/:chatId?" element={<Perm perm="chat"><Chat /></Perm>} />
+        <Route path="/company" element={<Perm perm="company.view" strict><Company /></Perm>} />
+        <Route path="/knowledge" element={<Perm perm="documents.view"><Knowledge /></Perm>} />
+        <Route path="/knowledge/:id" element={<Perm perm="documents.view"><DocumentView /></Perm>} />
+        <Route path="/inbox" element={<Perm perm={INBOX_PERMS}><Inbox /></Perm>} />
+        <Route path="/assets" element={<Perm perm="assets.view"><Assets /></Perm>} />
         <Route path="/production" element={<Perm perm="production.view"><Production /></Perm>} />
         <Route path="/audit" element={<Perm perm="audit.view"><Audit /></Perm>} />
         <Route path="/admin" element={<Perm perm={ADMIN_PERMS}><AdminLayout /></Perm>}>

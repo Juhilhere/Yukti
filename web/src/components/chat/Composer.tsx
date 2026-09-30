@@ -19,10 +19,12 @@ const coarsePointer = () => { try { return window.matchMedia('(pointer: coarse)'
 
 export const Composer = forwardRef<ComposerHandle, {
   busy: boolean; onSend: (text: string, images: string[]) => void; onStop: () => void; useKnowledge: boolean; onToggleKnowledge: () => void;
-  sendWithEnter: boolean; modelReady: boolean; canLoadModel: boolean; onOpenLoader: () => void; fullWidth: boolean;
+  sendWithEnter: boolean; modelReady: boolean; canLoadModel: boolean;
+  /** show the rough token count of the question (administrators) */
+  showTokens?: boolean; onOpenLoader: () => void; fullWidth: boolean;
   /** false = the loaded model can't see pictures (it only gets the text read from them) */
   vision?: boolean;
-}>(function Composer({ busy, onSend, onStop, useKnowledge, onToggleKnowledge, sendWithEnter, modelReady, canLoadModel, onOpenLoader, fullWidth, vision }, fwd) {
+}>(function Composer({ busy, onSend, onStop, useKnowledge, onToggleKnowledge, sendWithEnter, modelReady, canLoadModel, showTokens = false, onOpenLoader, fullWidth, vision }, fwd) {
   const t = useT();
   const [text, setText] = useState('');
   const [atts, setAtts] = useState<Att[]>([]);
@@ -219,7 +221,13 @@ export const Composer = forwardRef<ComposerHandle, {
             )}
             {showMic && (
               <MicButton state={voice.state} onToggle={voice.toggle} unavailable={speechUnavailable}
-                onUnavailable={() => setNotice({ title: t('voice.unavailable'), body: speechUnavailable ?? undefined })} />
+                onUnavailable={() => {
+                  // it may have been added on the server computer since this page asked: check again before saying no
+                  void speech.refetch().then((r) => {
+                    if (r.data?.available) { setNotice(null); voice.toggle(); }
+                    else setNotice({ title: t('voice.unavailable'), body: (r.data?.reason || speechUnavailable) ?? undefined });
+                  });
+                }} />
             )}
             <button onClick={onToggleKnowledge} title={t('composer.knowledgeTip')}
               className={cx('ml-1 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium',
@@ -227,7 +235,8 @@ export const Composer = forwardRef<ComposerHandle, {
               {useKnowledge ? <BookOpen size={11} /> : <BookX size={11} />}
               {useKnowledge ? t('chat.knowledgeOn') : t('chat.knowledgeOff')}
             </button>
-            <span className="ml-auto font-mono text-[10.5px] text-faint">{t('composer.tokens', { n: estimateTokens(text) })}</span>
+            <span className="ml-auto" />
+            {showTokens && <span className="font-mono text-[10.5px] text-faint">{t('composer.tokens', { n: estimateTokens(text) })}</span>}
             <span className="hidden text-[10.5px] text-faint xl:inline">
               {sendWithEnter ? <><Kbd>Enter</Kbd> {t('composer.send')} · <Kbd>Shift+Enter</Kbd> {t('composer.newline')}</> : <><Kbd>Ctrl+Enter</Kbd> {t('composer.send')}</>}
             </span>

@@ -7,7 +7,7 @@
 'use strict';
 const SUPPORT_EMAIL = 'juhilprogramming@gmail.com';  // problem reports (Help menu)
 const YI = require('./ui/i18n.js');
-const { app, BrowserWindow, Menu, Tray, dialog, ipcMain, shell, nativeImage, session } = require('electron');
+const { app, BrowserWindow, Menu, Tray, dialog, ipcMain, shell, nativeImage, session, screen } = require('electron');
 const { spawn, execFile } = require('child_process');
 const fs = require('fs');
 const net = require('net');
@@ -22,7 +22,8 @@ const UI = (f) => path.join(__dirname, 'ui', f);
 const ICON_PNG = path.join(ROOT, 'build', 'icon.png');
 const TRAY_PNG = path.join(ROOT, 'build', 'tray.png');
 const BG = '#0e0e10';
-const DEFAULT_PORT = 8000;
+// testing only (like YUKTI_PROFILE_DIR): a test copy must never serve on 8000, where a real Yukti app would connect to it
+const DEFAULT_PORT = Number(process.env.YUKTI_TEST_PORT) || 8000;
 const PORT_RANGE = [8001, 8099];
 const localUrl = (port) => `http://127.0.0.1:${port}`;
 const DEFAULT_DEST = path.join(process.env.LOCALAPPDATA || require('os').homedir(), 'Yukti', 'Server');
@@ -74,6 +75,10 @@ function distribution() {
 }
 
 app.setAppUserModelId('in.uniminds.yukti');
+// nothing may fail silently: unexpected errors in the main process are written to the log instead of vanishing
+process.on('uncaughtException', (e) => { try { log(`[error] ${e && e.stack || e}`); } catch { /* logging not ready */ } });
+process.on('unhandledRejection', (e) => { try { log(`[error] unhandled: ${e && e.stack || e}`); } catch { /* logging not ready */ } });
+app.on('child-process-gone', (_e, d) => { try { log(`[window] helper process ${d.type} stopped (${d.reason})`); } catch { /* ignore */ } });
 // Keep Chromium quiet on the network: no component updates / background pings.
 app.commandLine.appendSwitch('disable-background-networking');
 app.commandLine.appendSwitch('disable-component-update');
@@ -86,6 +91,7 @@ let page = null;              // 'setup' | 'splash' | 'app'
 let server = null;            // { proc, exited, root, port, url } when we own the local server
 let activeUrl = null;         // origin of the Yukti app currently (or last) shown in the window
 let quitting = false, stopping = false;
+let autoRestarts = [];      // times the local server was restarted after stopping unexpectedly
 let installAbort = null;
 let bootSeq = 0;              // bumps whenever a start-up sequence is superseded
 let lastStatus = null;        // last startup status (replayed when the startup page (re)loads)
@@ -127,7 +133,7 @@ async function health(base, timeoutMs = 4000) {
     if (!r.ok) return { ok: false, error: `HTTP ${r.status}` };
     const j = await r.json();
     if (!j || j.ok !== true) return { ok: false, error: 'Not a Yukti server (unexpected /api/health reply)' };
-    return { ok: true, version: j.version, engine: j.engine, raw: j };
+    return { ok: true, version: j.version, engine: j.engine, instance: j.instance || null, raw: j };
   } catch (e) {
     return { ok: false, error: e.name === 'AbortError' ? 'Timed out' : (e.cause && e.cause.code) || e.message };
   } finally { clearTimeout(t); }
@@ -150,7 +156,11 @@ function log(line) {
   logBuf.push(s);
   if (logBuf.length > 2000) logBuf.splice(0, logBuf.length - 2000);
   if (logFile) logFile.write(`${new Date().toISOString()} ${s}\n`);
-  sendUi('splash', 'splash:log', s);
+  // problems also go to errors.log next to desktop.log, so they can be found at once
+  if (/\[error\]|\bfail(ed|s)?\b|could not|cannot|not responding|stopped|refused|timed out|mismatch|invalid/i.test(s)) {
+    try { fs.appendFileSync(path.join(desktopLogDir(), 'errors.log'), `${new Date().toISOString()} ${s}\n`); } catch { /* logs folder not ready */ }
+  }
+  try { sendUi('splash', 'splash:log', s); } catch { /* window not ready */ }
 }
 function serverLogDir(root = config.installRoot) {
   // packaged servers keep data in %LOCALAPPDATA%\Yukti\data (older installs: <install>\data\store)
@@ -256,8 +266,18 @@ function startLocalServer(installRoot, port) {
     // stopped unexpectedly while the user works in the app → show the startup page with the error panel
     if (!quitting && !stopping && server === me && page === 'app' && activeUrl === me.url) {
       bootSeq++;
-      showSplash();
-      failStart(T('main.stopped'));
+      // restart it by itself (twice in 10 minutes at most); only a repeated failure is shown to the user
+      const now = Date.now();
+      autoRestarts = autoRestarts.filter((t) => now - t < 10 * 60 * 1000);
+      if (autoRestarts.length < 2) {
+        autoRestarts.push(now);
+        log('[yukti-desktop] the server stopped unexpectedly — restarting it');
+        showSplash();
+        setTimeout(bootLocal, 1000);
+      } else {
+        showSplash();
+        failStart(T('main.stopped'));
+      }
     }
     updateTray();
   });
@@ -380,11 +400,28 @@ function failStart(msg, extra = {}) {
 function winIcon() { return nativeImage.createFromPath(ICON_PNG); }
 function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
 
+/** Saved window position only if it is still (mostly) on a connected screen — else Windows would open Yukti off-screen
+ *  (e.g. last used on a second monitor): it would sit in the taskbar but never appear. */
+function visibleBounds(b) {
+  if (!b || b.x == null || b.y == null) return {};
+  try {
+    const onScreen = screen.getAllDisplays().some(({ workArea: w }) =>
+      b.x + 100 > w.x && b.y + 40 > w.y && b.x + 100 < w.x + w.width && b.y + 40 < w.y + w.height);
+    return onScreen ? { x: b.x, y: b.y } : {};
+  } catch { return {}; }
+}
+function ensureOnScreen() {
+  if (!win || win.isDestroyed() || win.isMaximized() || win.isFullScreen()) return;
+  if (!visibleBounds(win.getBounds()).x && win.getBounds().x !== undefined) win.center();
+}
+
 function createWindow() {
   const b = config.bounds || {};
+  const wa = (() => { try { return screen.getPrimaryDisplay().workAreaSize; } catch { return { width: 1440, height: 900 }; } })();
   win = new BrowserWindow({
-    width: Math.max(1200, b.width || 1440), height: Math.max(760, b.height || 900),
-    x: b.x, y: b.y, minWidth: 1200, minHeight: 760, title: 'Yukti', icon: winIcon(), show: false,
+    // never larger than the screen (small laptop screens), at least the minimum Yukti needs
+    width: Math.min(Math.max(1200, b.width || 1440), Math.max(1200, wa.width)), height: Math.min(Math.max(760, b.height || 900), Math.max(760, wa.height)),
+    ...visibleBounds(b), minWidth: 1200, minHeight: 760, title: 'Yukti', icon: winIcon(), show: false,
     backgroundColor: BG, autoHideMenuBar: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),   // exposes window.yukti on file:// pages only
@@ -407,7 +444,25 @@ function createWindow() {
   });
   win.on('closed', () => { win = null; });
   win.on('page-title-updated', (e) => { e.preventDefault(); win.setTitle('Yukti'); });
-  win.once('ready-to-show', () => win.show());
+  win.once('ready-to-show', () => { win.show(); ensureOnScreen(); });
+  // a page that fails before its first paint never sends ready-to-show: show the window anyway
+  setTimeout(() => { if (win && !win.isDestroyed() && !win.isVisible() && page !== 'app-hidden') { win.show(); ensureOnScreen(); } }, 4000);
+  // the page crashed or hung: log it and bring Yukti back instead of leaving a blank window
+  win.webContents.on('render-process-gone', (_e, d) => {
+    log(`[window] page stopped (${d.reason}, exit ${d.exitCode})`);
+    if (d.reason === 'clean-exit' || quitting) return;
+    setTimeout(() => {
+      if (!win || win.isDestroyed()) return;
+      if (page === 'app' && activeUrl) openApp(activeUrl); else win.webContents.reload();
+    }, 500);
+  });
+  let hangTimer = null;
+  win.on('unresponsive', () => {
+    log('[window] page not responding');
+    clearTimeout(hangTimer);
+    hangTimer = setTimeout(() => { if (win && !win.isDestroyed()) { log('[window] still not responding — reloading'); win.webContents.forcefullyCrashRenderer(); } }, 20000);
+  });
+  win.on('responsive', () => { clearTimeout(hangTimer); });
   win.webContents.on('did-fail-load', (_e, code, desc, url, isMain) => {
     if (isMain && code !== -3 && page === 'app') {
       dialog.showMessageBox(win, { type: 'error', title: 'Yukti', message: T('main.loadFailed', { url }), detail: T('main.loadFailedDetail', { desc, code }) });
@@ -603,11 +658,17 @@ function ensureTray() {
   if (tray) return updateTray();
   tray = new Tray(nativeImage.createFromPath(TRAY_PNG));
   tray.setToolTip('Yukti');
+  tray.on('click', showMainWin);          // one click opens Yukti (most people never double-click a tray icon)
   tray.on('double-click', showMainWin);
   updateTray();
 }
 function showMainWin() {
-  if (win && !win.isDestroyed()) { win.show(); if (win.isMinimized()) win.restore(); win.focus(); }
+  if (win && !win.isDestroyed()) {
+    if (win.isMinimized()) win.restore();
+    win.show(); ensureOnScreen();
+    // Windows may refuse to bring a background app to the front: briefly keep it on top so it really appears
+    win.setAlwaysOnTop(true); win.focus(); setTimeout(() => { if (win && !win.isDestroyed()) win.setAlwaysOnTop(false); }, 300);
+  }
   else if (page === 'app' && activeUrl) openApp(activeUrl);
   else showSetup();
 }
@@ -713,21 +774,29 @@ handle('yukti:plan', async (_e, req = {}) => {
 // ------------------------------------------------------------ add-ons (photos, voice): downloaded later, on request
 const FEATURES = ['vision', 'voice'];
 const localInstall = () => config.mode === 'local' && config.installRoot && fs.existsSync(path.join(config.installRoot, 'installed.json'));
+let featureBusy = null;   // add-on being downloaded right now (the add-on page may be reloaded meanwhile)
 handle('yukti:featuresPlan', async () => {
   if (config.mode !== 'local') return { ok: true, local: false, serverUrl: config.serverUrl };
   if (!localInstall()) return { ok: true, local: false, bundled: true };
   try {
     gpuPromise = gpuPromise || installer.hasNvidiaGpu();
     const p = await installer.plan({ manifestUrl: manifestUrl(), publicKey: distribution().publicKey || null, dest: config.installRoot, forceGpu: await gpuPromise });
-    return { ok: true, local: true, features: p.features, freeBytes: p.freeBytes, updatePending: !!(p.installed && p.installed.version !== p.version) };
-  } catch (e) { return { ok: false, local: true, error: e.message }; }
+    return { ok: true, local: true, features: p.features, freeBytes: p.freeBytes, busy: featureBusy,
+      updatePending: !!(p.installed && p.installed.version !== p.version) };
+  } catch (e) {
+    // no internet / download site down: what is already added is still known (and can still be removed)
+    let known = {};
+    try { known = await installer.localFeatures(config.installRoot); } catch { /* unreadable installed.json */ }
+    return { ok: false, local: true, error: e.message, known, busy: featureBusy };
+  }
 });
 handle('yukti:featureInstall', async (_e, feature) => {
   if (!FEATURES.includes(feature) || !localInstall()) return { ok: false, error: 'Not available on this computer' };
   if (installAbort) return { ok: false, error: T('main.installRunning') };
   installAbort = new AbortController();
+  featureBusy = feature;
   const dest = config.installRoot;
-  const send = (p) => { if (p.message && p.phase !== 'download') log(`[add-on] ${p.message}`); sendUi('features', 'install:progress', p);
+  const send = (p) => { if (p.message && p.phase !== 'download') log(`[add-on] ${p.message}`); sendUi('features', 'install:progress', { ...p, feature });
     if (p.pct !== undefined && win && !win.isDestroyed()) win.setProgressBar(p.pct / 100); };
   try {
     const cur = ((await installer.installedVersion(dest)) || {}).features || [];
@@ -739,20 +808,24 @@ handle('yukti:featureInstall', async (_e, feature) => {
     const core = pl.artifacts.some((a) => a.needed && !a.installed && !a.feature);
     // the photo add-on is used by the AI model only after a restart; the voice add-on is picked up by itself
     const restart = core || feature === 'vision';
-    if (core && serverAlive()) await stopLocalServer();
+    // a newer version of an add-on that is already there replaces files the running server has open (Windows locks them)
+    const replacing = !!(pl.features[feature] && pl.features[feature].present);
+    if ((core || replacing) && serverAlive()) await stopLocalServer();
     await installer.install({ ...opts, signal: installAbort.signal, onProgress: send });
     log(`[add-on] ${feature} installed`);
-    return { ok: true, restart };
+    return { ok: true, restart: restart || replacing };
   } catch (e) {
     log(`[add-on] ${feature} failed: ${e.message}`);
-    return { ok: false, error: e.message, cancelled: installAbort && installAbort.signal.aborted };
+    return { ok: false, error: e.message, cancelled: installAbort && installAbort.signal.aborted, stopped: !serverAlive() };
   } finally {
     installAbort = null;
+    featureBusy = null;
     if (win && !win.isDestroyed()) win.setProgressBar(-1);
   }
 });
 handle('yukti:featureRemove', async (_e, feature) => {
   if (!FEATURES.includes(feature) || !localInstall()) return { ok: false, error: 'Not available on this computer' };
+  if (installAbort) return { ok: false, error: T('main.installRunning') };   // never delete files a download is writing
   try {
     if (serverAlive()) await stopLocalServer();   // the files are in use while Yukti runs
     await installer.removeFeature(config.installRoot, feature);

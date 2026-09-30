@@ -323,8 +323,17 @@ STOP = set("a an the of to in on for and or is are was were be what which who ho
            "need needs get list find".split())
 
 
+# common Hindi / Kannada filler words: they would match almost every Hindi or Kannada document
+STOP_INDIC = {"है", "हैं", "का", "की", "के", "को", "में", "से", "पर", "और", "या", "यह", "वह", "क्या", "कैसे", "कौन", "कब", "एक", "भी", "तो",
+              "ही", "नहीं", "था", "थी", "हो", "कर", "करें", "करना", "दो", "दें", "बताओ", "बताएं", "मुझे", "हम", "आप",
+              "ಮತ್ತು", "ಅಥವಾ", "ಈ", "ಆ", "ಏನು", "ಹೇಗೆ", "ಯಾವ", "ಯಾರು", "ಯಾವಾಗ", "ಒಂದು", "ಇದೆ", "ಇವೆ", "ಅಲ್ಲ", "ನನಗೆ", "ನೀವು", "ಮಾಡಿ",
+              "ಮಾಡುವುದು", "ತಿಳಿಸಿ", "ಬಗ್ಗೆ", "ಅನ್ನು", "ಅನ್ನ", "ಗೆ", "ಲ್ಲಿ"}
+
+
 def _fts_query(text: str, extra_tags: list[str]) -> str:
-    toks = [t for t in re.findall(r"[A-Za-z0-9][A-Za-z0-9\-_.]*", text) if t.lower() not in STOP and len(t) > 1]
+    # Latin words and tags, plus Hindi (Devanagari) and Kannada words, so documents written in those languages are found too
+    toks = [t for t in re.findall(r"[A-Za-z0-9][A-Za-z0-9\-_.]*|[ऀ-ॿ]+|[ಀ-೿]+", text)
+            if t.lower() not in STOP and t not in STOP_INDIC and len(t) > 1]
     toks = toks[:24] + extra_tags
     return " OR ".join('"' + t.replace('"', "") + '"' for t in dict.fromkeys(toks)) or '""'
 

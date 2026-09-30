@@ -1,7 +1,7 @@
 import { memo, useState } from 'react';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { AlertTriangle, Brain, Check, ChevronDown, ChevronRight, Copy, Gauge, RefreshCw, Route, ShieldCheck, ShieldX, ShieldAlert, ThumbsDown, ThumbsUp } from 'lucide-react';
+import { AlertTriangle, Brain, Check, ChevronDown, ChevronRight, Copy, Gauge, Info, RefreshCw, Route, ShieldCheck, ShieldX, ShieldAlert, ThumbsDown, ThumbsUp } from 'lucide-react';
 import { api, errMsg } from '../../lib/api';
 import { useT } from '../../lib/i18n';
 import { Modal } from '../Modal';
@@ -67,7 +67,7 @@ function GuardChip({ guard }: { guard: GuardDecision }) {
   );
 }
 
-function Thinking({ text, streaming }: { text: string; streaming: boolean }) {
+function Thinking({ text, streaming, technical }: { text: string; streaming: boolean; technical: boolean }) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const isOpen = open || streaming;
@@ -77,7 +77,7 @@ function Thinking({ text, streaming }: { text: string; streaming: boolean }) {
         {isOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
         <Brain size={12} className="text-cyan" />
         {streaming ? <span className="flex items-center gap-1.5">{t('chat.thinking')} <Spinner size={11} /></span> : <span>{t('chat.thoughtProcess')}</span>}
-        <span className="ml-auto font-mono text-[10.5px] text-faint">{t('chat.tok', { n: Math.ceil(text.length / 4) })}</span>
+        {technical && <span className="ml-auto font-mono text-[10.5px] text-faint">{t('chat.tok', { n: Math.ceil(text.length / 4) })}</span>}
       </button>
       {isOpen && (
         <div className="max-h-[260px] overflow-y-auto whitespace-pre-wrap border-t border-border px-3 py-2 text-[12px] italic leading-relaxed text-muted">{text}</div>
@@ -136,7 +136,46 @@ function FeedbackButtons({ m }: { m: UIMessage }) {
   );
 }
 
-function StatsFooter({ m, canRegen, onRegen }: { m: UIMessage; canRegen: boolean; onRegen?: () => void }) {
+function StatsLine({ s }: { s: NonNullable<UIMessage['stats']> }) {
+  const t = useT();
+  return (
+    <>
+      <span className="inline-flex items-center gap-1 text-cyan/80"><Gauge size={11} />{num(s.tok_per_s, 1)} tok/s</span>
+      <span>{t('chat.stats.inOut', { in: s.tokens_in ?? '—', out: s.tokens_out ?? '—' })}</span>
+      <span>TTFT {num(s.ttft_ms, 0)}ms</span>
+      <span>{num((s.total_ms ?? 0) / 1000, 2)}s</span>
+      <span>{t('chat.stats.stop', { r: s.stop_reason })}</span>
+      <span className="text-muted">{s.model_name}</span>
+      <span className="uppercase">{s.engine}</span>
+    </>
+  );
+}
+
+/**
+ * Technical details of one answer (router, guardrail, speed, tokens, engine), for people without the administrator view:
+ * kept out of the way behind the "Details" button (useful when reporting a problem).
+ */
+function AnswerDetails({ m }: { m: UIMessage }) {
+  const t = useT();
+  return (
+    <div className="mt-1.5 rounded-md border border-border bg-surface/60 px-2.5 py-2">
+      <div className="mb-1 text-[11px] text-muted">{t('declutter.details.intro')}</div>
+      {(m.route || m.guard) && (
+        <div className="mb-1 flex flex-wrap items-center gap-1.5">
+          {m.route && <RouteChip route={m.route} />}
+          {m.guard && <GuardChip guard={m.guard} />}
+        </div>
+      )}
+      {m.stats && <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] text-faint"><StatsLine s={m.stats} /></div>}
+    </div>
+  );
+}
+
+function StatsFooter({ m, canRegen, onRegen, details }: {
+  m: UIMessage; canRegen: boolean; onRegen?: () => void;
+  /** people without the administrator view: a small button that shows the technical details */
+  details?: { open: boolean; toggle: () => void };
+}) {
   const t = useT();
   const [copied, setCopied] = useState(false);
   const s = m.stats;
@@ -145,18 +184,14 @@ function StatsFooter({ m, canRegen, onRegen }: { m: UIMessage; canRegen: boolean
   };
   return (
     <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] text-faint">
-      {s && (
-        <>
-          <span className="inline-flex items-center gap-1 text-cyan/80"><Gauge size={11} />{num(s.tok_per_s, 1)} tok/s</span>
-          <span>{t('chat.stats.inOut', { in: s.tokens_in ?? '—', out: s.tokens_out ?? '—' })}</span>
-          <span>TTFT {num(s.ttft_ms, 0)}ms</span>
-          <span>{num((s.total_ms ?? 0) / 1000, 2)}s</span>
-          <span>{t('chat.stats.stop', { r: s.stop_reason })}</span>
-          <span className="text-muted">{s.model_name}</span>
-          <span className="uppercase">{s.engine}</span>
-        </>
-      )}
+      {s && <StatsLine s={s} />}
       <span className="ml-auto flex items-center gap-0.5 font-sans">
+        {details && (
+          <button className={cx('btn btn-ghost btn-sm !px-1.5 text-[11px]', details.open ? 'text-text' : 'text-muted')} data-details="toggle"
+            title={t('declutter.details.tip')} aria-expanded={details.open} onClick={details.toggle}>
+            <Info size={12} />{details.open ? t('declutter.details.hide') : t('declutter.details')}
+          </button>
+        )}
         <FeedbackButtons m={m} />
         <button className="btn btn-ghost btn-icon text-muted" title={t('btn.copy')} onClick={copy}>{copied ? <Check size={13} className="text-ok" /> : <Copy size={13} />}</button>
         {canRegen && <button className="btn btn-ghost btn-icon text-muted" title={t('chat.regenerate')} onClick={onRegen}><RefreshCw size={13} /></button>}
@@ -165,12 +200,15 @@ function StatsFooter({ m, canRegen, onRegen }: { m: UIMessage; canRegen: boolean
   );
 }
 
-function AssistantMessageImpl({ m, isLast, busy, showStats, question, onRegenerate, withPhotos }: {
+function AssistantMessageImpl({ m, isLast, busy, showStats, technical = true, question, onRegenerate, withPhotos }: {
   m: UIMessage; isLast: boolean; busy: boolean; showStats: boolean; question?: string; onRegenerate?: () => void;
+  /** administrators see the router / guardrail chips and speed figures on every answer; everyone else behind "Details" */
+  technical?: boolean;
   /** the question came with photos (shows "Reading the photo…" until the photo event arrives) */
   withPhotos?: boolean;
 }) {
   const t = useT();
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const cite = (sid: string) => flashSource(m.id, sid);
   const components: Components = {
     a: ({ href, children }) => {
@@ -188,18 +226,19 @@ function AssistantMessageImpl({ m, isLast, busy, showStats, question, onRegenera
   };
   const waiting = m.streaming && !m.content && !m.reasoning && !m.error;
   const hasHeader = m.route || m.guard;
+  const hasDetails = !!(m.route || m.guard || m.stats);
   return (
     <div className="group flex gap-3">
       <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-cyan/30 bg-cyan/10 font-mono text-[11px] font-bold text-cyan">Y</div>
       <div className="min-w-0 flex-1">
         <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
           <span className="text-[12px] font-semibold">Yukti</span>
-          {m.route && <RouteChip route={m.route} />}
-          {m.guard && <GuardChip guard={m.guard} />}
+          {technical && m.route && <RouteChip route={m.route} />}
+          {technical && m.guard && <GuardChip guard={m.guard} />}
           {!hasHeader && m.streaming && <span className="text-[11px] text-faint">{t('chat.routing')}</span>}
         </div>
         {m.photo && <PhotoReadingCard photo={m.photo} />}
-        {m.reasoning ? <Thinking text={m.reasoning} streaming={!!m.streaming && !m.content} /> : null}
+        {m.reasoning ? <Thinking text={m.reasoning} streaming={!!m.streaming && !m.content} technical={technical} /> : null}
         {waiting && <div className="flex items-center gap-2 py-1 text-[12px] text-muted"><Spinner size={12} />{withPhotos && !m.photo ? t('photo.reading') : t('chat.generating')}</div>}
         {m.content && (
           <div className={cx('md', m.streaming && 'caret')}>
@@ -213,11 +252,13 @@ function AssistantMessageImpl({ m, isLast, busy, showStats, question, onRegenera
           </div>
         )}
         {m.facts && m.facts.length > 0 && <FactsTable facts={m.facts} onCite={cite} />}
-        {m.sources && m.sources.length > 0 && <SourcesRow msgId={m.id} sources={m.sources} />}
+        {m.sources && m.sources.length > 0 && <SourcesRow msgId={m.id} sources={m.sources} showScore={technical} />}
         {m.denied && m.denied.count > 0 && <DeniedCard denied={m.denied} question={question} suggest={m.route?.department} />}
         {!m.streaming && (
-          <StatsFooter m={showStats ? m : { ...m, stats: null }} canRegen={isLast && !busy && !!onRegenerate} onRegen={onRegenerate} />
+          <StatsFooter m={technical && showStats ? m : { ...m, stats: null }} canRegen={isLast && !busy && !!onRegenerate} onRegen={onRegenerate}
+            details={!technical && hasDetails ? { open: detailsOpen, toggle: () => setDetailsOpen((o) => !o) } : undefined} />
         )}
+        {!m.streaming && !technical && detailsOpen && hasDetails && <AnswerDetails m={m} />}
       </div>
     </div>
   );

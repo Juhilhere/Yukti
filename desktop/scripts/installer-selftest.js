@@ -89,6 +89,25 @@ const assert = (c, m) => { if (!c) { console.error('FAIL:', m); process.exit(1);
   assert(/1 of 3 components/.test(plan) && fs.existsSync(path.join(dest, 'speech', 'models', 'v.bin')), 'add-on downloaded on request (only the add-on)');
   const pf = await installer.plan({ manifestUrl: url, dest, forceGpu: false });
   assert(pf.todoCount === 0 && pf.features.voice.on && pf.features.voice.installed, 'add-on stays on for later updates');
+  // a newer release with a new version of the add-on: it is still there and working, so it must never look "not added"
+  const voice2 = crypto.randomBytes(1000);
+  fs.writeFileSync(path.join(files, 'voice2.part00'), voice2);
+  const newer = JSON.parse(JSON.stringify(manifest));
+  Object.assign(newer.artifacts[0], { size: voice2.length, sha256: sha(voice2), parts: [{ url: 'files/voice2.part00', size: voice2.length, sha256: sha(voice2) }] });
+  const pu = await installer.plan({ manifest: newer, dest, forceGpu: false });
+  assert(pu.features.voice.on && pu.features.voice.present && !pu.features.voice.installed && pu.features.voice.sizeTodo === voice2.length,
+    'add-on with a pending update: still present (not offered as "Add"), update size known');
+  // no internet: what was added is known from this computer alone
+  const lf = await installer.localFeatures(dest);
+  assert(lf.voice && lf.voice.on && lf.voice.present && !lf.vision, 'offline: added abilities known without the manifest');
+  // a network that never answers must not leave the add-on screen waiting for ever
+  const silent = http.createServer(() => { /* never answers */ }).listen(0, '127.0.0.1');
+  await new Promise((r) => silent.once('listening', r));
+  let hung = '';
+  const t0 = Date.now();
+  try { await installer.fetchManifest(`http://127.0.0.1:${silent.address().port}/manifest.json`, null, 500); } catch (e) { hung = e.message; }
+  assert(/fetch failed/.test(hung) && Date.now() - t0 < 5000, 'manifest download gives up with a network error when nothing answers');
+  silent.closeAllConnections(); silent.close();
   await installer.removeFeature(dest, 'voice');
   const pr = await installer.plan({ manifestUrl: url, dest, forceGpu: false });
   assert(!fs.existsSync(path.join(dest, 'speech', 'models', 'v.bin')) && !pr.features.voice.on && pr.todoCount === 0, 'add-on removed and switched off');

@@ -1,6 +1,8 @@
 """Functional tests of Yukti without a GPU/model (run in CI)."""
 from __future__ import annotations
 
+import asyncio
+
 import sqlite3
 
 import pytest
@@ -109,8 +111,11 @@ def test_finance_denied_then_granted(login):
 
 
 def test_public_mrpl_facts(login):
-    ev = login("ravi.e").chat("Who is the managing director of MRPL?")
+    # company-level facts: top management only (need-to-know); an engineer is told politely instead
+    ev = login("director.md").chat("Who is the managing director of MRPL?")
     assert any("Kamath" in f["value"] for f in ev["facts"]["facts"])
+    ev = login("ravi.e").chat("Who is the managing director of MRPL?")
+    assert "facts" not in ev and ev["guard"]["category"] == "company_restricted"
 
 
 # ------------------------------------------------------------------ guardrails
@@ -556,6 +561,42 @@ def test_microphone_allowed_for_the_app_only(app_client):
 
 def test_features_status_for_home_screen(login):
     a = login("admin").get("/api/features").json()
-    assert set(a) == {"vision", "voice", "can_manage"} and a["can_manage"] is True
+    assert set(a) == {"vision", "voice", "gpu", "downloadable", "can_manage"} and a["can_manage"] is True
+    assert a["downloadable"] is False  # a developer copy has no installed.json: nothing can be downloaded into it
     assert isinstance(a["vision"]["installed"], bool) and isinstance(a["voice"]["installed"], bool)
-    assert login("ravi.e").get("/api/features").json()["can_manage"] is False  # employees are never offered downloads
+    e = login("ravi.e").get("/api/features").json()
+    assert e["can_manage"] is False and "models" not in e["vision"]  # employees are never offered downloads
+
+
+def test_photo_ability_never_offered_when_a_model_can_already_see(login, monkeypatch):
+    """A vision model from Ollama (gemma3) or LM Studio already sees photos: the home screen must not offer the download,
+    and a photo answered by a text-only model must say "switch model", not "add the ability"."""
+    from app import chat, engine
+
+    async def ollama_with(models):
+        async def probe(eid):
+            return {"model_info": [{"id": m, "vision": True} for m in models]} if eid == "ollama" else {}
+        return probe
+
+    a = login("admin")
+    # 1) nothing on this computer can see photos -> offer the add-on; photo note asks to add it
+    monkeypatch.setattr(engine, "vision_models_on_disk", lambda: [])
+    monkeypatch.setattr(engine, "probe", asyncio.run(ollama_with([])))
+    f = a.get("/api/features").json()["vision"]
+    assert f == {"installed": False, "active": False, "loaded": False, "models": []}
+    ph = a.post("/api/attachments", files={"file": ("p.jpg", _photo_bytes(), "image/jpeg")}).json()
+    c = a.post("/api/chats", json={}).json()
+    ev = _events(a.post(f"/api/chats/{c['id']}/messages", json={"content": "what is this", "images": [ph["id"]]}).text)
+    assert ev["photo"]["note"] == chat.NOTE_NOT_ADDED
+    # 2) gemma3 in Ollama can see photos (not loaded): nothing to download; the note says to switch model
+    monkeypatch.setattr(engine, "probe", asyncio.run(ollama_with(["gemma3:4b"])))
+    f = a.get("/api/features").json()["vision"]
+    assert f["installed"] is True and f["active"] is False and f["models"] == ["gemma3:4b (Ollama)"]
+    ev = _events(a.post(f"/api/chats/{c['id']}/regenerate", json={}).text)
+    assert ev["photo"]["note"] == chat.NOTE_OTHER_MODEL
+    # 3) the loaded model sees photos (e.g. Ollama gemma3, no image module on disk): installed and active
+    monkeypatch.setattr(engine, "probe", asyncio.run(ollama_with([])))
+    monkeypatch.setattr(engine.state, "status", "ready")
+    monkeypatch.setattr(engine.state, "vision", True)
+    f = a.get("/api/features").json()["vision"]
+    assert f["installed"] is True and f["active"] is True

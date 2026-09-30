@@ -7,7 +7,8 @@ import { useT } from '../../lib/i18n';
 import { sourceElId } from './types';
 import { AccessRequestDialog } from './AccessRequestDialog';
 
-export function SourcesRow({ msgId, sources }: { msgId: string; sources: Source[] }) {
+/** showScore: the search match score (a technical detail for administrators). */
+export function SourcesRow({ msgId, sources, showScore = true }: { msgId: string; sources: Source[]; showScore?: boolean }) {
   const nav = useNavigate();
   const t = useT();
   if (!sources?.length) return null;
@@ -25,7 +26,7 @@ export function SourcesRow({ msgId, sources }: { msgId: string; sources: Source[
             <div className="flex items-center gap-1.5">
               <span className="rounded bg-cyan/15 px-1.5 font-mono text-[10.5px] font-semibold text-cyan">{s.id}</span>
               <span className="truncate font-mono text-[11px] text-muted">{s.doc_number}</span>
-              <span className="ml-auto font-mono text-[10.5px] text-faint">{typeof s.score === 'number' ? s.score.toFixed(2) : ''}</span>
+              {showScore && <span className="ml-auto font-mono text-[10.5px] text-faint">{typeof s.score === 'number' ? s.score.toFixed(2) : ''}</span>}
             </div>
             <div className="mt-1 line-clamp-1 font-medium text-[12.5px] group-hover:text-cyan">{s.title}</div>
             <div className="mt-1 flex flex-wrap items-center gap-1">

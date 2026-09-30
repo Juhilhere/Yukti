@@ -16,7 +16,21 @@ type AuthCtx = {
   logout: (all?: boolean) => Promise<void>;
   refresh: () => Promise<Me | null>;
   can: (perm?: string | string[]) => boolean;
+  /**
+   * Need-to-know check: true only when the user's own roles grant the permission. Unlike can(), the IT 'admin' role is
+   * NOT a pass for everything here (used for company-level information, which is for top management only).
+   */
+  has: (perm: string | string[]) => boolean;
+  /** Sees the computer's hardware, AI engine and build details (status bar): 'admin' or 'models.manage'. */
+  seesSystem: boolean;
+  /** Sees the technical details of an answer (router, guardrail, speed, tokens, engine): 'admin' or 'ai.settings'. */
+  seesAnswerDetails: boolean;
 };
+
+/** Inbox page: own access requests and grants (everyone who may request access), plus findings for roles that handle them. */
+export const INBOX_PERMS = ['inbox', 'access.request', 'findings.view'];
+/** The findings list (same rule as the server's /api/findings). */
+export const FINDINGS_PERMS = ['findings.view', 'inbox'];
 
 const Ctx = createContext<AuthCtx | null>(null);
 
@@ -119,11 +133,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return list.some((p) => perms.includes(p) || perms.some((x) => x.endsWith('.*') && p.startsWith(x.slice(0, -1))));
   }, [me]);
 
+  const has = useCallback((perm: string | string[]) => {
+    const perms = me?.permissions ?? [];
+    const list = Array.isArray(perm) ? perm : [perm];
+    return list.some((p) => perms.includes(p) || perms.includes('*') || perms.some((x) => x.endsWith('.*') && p.startsWith(x.slice(0, -1))));
+  }, [me]);
+
   const perms = me?.permissions ?? [];
+  const seesSystem = perms.includes('admin') || perms.includes('*') || perms.includes('models.manage');
+  const seesAnswerDetails = perms.includes('admin') || perms.includes('*') || perms.includes('ai.settings');
   const isLlmAdmin = perms.includes('admin') || perms.includes('*') || perms.includes('models.manage') || perms.includes('ai.settings');
   const mustChangePassword = !!me && (pwForced || !!me.user?.must_change_password);
-  const value = useMemo(() => ({ me, status, login, logout, refresh, can, isLlmAdmin, mustChangePassword }),
-    [me, status, login, logout, refresh, can, isLlmAdmin, mustChangePassword]);
+  const value = useMemo(() => ({ me, status, login, logout, refresh, can, has, seesSystem, seesAnswerDetails, isLlmAdmin, mustChangePassword }),
+    [me, status, login, logout, refresh, can, has, seesSystem, seesAnswerDetails, isLlmAdmin, mustChangePassword]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

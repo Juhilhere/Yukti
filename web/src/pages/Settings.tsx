@@ -24,7 +24,7 @@ function useNow(ms = 1000) {
 
 export default function Settings() {
   const st = useSettings();
-  const { me } = useAuth();
+  const { me, seesAnswerDetails } = useAuth();
   const t = useT();
   const now = useNow();
   const u = me?.user;
@@ -43,7 +43,8 @@ export default function Settings() {
         <Card title={t('settings.app')} icon={<Monitor size={14} className="text-cyan" />} bodyClass="px-3 py-1 divide-y divide-border">
           <Row title={t('account.language')} hint="English / हिंदी / ಕನ್ನಡ"><LangSwitcher /></Row>
           <Row title={t('settings.fullWidth')} hint={t('settings.fullWidth.hint')}><Toggle checked={st.chatFullWidth} onChange={(v) => setSettings({ chatFullWidth: v })} /></Row>
-          <Row title={t('settings.stats')} hint={t('settings.stats.hint')}><Toggle checked={st.showStats} onChange={(v) => setSettings({ showStats: v })} /></Row>
+          {/* speed figures under each answer are shown only to administrators (everyone else has a Details button) */}
+          {seesAnswerDetails && <Row title={t('settings.stats')} hint={t('settings.stats.hint')}><Toggle checked={st.showStats} onChange={(v) => setSettings({ showStats: v })} /></Row>}
           <Row title={t('settings.enter')} hint={t('settings.enter.hint')}><Toggle checked={st.sendWithEnter} onChange={(v) => setSettings({ sendWithEnter: v })} /></Row>
         </Card>
 
@@ -64,7 +65,10 @@ export default function Settings() {
                 <div><div className="label mb-1">{t('login.username')}</div><span className="font-mono">{u.username}</span></div>
                 <div><div className="label mb-1">{t('settings.roles')}</div><div className="flex flex-wrap gap-1">{u.roles.map((r) => <Badge key={r} tone="amber" mono>{roleLabel(r)}</Badge>)}</div></div>
                 <div className="col-span-2"><div className="label mb-1">{t('settings.assetScopes')}</div><div className="flex flex-wrap gap-1">{u.asset_scopes.length ? u.asset_scopes.map((r) => <Badge key={r} tone="cyan" mono>{r}</Badge>) : <span className="text-muted">—</span>}</div></div>
-                <div className="col-span-2"><div className="label mb-1">{t('settings.permissions')}</div><div className="flex flex-wrap gap-1">{(me?.permissions ?? []).map((p) => <Badge key={p} mono tone="muted">{p}</Badge>)}</div></div>
+                {/* raw permission codes help administrators only; everyone else sees their roles above */}
+                {seesAnswerDetails && (
+                  <div className="col-span-2"><div className="label mb-1">{t('settings.permissions')}</div><div className="flex flex-wrap gap-1">{(me?.permissions ?? []).map((p) => <Badge key={p} mono tone="muted">{p}</Badge>)}</div></div>
+                )}
                 <div className="col-span-2">
                   <div className="label mb-1">{t('settings.grants')}</div>
                   {(me?.grants ?? []).length === 0 ? <span className="text-muted">{t('common.none')}</span> : (

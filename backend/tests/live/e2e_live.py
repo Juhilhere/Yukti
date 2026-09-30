@@ -1,11 +1,12 @@
 """End-to-end API test for Yukti v0.2 — run against a live server:  cd backend && uv run python tests/live/e2e_live.py"""
 import json
+import os
 import sys
 import time
 
 import httpx
 
-B = "http://127.0.0.1:8000"
+B = os.environ.get("YUKTI_TEST_URL", "http://127.0.0.1:8000")
 FAILS: list[str] = []
 
 def wait_ready(timeout: float = 900) -> None:
@@ -227,7 +228,9 @@ lb = a.post("/api/admin/laya/benchmark", json={"n": 3})
 check("laya benchmark measured", lb.status_code == 200 and lb.json().get("llm_router_avg_ms", 0) > 0, lb.text)
 check("import dirs", "dirs" in a.get("/api/admin/models/import-dirs").json())
 check("import bad path rejected", a.post("/api/admin/models/import", json={"path": "C:/nope.gguf"}).status_code == 422)
-check("company page data", a.get("/api/company").json().get("source_count", 0) > 100)
+# need-to-know: company-level information is for top management only (not even the IT administrator)
+check("company page data for top management", session("director.md", "Kavya@2026").get("/api/company").json().get("source_count", 0) > 100)
+check("company page refused to the IT admin", a.get("/api/company").status_code == 403)
 print()
 print("RESULT:", "ALL PASS" if not FAILS else f"{len(FAILS)} FAILED: {FAILS}")
 sys.exit(1 if FAILS else 0)

@@ -66,6 +66,11 @@ def _gpu_free_mb() -> int:
         return 0
 
 
+def gpu_installed() -> bool:
+    """The GPU voice recogniser and its model are installed on a PC with an NVIDIA card (whether or not memory is free now)."""
+    return bool(_first(BIN["gpu"]) and _model("gpu") and has_nvidia_gpu())
+
+
 def choose() -> dict[str, Any]:
     """Which recogniser this computer can run: {'device', 'binary', 'model', 'model_name'} or {'reason'}."""
     if _first(BIN["gpu"]) and _model("gpu") and has_nvidia_gpu() and (_S.device == "gpu" or _gpu_free_mb() >= 1200):
@@ -191,7 +196,7 @@ def check_wav(data: bytes) -> tuple[float, float]:
     if dur > MAX_S + 0.5:
         raise SpeechError(413, "too_long", "Recordings can be at most 60 seconds long.")
     if dur < 0.3:
-        raise SpeechError(422, "too_short", "The recording is too short. Hold the microphone button and speak.")
+        raise SpeechError(422, "too_short", "The recording is too short. Press Speak, say your question, then press Done.")
     import numpy as np
     x = np.frombuffer(frames, dtype=np.int16).astype(np.float32) / 32768.0
     return dur, float(np.sqrt(np.mean(x * x))) if len(x) else 0.0
@@ -199,7 +204,46 @@ def check_wav(data: bytes) -> tuple[float, float]:
 
 def _clean(text: str) -> str:
     text = re.sub(r"\[[^\]]*\]|\([^)]*(music|noise|silence|applause|blank)[^)]*\)", " ", text, flags=re.I)  # [BLANK_AUDIO], (music)
+    # a character cut in half at the recogniser's output limit arrives as U+FFFD: never show it
+    text = text.replace("�", "")
     return re.sub(r"\s+", " ", text).strip()
+
+
+# Whisper writes at most ~224 tokens per 30-second window. Hindi and especially Kannada need many tokens per word, so a
+# long sentence was cut off in the middle (FLEURS Kannada, 26 s: the last third was missing and ended in a broken
+# character). Speech in those languages is therefore recognised in pieces of at most CHUNK_S seconds, cut at pauses.
+CHUNK_S = 10.0
+
+
+def split_wav(data: bytes, max_s: float = CHUNK_S) -> list[bytes]:
+    """16 kHz mono 16-bit WAV -> WAV pieces of at most `max_s` seconds, each cut at the quietest moment of its last 40%."""
+    import numpy as np
+    with wave.open(io.BytesIO(data)) as w:
+        sr = w.getframerate()
+        x = np.frombuffer(w.readframes(w.getnframes()), dtype=np.int16)
+    n_max = int(max_s * sr)
+    if len(x) <= n_max:
+        return [data]
+    hop = int(0.02 * sr)
+    cuts, start = [0], 0
+    while len(x) - start > n_max:
+        lo, hi = start + int(0.6 * n_max), start + n_max
+        seg = x[lo:hi].astype(np.float32)
+        frames = len(seg) // hop
+        energy = (seg[: frames * hop].reshape(frames, hop) ** 2).mean(axis=1) if frames else np.zeros(1)
+        start = lo + int(np.argmin(energy)) * hop + hop // 2
+        cuts.append(start)
+    cuts.append(len(x))
+    out = []
+    for a, b in zip(cuts, cuts[1:]):
+        buf = io.BytesIO()
+        with wave.open(buf, "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(sr)
+            w.writeframes(x[a:b].tobytes())
+        out.append(buf.getvalue())
+    return out
 
 
 # Whisper's language guess, folded onto Yukti's three languages. Whisper often hears Kannada as Tamil/Telugu and Hindi
@@ -251,8 +295,12 @@ async def transcribe(s: Subject, data: bytes, language: str) -> dict[str, Any]:
     heard = str(det.get("detected_language") or det.get("language") or "").lower()
     heard = {"english": "en", "hindi": "hi", "kannada": "kn"}.get(heard, heard[:2])
     lang = pick_language(det.get("language_probabilities") or {heard: 1.0}, preferred)
-    out = await _recognise(data, lang, vocabulary(s) if lang == "en" else "")
-    text = _clean(str(out.get("text") or ""))
+    if lang == "en":
+        out = await _recognise(data, lang, vocabulary(s))
+        text = _clean(str(out.get("text") or ""))
+    else:
+        parts = [_clean(str((await _recognise(piece, lang, "")).get("text") or "")) for piece in split_wav(data)]
+        text = " ".join(p for p in parts if p and p.lower() not in HALLUCINATIONS)
     if text.lower() in HALLUCINATIONS and rms < 0.02:
         text = ""
     return {"text": text, "language": lang, "duration_s": round(dur, 1), "elapsed_s": round(time.time() - t0, 2),

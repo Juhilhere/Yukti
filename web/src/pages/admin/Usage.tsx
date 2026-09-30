@@ -144,7 +144,42 @@ export default function UsageHealth() {
             ]} />
           </Card>
         </div>
+        <RecentProblems />
       </>}
     </div>
+  );
+}
+
+type Problem = { at: string; level: string; area: string; message: string; ref: string | null };
+
+/** The newest warnings and errors from the server's local journal (logs\errors.log), with the reference users see. */
+function RecentProblems() {
+  const t = useT();
+  const [onlyErrors, setOnlyErrors] = useState(false);
+  const q = useQuery({
+    queryKey: ['admin', 'problems', onlyErrors],
+    queryFn: () => api.get<{ items: Problem[]; folder: string }>(`/api/admin/problems?level=${onlyErrors ? 'ERROR' : 'WARNING'}`),
+    refetchInterval: 15_000,
+  });
+  const items = q.data?.items ?? [];
+  return (
+    <Card title={t('admin.problems.title')} icon={<ShieldAlert size={13} className="text-amber" />}
+      actions={<label className="flex items-center gap-1.5 text-[11.5px] text-muted"><input type="checkbox" checked={onlyErrors} onChange={(e) => setOnlyErrors(e.target.checked)} />{t('admin.problems.onlyErrors')}</label>}>
+      {q.error ? <ErrorBox error={q.error} onRetry={() => q.refetch()} /> : items.length === 0 ? (
+        <EmptyState title={t('admin.problems.none')} />
+      ) : (
+        <div className="max-h-[340px] overflow-auto font-mono text-[11.5px]">
+          {items.map((p, i) => (
+            <div key={i} className="flex gap-2 border-t border-border py-1 first:border-t-0">
+              <span className="shrink-0 text-faint">{p.at}</span>
+              <span className={cx('shrink-0 font-semibold', p.level === 'ERROR' ? 'text-danger' : 'text-amber')}>{p.ref ?? p.level}</span>
+              <span className="shrink-0 text-cyan">{p.area}</span>
+              <span className="min-w-0 break-words">{p.message.split('\n')[0]}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {q.data?.folder && <div className="mt-2 text-[11px] text-faint">{t('admin.problems.folder', { folder: q.data.folder })}</div>}
+    </Card>
   );
 }

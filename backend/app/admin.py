@@ -33,6 +33,7 @@ MODELS_DIR = USER_MODELS
 ROLE_DESC = {
     "engineer": "Plant engineer / technician — asks questions, uploads documents in own scope",
     "dept_manager": "Head of Department (HOD) — the only role that adds/removes documents (own department), approves access requests",
+    "executive": "Top management (MD, Chairman, Directors) — company-level information incl. finances, reads across departments",
     "plant_manager": "Plant / refinery head — approvals, escalations, audit, production view",
     "planner": "Production planner — production intelligence (view + edit model)",
     "auditor": "Internal auditor — read-only audit log and chain verification",

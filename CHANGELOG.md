@@ -26,6 +26,56 @@ All notable changes to Yukti are documented here. The format follows [Keep a Cha
   - Yukti restarts by itself when needed. Add-ons stay on across updates.
   - On an employee PC connected to a plant server, it explains that add-ons are added on the server computer.
 
+- **Unrelated questions are declined politely.** Laya has a new *off-topic* class and now reads Hindi and Kannada script.
+  Clearly unrelated questions (poems, sport, recipes, homework …) with no plant word or equipment tag get a short
+  translated note without calling the AI, and the AI's instructions decline the rest. Plant questions are never refused
+  (tested in English, Hindi and Kannada).
+- **Local journal of everything that happens and every problem:**
+  - The server's logs folder gets `yukti.log` (activity) and `errors.log`. Every server error shows the user a reference such as `E-7F3A2C`, and the same reference is in the log.
+  - Problems met by the web page are recorded too.
+  - *Admin → Usage & health* has a **Recent problems** list.
+  - The desktop app keeps `errors.log` next to `desktop.log`.
+  - Nothing leaves the computer; no passwords or question texts are written.
+
+- **Need-to-know for company information.**
+  - A new *Top management* role (`executive`: MD, Chairman, Directors; demo account `director.md`) is the only one that sees company-level information: the Company page and company facts in chat (finances, strategy, company-wide figures).
+  - Before, every signed-in user could see MRPL's public financial figures.
+  - Engineers, heads of department, the Chief GM and IT administrators get a polite translated note instead. This is enforced on the server.
+  - Plant questions that merely mention a department, a capacity or a history are not affected.
+- **Faster, more reliable AI start-up when other programs use video memory.** Auto-fit now chooses how many layers go on the GPU; forcing "all layers" made loading take minutes or fail. With voice input installed, about 2 GB of video memory stays free, so the fast GPU voice recogniser fits.
+
+- **A tidier screen for each role.**
+  - People see only the pages they can use; typing the address of another page shows a friendly "no access" page.
+  - Employees see the answer, its sources, the photo card and "request access". Technical details (routing, guardrail codes, token counts, speed, engine) sit behind a small **Details** button.
+  - The home screen shows at most 4 suggestions that fit the person's job.
+  - The hardware status bar, chat settings panel and permission codes are for administrators; the chat settings panel is closed by default.
+  - The top bar no longer overflows at 1200 px.
+
+### Fixed (questions and search)
+- 7 of 130 plant questions in an independent test set (English, Hinglish, Hindi, Kannada) were wrongly declined as
+  "not plant work". Examples: code about work-order data, "phone number for the instrumentation team", audit-report
+  access in Kannada, and the greeting "kaise ho". Now none are, and the 130 questions are a permanent test.
+- Document search ignored Hindi and Kannada words entirely (only Latin letters were kept). Documents written in those
+  languages are now found; common filler words are skipped.
+
+### Fixed (desktop app)
+- The app could attach to another Yukti installation's server on the same port (the installation check never ran).
+- Yukti could open off-screen, e.g. after a second monitor was disconnected: it was in the taskbar but never appeared. A single click on the tray icon now opens it.
+- A crashed or frozen page is reloaded by itself. A server that stops unexpectedly is restarted by itself; only a repeated failure is shown.
+
+### Fixed (photos, voice, add-ons)
+- **Add-on screen:** the Pause button and progress bar no longer flicker.
+- **Without internet:** the add-on screen shows what is already added, can remove it, and retries by itself. It no longer waits forever on a network that drops everything.
+- **Photo add-on:** never offered when a model that sees photos is already there (LM Studio, Ollama, or loaded). If the loaded model cannot see, the chat suggests switching to one that can.
+- **Where add-ons are offered:** the "Add" buttons appear only where adding is possible (the server computer, installed with Yukti-Setup).
+- **Microphone button:** follows the voice add-on being added or removed, without reloading the page.
+- **Long Hindi/Kannada speech:** no longer cut off; it is recognised in pieces cut at pauses.
+- **Removing an add-on:** asks for confirmation.
+- **Other fixes:**
+  - Reloading during a download keeps its progress.
+  - Add-on sizes are the same on every screen.
+  - An update of an installed add-on shows "Update" instead of offering it again.
+
 ### Fixed (sign-in and two-step sign-in)
 - Wrong two-step codes now count towards the account lockout (before, a code could be guessed without limit).
 - Codes are accepted as the phone shows them (`028 742`), pasting works, recovery codes work in any case and without the dash.

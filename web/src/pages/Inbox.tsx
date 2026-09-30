@@ -6,7 +6,7 @@ import { Modal } from '../components/Modal';
 import { useT } from '../lib/i18n';
 import { api, errMsg } from '../lib/api';
 import type { AccessRequest, Finding, Grant } from '../lib/types';
-import { useAuth } from '../lib/auth';
+import { FINDINGS_PERMS, useAuth } from '../lib/auth';
 import { Badge, Card, EmptyState, ErrorBox, PageHeader, ProvenanceBadges, QueryState, Spinner, StatusChip, Tabs, toneFor } from '../components/ui';
 import { toast } from '../components/Toast';
 import { AccessRequestDialog } from '../components/chat/AccessRequestDialog';
@@ -19,10 +19,13 @@ export default function Inbox() {
   // deep links from notifications: /inbox?tab=access (or requests / grants / findings)
   const [params] = useSearchParams();
   const want = params.get('tab');
-  const initial: Tab = want === 'access' || want === 'requests' ? 'requests' : want === 'grants' ? 'grants' : 'findings';
+  // findings are for people whose role handles them; everyone else sees only their access requests and grants
+  const { can } = useAuth();
+  const seesFindings = can(FINDINGS_PERMS);
+  const initial: Tab = want === 'access' || want === 'requests' ? 'requests' : want === 'grants' ? 'grants' : seesFindings ? 'findings' : 'requests';
   const [tab, setTab] = useState<Tab>(initial);
   useEffect(() => { setTab(initial); }, [want]); // eslint-disable-line react-hooks/exhaustive-deps
-  const findings = useQuery({ queryKey: ['findings'], queryFn: () => api.get<Finding[]>('/api/findings') });
+  const findings = useQuery({ queryKey: ['findings'], queryFn: () => api.get<Finding[]>('/api/findings'), enabled: seesFindings });
   const ars = useQuery({ queryKey: ['access-requests'], queryFn: () => api.get<{ mine: AccessRequest[]; to_approve: AccessRequest[] }>('/api/access-requests') });
   const grants = useQuery({ queryKey: ['grants'], queryFn: () => api.get<Grant[]>('/api/grants') });
 
@@ -35,12 +38,12 @@ export default function Inbox() {
     <div className="flex h-full flex-col">
       <PageHeader icon={<InboxIcon size={18} />} title={t('page.inbox')} subtitle={t('page.inbox.sub')} />
       <Tabs className="px-4" value={tab} onChange={setTab} tabs={[
-        { id: 'findings', label: t('inbox.tab.findings'), count: openFindings },
+        ...(seesFindings ? [{ id: 'findings' as const, label: t('inbox.tab.findings'), count: openFindings }] : []),
         { id: 'requests', label: t('inbox.tab.requests'), count: pendingAr },
         { id: 'grants', label: t('inbox.tab.grants'), count: activeGrants },
       ]} />
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
-        {tab === 'findings' && <FindingsTab q={findings} />}
+        {tab === 'findings' && seesFindings && <FindingsTab q={findings} />}
         {tab === 'requests' && <RequestsTab q={ars} />}
         {tab === 'grants' && <GrantsTab q={grants} />}
       </div>

@@ -125,3 +125,60 @@ def test_speech_language_folds_whisper_guesses_onto_yukti_languages():
     assert pick_language({"ur": 0.6, "hi": 0.3}, "en") == "hi"          # Hindi heard as Urdu
     assert pick_language({"en": 0.999, "hi": 0.001}, "kn") == "en"      # English with a Kannada screen stays English
     assert pick_language({}, "hi") == "hi" and pick_language({}, "") == "en"
+
+
+def _wav(samples) -> bytes:
+    import io
+    import wave
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(16000)
+        w.writeframes(samples.astype("int16").tobytes())
+    return buf.getvalue()
+
+
+def test_speech_long_recordings_are_split_at_pauses():
+    """Whisper writes at most ~224 tokens per window: long Kannada/Hindi speech was cut off mid-sentence."""
+    import io
+    import wave
+
+    import numpy as np
+    from app.speech import CHUNK_S, split_wav
+    rng = np.random.default_rng(1)
+    sr = 16000
+    # 26 s of "speech" with a short pause every 4 s (at 4.0, 8.0, 12.0 ... s)
+    x = (rng.standard_normal(26 * sr) * 3000).astype(np.int16)
+    for p in range(4, 26, 4):
+        x[p * sr - 1600:p * sr + 1600] = 0
+    parts = split_wav(_wav(x))
+    lens = []
+    for p in parts:
+        with wave.open(io.BytesIO(p)) as w:
+            assert (w.getnchannels(), w.getsampwidth(), w.getframerate()) == (1, 2, sr)
+            lens.append(w.getnframes())
+    assert len(parts) >= 3 and sum(lens) == len(x)          # nothing lost or duplicated
+    assert all(n <= CHUNK_S * sr for n in lens)
+    # every cut lands inside a pause, not in the middle of a word
+    cut = 0
+    for n in lens[:-1]:
+        cut += n
+        assert abs(cut - round(cut / sr / 4) * 4 * sr) <= 1600, cut / sr
+    short = _wav(x[: 5 * sr])
+    assert split_wav(short) == [short]
+
+
+def test_speech_transcript_drops_broken_characters():
+    from app.speech import _clean
+    assert _clean("ಮಸಾಲಗಳು ಕಡ\ufffd") == "ಮಸಾಲಗಳು ಕಡ"
+    assert _clean("[BLANK_AUDIO] pump  A2 ") == "pump A2"
+
+
+def test_gpu_layers_left_to_auto_fit_unless_set():
+    from app.llm_params import llama_args
+    a = llama_args({}, "m.gguf", None)
+    assert "-ngl" not in a and a[a.index("--fit") + 1] == "on"          # default: llama.cpp fits the layers to free VRAM
+    assert llama_args({"gpu_layers": 20}, "m.gguf", None)[llama_args({"gpu_layers": 20}, "m.gguf", None).index("-ngl") + 1] == "20"
+    b = llama_args({"gpu_layers": 99, "fit": "off"}, "m.gguf", None)
+    assert b[b.index("-ngl") + 1] == "99"                                 # fit off: exactly what the admin asked for

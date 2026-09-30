@@ -20,7 +20,7 @@ function LoadedCard() {
   const qc = useQueryClient();
   const unload = useMutation({
     mutationFn: () => api.post('/api/models/unload'),
-    onSuccess: () => { toast.success(t('admin.models.unloaded')); qc.invalidateQueries({ queryKey: qk.loaded }); },
+    onSuccess: () => { toast.success(t('admin.models.unloaded')); qc.invalidateQueries({ queryKey: qk.loaded }); qc.invalidateQueries({ queryKey: ['features'] }); },
     onError: (e) => toast.error(t('admin.models.unloadFailed'), String((e as Error).message)),
   });
   const l = q.data;

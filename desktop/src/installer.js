@@ -42,12 +42,21 @@ async function freeBytes(dir) {
 // When the app was built with the publisher's public key, the manifest must carry a valid Ed25519 signature
 // (manifest.json.sig, made by ops/sign-manifest.js). The manifest pins the SHA-256 of every file, so a verified
 // signature covers the whole download chain.
-async function fetchManifest(url, publicKey) {
-  const r = await fetch(url, { cache: 'no-store' });
+// A network that silently drops packets (firewall, captive portal) would otherwise leave the screen waiting for ever.
+const MANIFEST_TIMEOUT_MS = 20000;
+async function fetchManifest(url, publicKey, timeoutMs = MANIFEST_TIMEOUT_MS) {
+  // one quick second try: a server that closes the connection after each answer (HTTP/1.0 style, some proxies) makes the
+  // signature request right after the manifest fail at random with "fetch failed" (reused, already closed connection)
+  const once = (u) => fetch(u, { cache: 'no-store', signal: AbortSignal.timeout(timeoutMs) });
+  const get = (u) => once(u).catch((e) => (e && e.name === 'TimeoutError' ? Promise.reject(e) : once(u))).catch((e) => {
+    throw new Error(e && e.name === 'TimeoutError' ? `fetch failed: no answer from ${u} within ${Math.round(timeoutMs / 1000)} s`
+      : `fetch failed: ${e && e.message}${e && e.cause && e.cause.code ? ' (' + e.cause.code + ')' : ''}`);
+  });
+  const r = await get(url);
   if (!r.ok) throw new Error(`Cannot download manifest (${r.status}) from ${url}`);
   const raw = Buffer.from(await r.arrayBuffer());
   if (publicKey) {
-    const sr = await fetch(url + '.sig', { cache: 'no-store' });
+    const sr = await get(url + '.sig');
     if (!sr.ok) throw new Error(`Release signature missing (${sr.status}) at ${url}.sig - refusing to install an unsigned release`);
     const sig = Buffer.from((await sr.text()).trim(), 'base64');
     let ok = false;
@@ -96,6 +105,21 @@ function checkDest(dest) {
   }
 }
 
+/**
+ * Add-ons as recorded on this computer (no internet needed): {feature: {on, present}}. present = it was added and every
+ * file it brought is still there.
+ */
+function localFeatures(dest, state) {
+  const out = {};
+  const files = (state && state.featureFiles) || {};
+  for (const f of new Set([...((state && state.features) || []), ...Object.keys(files)])) {
+    const on = ((state && state.features) || []).includes(f);
+    const list = files[f] || [];
+    out[f] = { on, present: on && list.length > 0 && list.every((rel) => fs.existsSync(path.resolve(dest, rel))) };
+  }
+  return out;
+}
+
 async function readState(dest) {
   try { return JSON.parse(await fsp.readFile(path.join(dest, 'installed.json'), 'utf8')); } catch { return { version: null, artifacts: {} }; }
 }
@@ -130,13 +154,18 @@ async function plan(o) {
       needed, installed, partialBytes });
   }
   // per add-on: what it costs on THIS computer (GPU-only parts are left out without an NVIDIA GPU)
+  // installed: every part is there in THIS release's version; present: it was added and its files are still there (it
+  // works), even if a newer version of it is waiting to be downloaded - such an add-on must never be offered as "Add"
   const featureInfo = {};
+  const local = localFeatures(dest, state);
   for (const a of m.artifacts) {
     if (!a.feature || (a.requires === 'nvidia' && !nvidia)) continue;
-    const f = featureInfo[a.feature] || (featureInfo[a.feature] = { size: 0, on: features.has(a.feature), installed: true });
+    const f = featureInfo[a.feature] || (featureInfo[a.feature] = { size: 0, sizeTodo: 0, on: features.has(a.feature), installed: true,
+      present: !!(local[a.feature] && local[a.feature].present) });
     f.size += a.size;
-    if (!(state.artifacts[a.name] === a.sha256 && fs.existsSync(path.join(dest, a.check || a.dest)))) f.installed = false;
+    if (!(state.artifacts[a.name] === a.sha256 && fs.existsSync(path.join(dest, a.check || a.dest)))) { f.installed = false; f.sizeTodo += a.size; }
   }
+  for (const f of Object.values(featureInfo)) if (f.installed && f.on) f.present = true;
   const todo = artifacts.filter((a) => a.needed && !a.installed);
   const totalBytes = todo.reduce((s, a) => s + a.size, 0);
   let probe = dest;
@@ -296,4 +325,6 @@ async function installedVersion(dest) {
   try { return JSON.parse(await fsp.readFile(path.join(dest, 'installed.json'), 'utf8')); } catch { return null; }
 }
 
-module.exports = { install, plan, removeFeature, fetchManifest, installedVersion, hasNvidiaGpu, freeBytes, sha256File };
+async function localFeaturesAt(dest) { return localFeatures(path.resolve(dest), await readState(path.resolve(dest))); }
+
+module.exports = { install, plan, removeFeature, fetchManifest, installedVersion, localFeatures: localFeaturesAt, hasNvidiaGpu, freeBytes, sha256File };

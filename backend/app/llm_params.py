@@ -175,7 +175,11 @@ def llama_args(cfg: dict[str, Any], model_path: str, draft_path: str | None) -> 
         a.extend([flag, str(v)])
 
     add("-c", int(c["ctx_size"]))
-    add("-ngl", int(c["gpu_layers"]))
+    # "all layers" (99) with auto-fit on: leave the layer count to llama.cpp, which then keeps as many layers on the GPU as
+    # fit next to what other programs use. Forcing 99 made it abort fitting ("n_gpu_layers already set by user") and
+    # load very slowly or fail when a browser, game or another AI tool holds video memory.
+    if not (int(c["gpu_layers"]) >= 99 and c["fit"] == "on"):
+        add("-ngl", int(c["gpu_layers"]))
     add("--fit", c["fit"])
     if int(c["main_gpu"]):
         add("-mg", int(c["main_gpu"]))

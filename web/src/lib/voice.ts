@@ -1,7 +1,7 @@
 // Voice input: microphone -> PCM (ScriptProcessorNode; AudioWorklet and blob: URLs are blocked by the CSP)
 // -> windowed-sinc low-pass + resample to 16 kHz mono -> 16-bit PCM WAV -> POST /api/speech/transcribe.
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from './api';
 import { getLang, tr } from './i18n';
 import type { SpeechStatus, Transcript } from './types';
@@ -12,7 +12,9 @@ export const TARGET_RATE = 16000;
 export const useSpeechStatus = () => useQuery({
   queryKey: ['speech', 'status'] as const,
   queryFn: () => api.get<SpeechStatus>('/api/speech/status', { silent: true }),
-  staleTime: 60_000, retry: false, refetchOnWindowFocus: false,
+  // voice can be added or removed on the server computer while this page is open: check again when the window gets
+  // focus, and retry a failed check (e.g. while Yukti restarts) instead of hiding the microphone for good
+  staleTime: 60_000, retry: 2, refetchOnWindowFocus: true,
 });
 
 /** getUserMedia only exists on secure pages (https, localhost, the Yukti app). */
@@ -119,6 +121,7 @@ export function useVoiceInput(onText: (text: string) => void) {
   const startedAt = useRef(0);
   const raf = useRef(0);
   const abort = useRef<AbortController | null>(null);
+  const qc = useQueryClient();
   const onTextRef = useRef(onText);
   onTextRef.current = onText;
   const stateRef = useRef<VoiceState>('idle');
@@ -173,12 +176,14 @@ export function useVoiceInput(onText: (text: string) => void) {
       if ((e as Error)?.name !== 'AbortError') {
         const msg = e instanceof ApiError ? e.message : (e as Error)?.message ?? String(e);
         setError({ title: tr('voice.err.convertFailed'), body: msg });
+        // e.g. voice was removed on the server meanwhile: the microphone button must show that, not stay "ready"
+        if (e instanceof ApiError && e.status === 503) void qc.invalidateQueries({ queryKey: ['speech', 'status'] });
       }
     } finally {
       if (abort.current === ctrl) abort.current = null;
       set('idle');
     }
-  }, [teardown]);
+  }, [teardown, qc]);
 
   const start = useCallback(async () => {
     if (stateRef.current !== 'idle') return;

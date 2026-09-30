@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { useT } from '../lib/i18n';
 import { ADMIN_PERMS } from '../pages/admin/AdminLayout';
-import { useAuth } from '../lib/auth';
+import { FINDINGS_PERMS, INBOX_PERMS, useAuth } from '../lib/auth';
 import { api } from '../lib/api';
 import { uiStore, useLoaded, useSystem, useUI } from '../lib/queries';
 import type { AccessRequest, Alert, Finding, Notification } from '../lib/types';
@@ -20,7 +20,8 @@ import { Badge, Dot, LangSwitcher, MenuItem, Popover, Spinner, Tip } from '../co
 import { ModelLoader, ENGINE_LABEL } from './ModelLoader';
 import { IdleWatcher } from './IdleWatcher';
 
-type NavItem = { to: string; label: string; icon: ReactNode; perm?: string | string[]; badge?: number };
+/** strict: need-to-know page; the IT 'admin' role alone does not show it (see useAuth().has). */
+type NavItem = { to: string; label: string; icon: ReactNode; perm?: string | string[]; strict?: boolean; badge?: number };
 
 function RailLink({ item }: { item: NavItem }) {
   return (
@@ -40,7 +41,9 @@ function RailLink({ item }: { item: NavItem }) {
 }
 
 function useInboxCount(enabled: boolean) {
-  const findings = useQuery({ queryKey: ['findings'], queryFn: () => api.get<Finding[]>('/api/findings'), refetchInterval: 30_000, enabled, retry: false });
+  const { can } = useAuth();
+  // only ask for findings when the role may see them (otherwise the server refuses every 30 s)
+  const findings = useQuery({ queryKey: ['findings'], queryFn: () => api.get<Finding[]>('/api/findings'), refetchInterval: 30_000, enabled: enabled && can(FINDINGS_PERMS), retry: false });
   const ar = useQuery({ queryKey: ['access-requests'], queryFn: () => api.get<{ mine: AccessRequest[]; to_approve: AccessRequest[] }>('/api/access-requests'), refetchInterval: 15_000, enabled, retry: false });
   // findings where the current user can still act (backend computes allowed_actions per user & state)
   const openFindings = (findings.data ?? []).filter((f) => (f.allowed_actions ?? []).some((a) => a !== 'note')).length;
@@ -76,15 +79,15 @@ function UserMenu({ close }: { close: () => void }) {
 }
 
 function Rail() {
-  const { can, me } = useAuth();
+  const { can, has, me } = useAuth();
   const t = useT();
-  const inbox = useInboxCount(!!me);
+  const inbox = useInboxCount(!!me && can(INBOX_PERMS));
   const top: NavItem[] = [
     { to: '/chat', label: t('nav.chat'), icon: <MessageSquare size={18} />, perm: 'chat' },
-    { to: '/company', label: t('nav.company'), icon: <Building2 size={18} /> },
-    { to: '/knowledge', label: t('nav.knowledge'), icon: <BookOpen size={18} /> },
-    { to: '/inbox', label: t('nav.inbox'), icon: <Inbox size={18} />, badge: inbox },
-    { to: '/assets', label: t('nav.assets'), icon: <Wrench size={18} /> },
+    { to: '/company', label: t('nav.company'), icon: <Building2 size={18} />, perm: 'company.view', strict: true },
+    { to: '/knowledge', label: t('nav.knowledge'), icon: <BookOpen size={18} />, perm: 'documents.view' },
+    { to: '/inbox', label: t('nav.inbox'), icon: <Inbox size={18} />, perm: INBOX_PERMS, badge: inbox },
+    { to: '/assets', label: t('nav.assets'), icon: <Wrench size={18} />, perm: 'assets.view' },
     { to: '/production', label: t('nav.production'), icon: <Factory size={18} />, perm: 'production.view' },
   ];
   const bottom: NavItem[] = [
@@ -93,13 +96,14 @@ function Rail() {
     { to: '/settings', label: t('nav.settings'), icon: <Settings size={18} /> },
     { to: '/help', label: t('nav.help'), icon: <HelpCircle size={18} /> },
   ];
+  const allowed = (i: NavItem) => (i.strict && i.perm ? has(i.perm) : can(i.perm));
   const initials = (me?.user.display_name || me?.user.username || '?').split(/\s+/).map((s) => s[0]).slice(0, 2).join('').toUpperCase();
   return (
     <nav className="flex w-14 shrink-0 flex-col items-center gap-1 border-r border-border bg-surface py-2">
       <Tip text={`Yukti — ${t('login.title')}`}><NavLink to="/chat" className="mb-2 mt-0.5"><Logo size={30} /></NavLink></Tip>
-      {top.filter((i) => can(i.perm)).map((i) => <RailLink key={i.to} item={i} />)}
+      {top.filter(allowed).map((i) => <RailLink key={i.to} item={i} />)}
       <div className="flex-1" />
-      {bottom.filter((i) => can(i.perm)).map((i) => <RailLink key={i.to} item={i} />)}
+      {bottom.filter(allowed).map((i) => <RailLink key={i.to} item={i} />)}
       <Popover direction="up" className="!bottom-0 !left-full !mb-0 ml-2 w-64"
         trigger={(_o, toggle) => (
           <button onClick={toggle} className="mt-1 flex h-9 w-9 items-center justify-center rounded-full border border-border-strong bg-cyan/15 text-[12px] font-semibold text-cyan hover:border-cyan">
@@ -150,7 +154,7 @@ function ModelPill() {
   const errored = st?.status === 'error';
   return (
     <button onClick={() => uiStore.openLoader()}
-      className={cx('group flex h-8 min-w-[320px] max-w-[560px] items-center gap-2 rounded-md border px-3 transition-colors',
+      className={cx('group flex h-8 min-w-[260px] max-w-[420px] items-center xl:min-w-[320px] 2xl:max-w-[560px] gap-2 rounded-md border px-3 transition-colors',
         ready ? 'border-border-strong bg-surface-2 hover:border-cyan/60' : 'border-dashed border-amber/60 bg-amber/5 hover:bg-amber/10')}>
       {loading ? <Spinner size={13} /> : <Dot tone={ready ? 'ok' : errored ? 'danger' : 'amber'} pulse={!ready && !errored} />}
       <span className={cx('flex-1 truncate text-left', ready ? 'font-medium' : 'text-amber')}>
@@ -245,7 +249,7 @@ function TopBar() {
       {isLlmAdmin ? <ModelPill /> : <ModelChip />}
       <div className="flex items-center justify-end gap-2">
         <Tip side="bottom" text={offline ? t('shell.offline.onTip') : t('shell.offline.offTip')}>
-          <span className={cx('hidden items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium md:inline-flex',
+          <span className={cx('hidden items-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-medium md:inline-flex',
             offline ? 'border-ok/40 bg-ok/10 text-green-300' : 'border-amber/40 bg-amber/10 text-amber')}>
             <ShieldCheck size={12} /> {offline ? t('shell.offline.on') : t('shell.offline.off')}
           </span>
@@ -255,7 +259,7 @@ function TopBar() {
           <Popover align="right" className="w-64"
             trigger={(open, toggle) => (
               <button onClick={toggle} className={cx('flex items-center gap-2 rounded-md border bg-surface-2 py-0.5 pl-2 pr-1 hover:border-border-strong', open ? 'border-border-strong' : 'border-border')}>
-                <div className="text-right leading-tight">
+                <div className={cx('text-right leading-tight', isLlmAdmin && 'hidden xl:block')}>
                   <div className="max-w-[160px] truncate text-[12px] font-medium">{me.user.display_name}</div>
                   <div className="max-w-[160px] truncate text-[10.5px] text-muted">{me.user.post}</div>
                 </div>
@@ -290,9 +294,9 @@ function StatusBar() {
           <span className="h-1 w-8 overflow-hidden rounded bg-surface-3"><span className={cx('block h-full', ramPct > 85 ? 'bg-danger' : 'bg-cyan')} style={{ width: `${ramPct}%` }} /></span>
         </Item>
         <Item title={s.cpu?.name}><Cpu size={11} /> CPU {Math.round(s.cpu?.util_pct ?? 0)}%</Item>
-        <Item title="GPU">
+        <Item title={s.gpu?.name ?? 'GPU'}>
           <Gauge size={11} />
-          {s.gpu ? <>{s.gpu.name} · VRAM {fmtMB(s.gpu.vram_used_mb)} / {fmtMB(s.gpu.vram_total_mb)} · {Math.round(s.gpu.util_pct ?? 0)}%</> : t('shell.status.noGpu')}
+          {s.gpu ? <><span className="hidden 2xl:inline">{s.gpu.name} · </span>VRAM {fmtMB(s.gpu.vram_used_mb)} / {fmtMB(s.gpu.vram_total_mb)} · {Math.round(s.gpu.util_pct ?? 0)}%</> : t('shell.status.noGpu')}
         </Item>
       </>}
       <Item title={t('shell.status.engineModel')}>
@@ -301,7 +305,7 @@ function StatusBar() {
       </Item>
       {lastGen && <Item title={t('shell.status.lastSpeed')}><Zap size={11} className="text-amber" /> {lastGen.tok_per_s.toFixed(1)} tok/s</Item>}
       <div className="flex-1" />
-      {s?.llama_build && <Item title={t('shell.status.llamaBuild')}>llama.cpp {s.llama_build}</Item>}
+      {s?.llama_build && <span className="hidden xl:contents"><Item title={t('shell.status.llamaBuild')}>llama.cpp {s.llama_build}</Item></span>}
       {s && <Item>Yukti v{s.version}</Item>}
     </footer>
   );
@@ -325,7 +329,7 @@ function Shortcuts() {
 
 export function AppShell() {
   const loc = useLocation();
-  const { isLlmAdmin } = useAuth();
+  const { isLlmAdmin, seesSystem } = useAuth();
   const key = loc.pathname.split('/')[1];
   // the desktop app's Help > Report a problem (and any link to #report-problem) opens the report dialog
   useEffect(() => {
@@ -342,7 +346,9 @@ export function AppShell() {
         <main key={key} className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <ErrorBoundary resetKey={loc.pathname}><Outlet /></ErrorBoundary>
         </main>
-        <StatusBar />
+        {/* computer, engine and build details are for administrators; the top bar already shows everyone that Yukti runs
+            on-premise and offline, and which AI model answers */}
+        {seesSystem && <StatusBar />}
       </div>
       {isLlmAdmin && <ModelLoader />}
       <ReportProblem />

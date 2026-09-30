@@ -26,7 +26,9 @@ TOTP_WINDOW = 2
 LOCK_MINUTES = 5
 
 ROLE_PERMS: dict[str, list[str]] = {
-    "*": ["chat", "documents.view", "assets.view", "access.request", "notifications", "company.view", "feedback"],
+    # need-to-know: company-level information (finances, strategy, company-wide figures) is for top management only
+    "*": ["chat", "documents.view", "assets.view", "access.request", "notifications", "feedback"],
+    "executive": ["company.view", "production.view", "findings.view"],
     "engineer": ["findings.view"],
     "hse": ["findings.view"],
     "contractor": [],

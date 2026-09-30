@@ -126,6 +126,7 @@ export function ModelLoader() {
     } finally {
       setBusy(false);
       void qc.invalidateQueries({ queryKey: qk.loaded });
+      void qc.invalidateQueries({ queryKey: ['features'] });  // "can see photos" depends on the loaded model
     }
   };
 
@@ -135,6 +136,7 @@ export function ModelLoader() {
       await api.post('/api/models/unload', {});
       toast(t('loader.unloaded'));
       await qc.invalidateQueries({ queryKey: qk.loaded });
+      void qc.invalidateQueries({ queryKey: ['features'] });
     } catch (e) { setErr(e); } finally { setBusy(false); }
   };
 

@@ -43,6 +43,7 @@ PERSONAS = [
     ("rajesh.mm", "Rajesh Shenoy", "HOD — Mechanical Maintenance", "Mechanical Maintenance", 2, ["dept_manager", "approver:mechanical", "engineer"], ["*"], "Rajesh@2026"),
     ("sunita.hse", "Sunita Bhandary", "HOD — Health, Safety & Environment", "Health, Safety & Environment", 2, ["dept_manager", "hse"], ["*"], "Sunita@2026"),
     ("contractor.x", "Vendor Technician", "Contract technician (Mechanical)", "Mechanical Maintenance", 0, ["contractor"], ["CDU-1"], "Vendor@2026"),
+    ("director.md", "Kavya Rao", "Managing Director (fictional demo account)", "MD Office", 4, ["executive"], ["*"], "Kavya@2026"),
     ("admin", "Yukti Administrator", "Platform Administrator", "Information Systems (IT/SAP)", 3, ["admin"], [], "Admin@2026"),
 ]
 ON_CALL = {"ravi.e", "suresh.em", "meera.me"}

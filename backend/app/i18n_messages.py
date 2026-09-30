@@ -545,6 +545,12 @@ M("The loaded model cannot see photos, so Yukti answers only from the text it re
   "एडमिन सर्वर वाले कंप्यूटर पर Yukti की होम स्क्रीन से \"फ़ोटो से पूछें\" सुविधा जोड़ सकते हैं।",
   "ಈಗ ಲೋಡ್ ಆಗಿರುವ AI ಮಾದರಿ ಫೋಟೋವನ್ನು ನೋಡಲಾರದು, ಆದ್ದರಿಂದ ಯುಕ್ತಿ ಫೋಟೋದಲ್ಲಿ ಓದಿದ ಬರಹದಿಂದ ಮಾತ್ರ ಉತ್ತರಿಸುತ್ತದೆ. "
   "ಆಡ್ಮಿನ್ ಸರ್ವರ್ ಕಂಪ್ಯೂಟರ್‌ನಲ್ಲಿ Yukti ಮುಖಪುಟದಿಂದ \"ಫೋಟೋ ಮೂಲಕ ಕೇಳಿ\" ಸಾಮರ್ಥ್ಯವನ್ನು ಸೇರಿಸಬಹುದು.")
+M("The AI model in use cannot see photos, so Yukti answers only from the text it read on the photo. "
+  "An administrator can switch to a model marked \"Sees photos\" under Administration > AI models.",
+  "अभी चल रहा AI मॉडल फ़ोटो नहीं देख सकता, इसलिए युक्ति केवल फ़ोटो पर पढ़े गए लिखे हुए शब्दों से जवाब देगा। "
+  "एडमिन प्रशासन > AI मॉडल में \"फ़ोटो देखता है\" वाला मॉडल चुन सकते हैं।",
+  "ಈಗ ಬಳಕೆಯಲ್ಲಿರುವ AI ಮಾದರಿ ಫೋಟೋವನ್ನು ನೋಡಲಾರದು, ಆದ್ದರಿಂದ ಯುಕ್ತಿ ಫೋಟೋದಲ್ಲಿ ಓದಿದ ಬರಹದಿಂದ ಮಾತ್ರ ಉತ್ತರಿಸುತ್ತದೆ. "
+  "ಆಡ್ಮಿನ್ ಆಡಳಿತ > AI ಮಾಡೆಲ್‌ಗಳು ಇಲ್ಲಿ \"ಫೋಟೋ ನೋಡುತ್ತದೆ\" ಎಂದು ಗುರುತಿಸಿದ ಮಾದರಿಯನ್ನು ಆರಿಸಬಹುದು.")
 M("images must be a list of photo ids", "फ़ोटो की सूची सही नहीं है।", "ಫೋಟೋಗಳ ಪಟ್ಟಿ ಸರಿಯಾಗಿಲ್ಲ.")
 M("At most 4 photos per question", "एक सवाल के साथ ज़्यादा से ज़्यादा 4 फ़ोटो भेजी जा सकती हैं",
   "ಒಂದು ಪ್ರಶ್ನೆಗೆ ಗರಿಷ್ಠ 4 ಫೋಟೋಗಳನ್ನು ಕಳುಹಿಸಬಹುದು")
@@ -567,7 +573,7 @@ M("The recording must be 16 kHz mono 16-bit WAV.", "रिकॉर्डिं�
   "ರೆಕಾರ್ಡಿಂಗ್ 16 kHz mono 16-bit WAV ಆಗಿರಬೇಕು.")
 M("Recordings can be at most 60 seconds long.", "रिकॉर्डिंग ज़्यादा से ज़्यादा 60 सेकंड की हो सकती है।",
   "ರೆಕಾರ್ಡಿಂಗ್ ಗರಿಷ್ಠ 60 ಸೆಕೆಂಡುಗಳಷ್ಟು ಇರಬಹುದು.")
-M("The recording is too short. Hold the microphone button and speak.", "रिकॉर्डिंग बहुत छोटी है। माइक बटन दबाकर बोलें।",
+M("The recording is too short. Press Speak, say your question, then press Done.", "रिकॉर्डिंग बहुत छोटी है। माइक बटन दबाकर बोलें।",
   "ರೆಕಾರ್ಡಿಂಗ್ ತುಂಬಾ ಚಿಕ್ಕದಾಗಿದೆ. ಮೈಕ್ ಬಟನ್ ಒತ್ತಿ ಮಾತನಾಡಿ.")
 M("The recording could not be converted to text. Please try again.", "रिकॉर्डिंग को लिखे हुए शब्दों में नहीं बदला जा सका। कृपया फिर से कोशिश करें।",
   "ರೆಕಾರ್ಡಿಂಗ್ ಅನ್ನು ಬರಹಕ್ಕೆ ಪರಿವರ್ತಿಸಲಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.")
@@ -590,3 +596,32 @@ M("To change your own password, use Account & security. Another administrator ca
 M("You cannot reset your own two-step sign-in. Turn it off in Account & security, or ask another administrator.",
   "आप अपना खुद का दो-चरणीय साइन-इन रीसेट नहीं कर सकते। इसे 'खाता और सुरक्षा' में बंद करें, या किसी दूसरे एडमिन से कहें।",
   "ನಿಮ್ಮ ಸ್ವಂತ ಎರಡು-ಹಂತದ ಸೈನ್ ಇನ್ ಅನ್ನು ನೀವೇ ಮರುಹೊಂದಿಸಲು ಆಗದು. 'ಖಾತೆ ಮತ್ತು ಭದ್ರತೆ'ಯಲ್ಲಿ ಅದನ್ನು ಆಫ್ ಮಾಡಿ, ಅಥವಾ ಇನ್ನೊಬ್ಬ ಆಡ್ಮಿನ್‌ಗೆ ಕೇಳಿ.")
+
+
+# ============================================================== questions that are not plant work (chat.py)
+M("I can only help with work at the plant: equipment, procedures, safety, maintenance, documents and the company. "
+  "For example, ask \"How do I isolate pump A2?\" or \"Which certificates expire this month?\"",
+  "मैं केवल प्लांट के काम में मदद कर सकता हूँ: उपकरण, प्रक्रियाएँ, सुरक्षा, रखरखाव, दस्तावेज़ और कंपनी। "
+  "उदाहरण के लिए पूछें: \"पंप A2 को आइसोलेट कैसे करें?\" या \"इस महीने कौन से प्रमाणपत्र खत्म हो रहे हैं?\"",
+  "ನಾನು ಸ್ಥಾವರದ ಕೆಲಸಕ್ಕೆ ಮಾತ್ರ ಸಹಾಯ ಮಾಡಬಲ್ಲೆ: ಉಪಕರಣಗಳು, ಕಾರ್ಯವಿಧಾನಗಳು, ಸುರಕ್ಷತೆ, ನಿರ್ವಹಣೆ, ದಾಖಲೆಗಳು ಮತ್ತು ಕಂಪನಿ. "
+  "ಉದಾಹರಣೆಗೆ ಕೇಳಿ: \"ಪಂಪ್ A2 ಅನ್ನು ಐಸೋಲೇಟ್ ಮಾಡುವುದು ಹೇಗೆ?\" ಅಥವಾ \"ಈ ತಿಂಗಳು ಯಾವ ಪ್ರಮಾಣಪತ್ರಗಳು ಮುಗಿಯುತ್ತವೆ?\"")
+M("Yukti only answers questions about plant work.", "Yukti केवल प्लांट के काम से जुड़े सवालों के जवाब देता है।",
+  "Yukti ಸ್ಥಾವರದ ಕೆಲಸಕ್ಕೆ ಸಂಬಂಧಿಸಿದ ಪ್ರಶ್ನೆಗಳಿಗೆ ಮಾತ್ರ ಉತ್ತರಿಸುತ್ತದೆ.")
+
+# ============================================================== server errors with a reference (main.py)
+M("Something went wrong on the server. Please try again. If it keeps happening, give your administrator this reference:",
+  "सर्वर पर कुछ गड़बड़ हो गई। कृपया फिर से कोशिश करें। अगर ऐसा बार-बार हो, तो अपने एडमिन को यह संदर्भ संख्या दें:",
+  "ಸರ್ವರ್‌ನಲ್ಲಿ ಏನೋ ತಪ್ಪಾಗಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ. ಇದು ಮತ್ತೆ ಮತ್ತೆ ಆದರೆ, ನಿಮ್ಮ ಆಡ್ಮಿನ್‌ಗೆ ಈ ಉಲ್ಲೇಖ ಸಂಖ್ಯೆ ನೀಡಿ:")
+
+# ============================================================== need-to-know: company-level information (chat.py)
+M("Company-level information such as finances, strategy and company-wide figures is available to top management only. "
+  "For your work, ask about your equipment, procedures, safety or documents.",
+  "कंपनी स्तर की जानकारी, जैसे वित्त, रणनीति और पूरी कंपनी के आँकड़े, केवल शीर्ष प्रबंधन के लिए उपलब्ध है। "
+  "अपने काम के लिए अपने उपकरण, प्रक्रियाओं, सुरक्षा या दस्तावेज़ों के बारे में पूछें।",
+  "ಹಣಕಾಸು, ಕಾರ್ಯತಂತ್ರ ಮತ್ತು ಇಡೀ ಕಂಪನಿಯ ಅಂಕಿಅಂಶಗಳಂತಹ ಕಂಪನಿ ಮಟ್ಟದ ಮಾಹಿತಿ ಉನ್ನತ ಆಡಳಿತಕ್ಕೆ ಮಾತ್ರ ಲಭ್ಯವಿದೆ. "
+  "ನಿಮ್ಮ ಕೆಲಸಕ್ಕಾಗಿ ನಿಮ್ಮ ಉಪಕರಣಗಳು, ಕಾರ್ಯವಿಧಾನಗಳು, ಸುರಕ್ಷತೆ ಅಥವಾ ದಾಖಲೆಗಳ ಬಗ್ಗೆ ಕೇಳಿ.")
+M("Company-level information is for top management only.", "कंपनी स्तर की जानकारी केवल शीर्ष प्रबंधन के लिए है।",
+  "ಕಂಪನಿ ಮಟ್ಟದ ಮಾಹಿತಿ ಉನ್ನತ ಆಡಳಿತಕ್ಕೆ ಮಾತ್ರ.")
+M("Top management (MD, Chairman, Directors) — company-level information incl. finances, reads across departments",
+  "शीर्ष प्रबंधन (MD, अध्यक्ष, निदेशक) — वित्त सहित कंपनी स्तर की जानकारी, सभी विभागों के दस्तावेज़ पढ़ सकते हैं",
+  "ಉನ್ನತ ಆಡಳಿತ (MD, ಅಧ್ಯಕ್ಷರು, ನಿರ್ದೇಶಕರು) — ಹಣಕಾಸು ಸೇರಿ ಕಂಪನಿ ಮಟ್ಟದ ಮಾಹಿತಿ, ಎಲ್ಲಾ ವಿಭಾಗಗಳ ದಾಖಲೆಗಳನ್ನು ಓದಬಹುದು")

@@ -68,7 +68,7 @@ rules:
     actions: [read, search, cite]
     # refinery management and internal audit read across departments (still capped by their clearance).
     # The IT/platform administrator configures Yukti but does not read plant documents.
-    when: "('plant_manager' in subject.roles or 'auditor' in subject.roles)"
+    when: "('executive' in subject.roles or 'plant_manager' in subject.roles or 'auditor' in subject.roles)"
   - id: R-GRANT
     effect: allow
     resources: [document]

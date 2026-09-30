@@ -6,7 +6,7 @@ import { ArrowRight, BookOpen, Camera, Eye, PanelRightOpen, ShieldCheck } from '
 import { api, errMsg } from '../lib/api';
 import { streamSSE } from '../lib/sse';
 import { qk, uiStore, useLoaded } from '../lib/queries';
-import { setSettings, useSettings } from '../lib/settings';
+import { configSidebarOpen, setConfigSidebarOpen, useSettings } from '../lib/settings';
 import type { ChatDetail, Denied, Fact, GenStats, GuardDecision, PhotoReading, RouteDecision, Source } from '../lib/types';
 import { cx } from '../lib/format';
 import { Badge, Dot, ErrorBox, Loading } from '../components/ui';
@@ -16,7 +16,7 @@ import { ChatSidebar } from '../components/chat/ChatSidebar';
 import { ConfigSidebar } from '../components/chat/ConfigSidebar';
 import { Composer, type ComposerHandle } from '../components/chat/Composer';
 import { AssistantMessage, UserMessage } from '../components/chat/AssistantMessage';
-import { SUGGESTIONS, type UIMessage } from '../components/chat/types';
+import { suggestionsFor, type UIMessage } from '../components/chat/types';
 import { useAuth } from '../lib/auth';
 import { tr, useT } from '../lib/i18n';
 
@@ -28,7 +28,9 @@ export default function Chat() {
   const qc = useQueryClient();
   const settings = useSettings();
   const loaded = useLoaded();
-  const { isLlmAdmin } = useAuth();
+  const { isLlmAdmin, seesAnswerDetails, me } = useAuth();
+  const username = me?.user.username;
+  const cfgOpen = isLlmAdmin && configSidebarOpen(settings, username);
   const t = useT();
 
   const [messages, setMessages] = useState<UIMessage[]>([]);
@@ -262,10 +264,11 @@ export default function Chat() {
         )}
         <header className="flex h-10 shrink-0 items-center gap-2 border-b border-border px-4">
           <div className="min-w-0 flex-1 truncate font-medium">{title}</div>
-          {useKnowledge
+          {/* the composer already shows the knowledge switch and the top bar the model: repeated here only for administrators */}
+          {isLlmAdmin && (useKnowledge
             ? <Badge tone="cyan"><BookOpen size={11} />{t('chat.knowledgeOn')}</Badge>
-            : <Badge tone="muted">{t('chat.knowledgeOff')}</Badge>}
-          {loaded.data?.model_name && (
+            : <Badge tone="muted">{t('chat.knowledgeOff')}</Badge>)}
+          {isLlmAdmin && loaded.data?.model_name && (
             <Badge tone="muted" mono className="max-w-[220px] truncate">
               <Dot tone={modelReady ? 'ok' : loaded.data.status === 'loading' ? 'cyan' : 'muted'} />{loaded.data.model_name}
             </Badge>
@@ -273,8 +276,8 @@ export default function Chat() {
           {vision === true && (
             <Badge tone="violet" title={t('photo.model.visionTip')}><Eye size={11} />{t('photo.model.vision')}</Badge>
           )}
-          {isLlmAdmin && !settings.configSidebarOpen && (
-            <button className="btn btn-ghost btn-icon text-muted" title={t('chat.showConfig')} onClick={() => setSettings({ configSidebarOpen: true })}>
+          {isLlmAdmin && !cfgOpen && (
+            <button className="btn btn-ghost btn-icon text-muted" title={t('chat.showConfig')} onClick={() => setConfigSidebarOpen(username, true)}>
               <PanelRightOpen size={15} />
             </button>
           )}
@@ -294,7 +297,7 @@ export default function Chat() {
               {messages.map((m, i) => m.role === 'user'
                 ? <UserMessage key={m.id} m={m} />
                 : (
-                  <AssistantMessage key={m.id} m={m} isLast={i === lastAssistantIdx} busy={busy} showStats={settings.showStats}
+                  <AssistantMessage key={m.id} m={m} isLast={i === lastAssistantIdx} busy={busy} showStats={settings.showStats} technical={seesAnswerDetails}
                     question={messages[i - 1]?.role === 'user' ? messages[i - 1].content : undefined}
                     withPhotos={messages[i - 1]?.role === 'user' && !!messages[i - 1].images?.length}
                     onRegenerate={regenerate} />
@@ -305,13 +308,13 @@ export default function Chat() {
 
         <Composer ref={composerRef} vision={vision} busy={busy} onSend={(t, imgs) => void send(t, imgs)} onStop={stop} useKnowledge={useKnowledge}
           onToggleKnowledge={() => setUseKnowledge((v) => !v)} sendWithEnter={settings.sendWithEnter}
-          modelReady={modelReady} canLoadModel={isLlmAdmin} onOpenLoader={() => uiStore.openLoader()} fullWidth={settings.chatFullWidth} />
+          modelReady={modelReady} canLoadModel={isLlmAdmin} showTokens={seesAnswerDetails} onOpenLoader={() => uiStore.openLoader()} fullWidth={settings.chatFullWidth} />
       </section>
 
-      {isLlmAdmin && settings.configSidebarOpen && (
+      {cfgOpen && (
         <ConfigSidebar systemPrompt={systemPrompt} setSystemPrompt={setSystemPrompt} prediction={prediction}
           setPrediction={setPrediction} useKnowledge={useKnowledge} setUseKnowledge={setUseKnowledge}
-          onClose={() => setSettings({ configSidebarOpen: false })} />
+          onClose={() => setConfigSidebarOpen(username, false)} />
       )}
     </div>
   );
@@ -319,6 +322,9 @@ export default function Chat() {
 
 function EmptyChat({ onPick }: { onPick: (prompt: string) => void }) {
   const t = useT();
+  const { has, me } = useAuth();
+  // at most 4 examples, only about things this person may see (need-to-know), closest to their department first
+  const suggestions = suggestionsFor(has, me?.user.department);
   return (
     <div className="flex min-h-full flex-col items-center justify-center px-6 py-10">
       <Logo size={52} />
@@ -329,7 +335,7 @@ function EmptyChat({ onPick }: { onPick: (prompt: string) => void }) {
       <div className="mt-2 inline-flex items-center gap-1.5 text-[11.5px] text-ok"><ShieldCheck size={12} />{t('chat.empty.badge')}</div>
       <FeatureOffers variant="home" />
       <div className="mt-6 grid w-full max-w-[760px] grid-cols-1 gap-2.5 sm:grid-cols-2">
-        {SUGGESTIONS.map((s) => (
+        {suggestions.map((s) => (
           <button key={s.prompt} onClick={() => onPick(t(s.prompt))}
             className="group rounded-lg border border-border bg-surface p-3 text-left transition-colors hover:border-cyan/50 hover:bg-surface-2">
             <div className="flex items-center gap-2">

@@ -1,0 +1,782 @@
+[
+ {
+  "id": "r001",
+  "intent": "asset_dossier",
+  "lang": "en",
+  "text": "P-101 stopped suddenly, pull up everything we have on it"
+ },
+ {
+  "id": "r002",
+  "intent": "asset_dossier",
+  "lang": "en",
+  "text": "motor M-A2 nameplate kW and full load amps?"
+ },
+ {
+  "id": "r003",
+  "intent": "asset_dossier",
+  "lang": "en",
+  "text": "what feeder supplies the A2 pump motor and what's the cable size"
+ },
+ {
+  "id": "r004",
+  "intent": "asset_dossier",
+  "lang": "hinglish",
+  "text": "A2B pump band ho gaya, uska saara record dikhao"
+ },
+ {
+  "id": "r005",
+  "intent": "asset_dossier",
+  "lang": "hinglish",
+  "text": "K-401 compressor ki history aur pending work orders batao"
+ },
+ {
+  "id": "r006",
+  "intent": "asset_dossier",
+  "lang": "hi",
+  "text": "पंप A2 बार-बार ट्रिप हो रहा है, इसकी पूरी हिस्ट्री और खुले वर्क ऑर्डर दिखाओ"
+ },
+ {
+  "id": "r007",
+  "intent": "asset_dossier",
+  "lang": "hi",
+  "text": "E-310 एक्सचेंजर की सारी डिटेल्स चाहिए"
+ },
+ {
+  "id": "r008",
+  "intent": "asset_dossier",
+  "lang": "kn",
+  "text": "A2 ಪಂಪ್ ನಿಂತುಹೋಗಿದೆ, ಅದರ ಎಲ್ಲಾ ಮಾಹಿತಿ ತೋರಿಸಿ"
+ },
+ {
+  "id": "r009",
+  "intent": "asset_dossier",
+  "lang": "kn",
+  "text": "M-A2 ಮೋಟಾರ್‌ನ ಪವರ್ ಮತ್ತು ಫುಲ್ ಲೋಡ್ ಕರೆಂಟ್ ಎಷ್ಟು"
+ },
+ {
+  "id": "r010",
+  "intent": "procedure_lookup",
+  "lang": "en",
+  "text": "what are the steps to safely isolate the A2 motor before maintenance"
+ },
+ {
+  "id": "r011",
+  "intent": "procedure_lookup",
+  "lang": "en",
+  "text": "how do I put a lock and tag on the MCC-2 breaker"
+ },
+ {
+  "id": "r012",
+  "intent": "procedure_lookup",
+  "lang": "en",
+  "text": "restart sequence for the booster pump after it tripped"
+ },
+ {
+  "id": "r013",
+  "intent": "procedure_lookup",
+  "lang": "hinglish",
+  "text": "motor ko isolate karne ka tarika kya hai"
+ },
+ {
+  "id": "r014",
+  "intent": "procedure_lookup",
+  "lang": "hinglish",
+  "text": "LOTO kaise karte hain feeder pe, step by step batao"
+ },
+ {
+  "id": "r015",
+  "intent": "procedure_lookup",
+  "lang": "hi",
+  "text": "मोटर को दोबारा चालू करने से पहले क्या-क्या स्टेप करने हैं"
+ },
+ {
+  "id": "r016",
+  "intent": "procedure_lookup",
+  "lang": "hi",
+  "text": "ब्रेकर रैक आउट करने की प्रक्रिया बताइए"
+ },
+ {
+  "id": "r017",
+  "intent": "procedure_lookup",
+  "lang": "kn",
+  "text": "ಮೋಟಾರ್ ಅನ್ನು ಸುರಕ್ಷಿತವಾಗಿ ಐಸೋಲೇಟ್ ಮಾಡುವ ಹಂತಗಳು ಯಾವುವು"
+ },
+ {
+  "id": "r018",
+  "intent": "procedure_lookup",
+  "lang": "kn",
+  "text": "ಲಾಕ್‌ಔಟ್ ಟ್ಯಾಗ್‌ಔಟ್ ಪ್ರಕ್ರಿಯೆ ವಿವರಿಸಿ"
+ },
+ {
+  "id": "r019",
+  "intent": "doc_ingest",
+  "lang": "en",
+  "text": "I've attached a photo of the old inspection sheet, can you read it"
+ },
+ {
+  "id": "r020",
+  "intent": "doc_ingest",
+  "lang": "en",
+  "text": "pull the numbers out of this scanned calibration certificate"
+ },
+ {
+  "id": "r021",
+  "intent": "doc_ingest",
+  "lang": "en",
+  "text": "convert this handwritten logbook page into text"
+ },
+ {
+  "id": "r022",
+  "intent": "doc_ingest",
+  "lang": "hinglish",
+  "text": "ye scan kiya hua report padh ke summary do"
+ },
+ {
+  "id": "r023",
+  "intent": "doc_ingest",
+  "lang": "hinglish",
+  "text": "is PDF se readings nikaal do"
+ },
+ {
+  "id": "r024",
+  "intent": "doc_ingest",
+  "lang": "hi",
+  "text": "इस स्कैन की हुई रिपोर्ट से डेटा निकालो"
+ },
+ {
+  "id": "r025",
+  "intent": "doc_ingest",
+  "lang": "kn",
+  "text": "ಈ ಸ್ಕ್ಯಾನ್ ಮಾಡಿದ ವರದಿಯನ್ನು ಓದಿ ಸಾರಾಂಶ ಕೊಡಿ"
+ },
+ {
+  "id": "r026",
+  "intent": "doc_ingest",
+  "lang": "kn",
+  "text": "ಅಪ್‌ಲೋಡ್ ಮಾಡಿದ ತಪಾಸಣಾ ಹಾಳೆಯಿಂದ ಅಳತೆಗಳನ್ನು ತೆಗೆಯಿರಿ"
+ },
+ {
+  "id": "r027",
+  "intent": "finding_review",
+  "lang": "en",
+  "text": "which inspection findings are waiting for my sign-off"
+ },
+ {
+  "id": "r028",
+  "intent": "finding_review",
+  "lang": "en",
+  "text": "E-310 wall thickness is under the limit, should I approve the finding"
+ },
+ {
+  "id": "r029",
+  "intent": "finding_review",
+  "lang": "en",
+  "text": "reject the corrosion finding raised on the exchanger"
+ },
+ {
+  "id": "r030",
+  "intent": "finding_review",
+  "lang": "hinglish",
+  "text": "mere approval ke liye kaunse findings pending hain"
+ },
+ {
+  "id": "r031",
+  "intent": "finding_review",
+  "lang": "hi",
+  "text": "E-310 की मोटाई वाली फाइंडिंग को मंजूरी देनी है"
+ },
+ {
+  "id": "r032",
+  "intent": "finding_review",
+  "lang": "hi",
+  "text": "निरीक्षण की कौन सी फाइंडिंग मेरे पास लंबित हैं"
+ },
+ {
+  "id": "r033",
+  "intent": "finding_review",
+  "lang": "kn",
+  "text": "ನನ್ನ ಅನುಮೋದನೆಗೆ ಬಾಕಿ ಇರುವ ಫೈಂಡಿಂಗ್‌ಗಳನ್ನು ತೋರಿಸಿ"
+ },
+ {
+  "id": "r034",
+  "intent": "finding_review",
+  "lang": "kn",
+  "text": "E-310 ದಪ್ಪದ ಫೈಂಡಿಂಗ್ ಅನ್ನು ಎಸ್ಕಲೇಟ್ ಮಾಡಿ"
+ },
+ {
+  "id": "r035",
+  "intent": "access_request",
+  "lang": "en",
+  "text": "I can't open the audit report, how do I get clearance"
+ },
+ {
+  "id": "r036",
+  "intent": "access_request",
+  "lang": "en",
+  "text": "please grant me permission to read the restricted process manual"
+ },
+ {
+  "id": "r037",
+  "intent": "access_request",
+  "lang": "en",
+  "text": "raise an access request for the confidential fuel cost document"
+ },
+ {
+  "id": "r038",
+  "intent": "access_request",
+  "lang": "hinglish",
+  "text": "audit wali file khul nahi rahi, access dila do"
+ },
+ {
+  "id": "r039",
+  "intent": "access_request",
+  "lang": "hi",
+  "text": "मुझे गोपनीय दस्तावेज़ देखने की अनुमति चाहिए"
+ },
+ {
+  "id": "r040",
+  "intent": "access_request",
+  "lang": "hi",
+  "text": "फाइनेंस ऑडिट रिपोर्ट का एक्सेस कैसे मिलेगा"
+ },
+ {
+  "id": "r041",
+  "intent": "access_request",
+  "lang": "kn",
+  "text": "ಗೌಪ್ಯ ವರದಿಯನ್ನು ನೋಡಲು ನನಗೆ ಅನುಮತಿ ಬೇಕು"
+ },
+ {
+  "id": "r042",
+  "intent": "access_request",
+  "lang": "kn",
+  "text": "ಆಡಿಟ್ ವರದಿಗೆ ಪ್ರವೇಶ ಹೇಗೆ ಪಡೆಯುವುದು"
+ },
+ {
+  "id": "r043",
+  "intent": "asset_expiry",
+  "lang": "en",
+  "text": "is the PSV-118 certificate still valid"
+ },
+ {
+  "id": "r044",
+  "intent": "asset_expiry",
+  "lang": "en",
+  "text": "what calibrations are overdue in CDU-1"
+ },
+ {
+  "id": "r045",
+  "intent": "asset_expiry",
+  "lang": "en",
+  "text": "show me everything expiring before end of october"
+ },
+ {
+  "id": "r046",
+  "intent": "asset_expiry",
+  "lang": "hinglish",
+  "text": "boiler licence kab expire ho raha hai"
+ },
+ {
+  "id": "r047",
+  "intent": "asset_expiry",
+  "lang": "hinglish",
+  "text": "is hafte kaunse calibration due hain"
+ },
+ {
+  "id": "r048",
+  "intent": "asset_expiry",
+  "lang": "hi",
+  "text": "PSV-118 का कैलिब्रेशन कब ड्यू है"
+ },
+ {
+  "id": "r049",
+  "intent": "asset_expiry",
+  "lang": "hi",
+  "text": "अगले महीने किन लाइसेंसों की अवधि समाप्त हो रही है"
+ },
+ {
+  "id": "r050",
+  "intent": "asset_expiry",
+  "lang": "kn",
+  "text": "PSV-118 ಕ್ಯಾಲಿಬ್ರೇಶನ್ ಯಾವಾಗ ಬಾಕಿ ಇದೆ"
+ },
+ {
+  "id": "r051",
+  "intent": "asset_expiry",
+  "lang": "kn",
+  "text": "ಮುಂದಿನ ವಾರ ಅವಧಿ ಮುಗಿಯುವ ಪರವಾನಗಿಗಳು ಯಾವುವು"
+ },
+ {
+  "id": "r052",
+  "intent": "production_scenario",
+  "lang": "en",
+  "text": "if the hydrocracker goes for shutdown for two weeks how much diesel do we lose"
+ },
+ {
+  "id": "r053",
+  "intent": "production_scenario",
+  "lang": "en",
+  "text": "gasoline cracks have fallen, what should the product slate look like"
+ },
+ {
+  "id": "r054",
+  "intent": "production_scenario",
+  "lang": "en",
+  "text": "run a what-if with crude price at 90 dollars"
+ },
+ {
+  "id": "r055",
+  "intent": "production_scenario",
+  "lang": "hinglish",
+  "text": "agle mahine ka production plan kya hona chahiye"
+ },
+ {
+  "id": "r056",
+  "intent": "production_scenario",
+  "lang": "hinglish",
+  "text": "HCU band rahega toh diesel pe kya asar padega"
+ },
+ {
+  "id": "r057",
+  "intent": "production_scenario",
+  "lang": "hi",
+  "text": "अगर कच्चे तेल की कीमत बढ़ जाए तो उत्पादन योजना कैसे बदलें"
+ },
+ {
+  "id": "r058",
+  "intent": "production_scenario",
+  "lang": "hi",
+  "text": "अगले महीने के लिए उत्पाद मिश्रण का सुझाव दो"
+ },
+ {
+  "id": "r059",
+  "intent": "production_scenario",
+  "lang": "kn",
+  "text": "ಮುಂದಿನ ತಿಂಗಳ ಉತ್ಪಾದನಾ ಯೋಜನೆ ಏನಾಗಿರಬೇಕು"
+ },
+ {
+  "id": "r060",
+  "intent": "production_scenario",
+  "lang": "kn",
+  "text": "HCU ಎರಡು ವಾರ ನಿಂತರೆ ಡೀಸೆಲ್ ಉತ್ಪಾದನೆ ಮೇಲೆ ಏನು ಪರಿಣಾಮ"
+ },
+ {
+  "id": "r061",
+  "intent": "process_chemistry",
+  "lang": "en",
+  "text": "what wt% MDEA should the lean amine be"
+ },
+ {
+  "id": "r062",
+  "intent": "process_chemistry",
+  "lang": "en",
+  "text": "how much antifoam can I inject in the absorber"
+ },
+ {
+  "id": "r063",
+  "intent": "process_chemistry",
+  "lang": "en",
+  "text": "maximum rich amine loading before corrosion starts"
+ },
+ {
+  "id": "r064",
+  "intent": "process_chemistry",
+  "lang": "en",
+  "text": "what strength of NaOH for the LPG caustic wash"
+ },
+ {
+  "id": "r065",
+  "intent": "process_chemistry",
+  "lang": "hinglish",
+  "text": "caustic ki strength kitni honi chahiye LPG wash mein"
+ },
+ {
+  "id": "r066",
+  "intent": "process_chemistry",
+  "lang": "hi",
+  "text": "रिच अमाइन में H2S लोडिंग की अधिकतम सीमा क्या है"
+ },
+ {
+  "id": "r067",
+  "intent": "process_chemistry",
+  "lang": "hi",
+  "text": "एंटीफोम की कितनी मात्रा डालनी चाहिए"
+ },
+ {
+  "id": "r068",
+  "intent": "process_chemistry",
+  "lang": "kn",
+  "text": "ಲೀನ್ ಅಮೈನ್ ಶಕ್ತಿ ಎಷ್ಟು ಇರಬೇಕು"
+ },
+ {
+  "id": "r069",
+  "intent": "process_chemistry",
+  "lang": "kn",
+  "text": "H2S ಗೆ ಒಡ್ಡಿಕೊಳ್ಳುವ ಮಿತಿ ಎಷ್ಟು"
+ },
+ {
+  "id": "r070",
+  "intent": "code_task",
+  "lang": "en",
+  "text": "give me a script that reads the vibration csv and plots it"
+ },
+ {
+  "id": "r071",
+  "intent": "code_task",
+  "lang": "en",
+  "text": "write a SQL query for all work orders still open"
+ },
+ {
+  "id": "r072",
+  "intent": "code_task",
+  "lang": "en",
+  "text": "python code to find missing entries in the shift log"
+ },
+ {
+  "id": "r073",
+  "intent": "code_task",
+  "lang": "hinglish",
+  "text": "work orders ka excel padhne ke liye python likh do"
+ },
+ {
+  "id": "r074",
+  "intent": "code_task",
+  "lang": "hi",
+  "text": "कंपन डेटा का ग्राफ बनाने के लिए पायथन कोड लिखो"
+ },
+ {
+  "id": "r075",
+  "intent": "code_task",
+  "lang": "kn",
+  "text": "ಕಂಪನ ಡೇಟಾ ಗ್ರಾಫ್‌ಗಾಗಿ ಪೈಥಾನ್ ಕೋಡ್ ಬರೆಯಿರಿ"
+ },
+ {
+  "id": "r076",
+  "intent": "general_chat",
+  "lang": "en",
+  "text": "I see rust spots on the line near the exchanger, is that a problem"
+ },
+ {
+  "id": "r077",
+  "intent": "general_chat",
+  "lang": "en",
+  "text": "who's the on-call electrician tonight"
+ },
+ {
+  "id": "r078",
+  "intent": "general_chat",
+  "lang": "en",
+  "text": "what happened on the night shift yesterday"
+ },
+ {
+  "id": "r079",
+  "intent": "general_chat",
+  "lang": "en",
+  "text": "what does a PSV do"
+ },
+ {
+  "id": "r080",
+  "intent": "general_chat",
+  "lang": "en",
+  "text": "phone number for the instrumentation team"
+ },
+ {
+  "id": "r081",
+  "intent": "general_chat",
+  "lang": "hinglish",
+  "text": "pipe pe zang lag gaya hai, kya karna chahiye"
+ },
+ {
+  "id": "r082",
+  "intent": "general_chat",
+  "lang": "hinglish",
+  "text": "aaj raat on-call kaun hai"
+ },
+ {
+  "id": "r083",
+  "intent": "general_chat",
+  "lang": "hi",
+  "text": "कल रात की शिफ्ट में क्या हुआ"
+ },
+ {
+  "id": "r084",
+  "intent": "general_chat",
+  "lang": "hi",
+  "text": "यह उपकरण किस काम आता है"
+ },
+ {
+  "id": "r085",
+  "intent": "general_chat",
+  "lang": "kn",
+  "text": "ಇಂದು ರಾತ್ರಿ ಆನ್-ಕಾಲ್ ಯಾರು"
+ },
+ {
+  "id": "r086",
+  "intent": "general_chat",
+  "lang": "kn",
+  "text": "ಈ ಪೈಪ್‌ನಲ್ಲಿ ಯಾವ ದ್ರವ ಹರಿಯುತ್ತದೆ"
+ },
+ {
+  "id": "r087",
+  "intent": "company_info",
+  "lang": "en",
+  "text": "how many million tonnes per year can MRPL process"
+ },
+ {
+  "id": "r088",
+  "intent": "company_info",
+  "lang": "en",
+  "text": "who heads MRPL right now"
+ },
+ {
+  "id": "r089",
+  "intent": "company_info",
+  "lang": "en",
+  "text": "what was MRPL's gross refining margin in FY25"
+ },
+ {
+  "id": "r090",
+  "intent": "company_info",
+  "lang": "en",
+  "text": "is MRPL a subsidiary of ONGC"
+ },
+ {
+  "id": "r091",
+  "intent": "company_info",
+  "lang": "hinglish",
+  "text": "MRPL ka profit pichhle saal kitna tha"
+ },
+ {
+  "id": "r092",
+  "intent": "company_info",
+  "lang": "hi",
+  "text": "MRPL की शोधन क्षमता कितनी है"
+ },
+ {
+  "id": "r093",
+  "intent": "company_info",
+  "lang": "hi",
+  "text": "MRPL कौन-कौन से उत्पाद बनाती है"
+ },
+ {
+  "id": "r094",
+  "intent": "company_info",
+  "lang": "kn",
+  "text": "MRPL ನ ಸಂಸ್ಕರಣಾ ಸಾಮರ್ಥ್ಯ ಎಷ್ಟು"
+ },
+ {
+  "id": "r095",
+  "intent": "company_info",
+  "lang": "kn",
+  "text": "MRPL ನ ಇತಿಹಾಸ ತಿಳಿಸಿ"
+ },
+ {
+  "id": "r096",
+  "intent": "smalltalk",
+  "lang": "en",
+  "text": "hey there"
+ },
+ {
+  "id": "r097",
+  "intent": "smalltalk",
+  "lang": "en",
+  "text": "thank you so much, that helped"
+ },
+ {
+  "id": "r098",
+  "intent": "smalltalk",
+  "lang": "en",
+  "text": "what are you able to help with"
+ },
+ {
+  "id": "r099",
+  "intent": "smalltalk",
+  "lang": "hinglish",
+  "text": "shukriya bhai"
+ },
+ {
+  "id": "r100",
+  "intent": "smalltalk",
+  "lang": "hinglish",
+  "text": "kaise ho"
+ },
+ {
+  "id": "r101",
+  "intent": "smalltalk",
+  "lang": "hi",
+  "text": "आप कौन हैं"
+ },
+ {
+  "id": "r102",
+  "intent": "smalltalk",
+  "lang": "hi",
+  "text": "शुभ प्रभात"
+ },
+ {
+  "id": "r103",
+  "intent": "smalltalk",
+  "lang": "kn",
+  "text": "ನೀವು ಯಾರು"
+ },
+ {
+  "id": "r104",
+  "intent": "smalltalk",
+  "lang": "kn",
+  "text": "ತುಂಬಾ ಧನ್ಯವಾದ"
+ },
+ {
+  "id": "r105",
+  "intent": "off_topic",
+  "lang": "en",
+  "text": "compose a short poem about the monsoon"
+ },
+ {
+  "id": "r106",
+  "intent": "off_topic",
+  "lang": "en",
+  "text": "who won the IPL final this year"
+ },
+ {
+  "id": "r107",
+  "intent": "off_topic",
+  "lang": "en",
+  "text": "how do I make paneer butter masala"
+ },
+ {
+  "id": "r108",
+  "intent": "off_topic",
+  "lang": "en",
+  "text": "help me solve this quadratic equation for class 10"
+ },
+ {
+  "id": "r109",
+  "intent": "off_topic",
+  "lang": "en",
+  "text": "recommend a good web series on netflix"
+ },
+ {
+  "id": "r110",
+  "intent": "off_topic",
+  "lang": "en",
+  "text": "what's the price of gold today"
+ },
+ {
+  "id": "r111",
+  "intent": "off_topic",
+  "lang": "en",
+  "text": "write a birthday wish for my wife"
+ },
+ {
+  "id": "r112",
+  "intent": "off_topic",
+  "lang": "en",
+  "text": "explain the rules of chess"
+ },
+ {
+  "id": "r113",
+  "intent": "off_topic",
+  "lang": "en",
+  "text": "what is the population of japan"
+ },
+ {
+  "id": "r114",
+  "intent": "off_topic",
+  "lang": "en",
+  "text": "suggest a name for my new puppy"
+ },
+ {
+  "id": "r115",
+  "intent": "off_topic",
+  "lang": "en",
+  "text": "write a javascript tic tac toe game"
+ },
+ {
+  "id": "r116",
+  "intent": "off_topic",
+  "lang": "en",
+  "text": "what's the best way to invest 5 lakh rupees"
+ },
+ {
+  "id": "r117",
+  "intent": "off_topic",
+  "lang": "hinglish",
+  "text": "mere liye ek romantic shayari likh do"
+ },
+ {
+  "id": "r118",
+  "intent": "off_topic",
+  "lang": "hinglish",
+  "text": "kal ka match kaun jeeta"
+ },
+ {
+  "id": "r119",
+  "intent": "off_topic",
+  "lang": "hinglish",
+  "text": "gajar ka halwa kaise banate hain"
+ },
+ {
+  "id": "r120",
+  "intent": "off_topic",
+  "lang": "hinglish",
+  "text": "koi achhi movie batao dekhne ke liye"
+ },
+ {
+  "id": "r121",
+  "intent": "off_topic",
+  "lang": "hi",
+  "text": "मेरे बेटे का गणित का होमवर्क कर दो"
+ },
+ {
+  "id": "r122",
+  "intent": "off_topic",
+  "lang": "hi",
+  "text": "दिल्ली में कल बारिश होगी क्या"
+ },
+ {
+  "id": "r123",
+  "intent": "off_topic",
+  "lang": "hi",
+  "text": "एक मजेदार कहानी सुनाओ"
+ },
+ {
+  "id": "r124",
+  "intent": "off_topic",
+  "lang": "hi",
+  "text": "सबसे अच्छा स्मार्टफोन कौन सा है"
+ },
+ {
+  "id": "r125",
+  "intent": "off_topic",
+  "lang": "hi",
+  "text": "विराट कोहली ने कितने शतक बनाए हैं"
+ },
+ {
+  "id": "r126",
+  "intent": "off_topic",
+  "lang": "kn",
+  "text": "ಮಳೆಯ ಬಗ್ಗೆ ಒಂದು ಹಾಡು ಬರೆಯಿರಿ"
+ },
+ {
+  "id": "r127",
+  "intent": "off_topic",
+  "lang": "kn",
+  "text": "ನಿನ್ನೆಯ ಪಂದ್ಯ ಯಾರು ಗೆದ್ದರು"
+ },
+ {
+  "id": "r128",
+  "intent": "off_topic",
+  "lang": "kn",
+  "text": "ಮೈಸೂರು ಪಾಕ್ ಹೇಗೆ ಮಾಡುವುದು"
+ },
+ {
+  "id": "r129",
+  "intent": "off_topic",
+  "lang": "kn",
+  "text": "ನನ್ನ ಶಾಲೆಯ ಪ್ರಬಂಧ ಬರೆದುಕೊಡಿ"
+ },
+ {
+  "id": "r130",
+  "intent": "off_topic",
+  "lang": "kn",
+  "text": "ಗೋವಾ ಪ್ರವಾಸಕ್ಕೆ ಯೋಜನೆ ಮಾಡಿ"
+ }
+]

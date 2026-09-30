@@ -26,9 +26,21 @@ LOG = collections.deque(maxlen=3000)
 LOG_FILE = LOG_DIR / "engine.log"
 
 
+_PROBLEM = re.compile(r"\b(error|failed|fail|could not|cannot|crash|out of memory|exited|not responding|timed out)\b", re.I)
+
+
 def log(line: str) -> None:
     s = f"{time.strftime('%H:%M:%S')} {line.rstrip()}"
     LOG.append(s)
+    try:  # engine problems also go into the local journal (errors.log), the rest stays in engine.log
+        from . import journal
+        area = "speech" if line.startswith("[speech]") else "engine"
+        if _PROBLEM.search(line) and not line.startswith("[llama] ") or line.startswith("[llama] ") and " E " in line:
+            journal.warn(area, line.strip()[:500])
+        elif not line.startswith("[llama] "):   # what Yukti did (model loaded, voice started …); llama.cpp's own chatter stays in engine.log
+            journal.event(area, line.strip()[:500])
+    except Exception:  # noqa: BLE001
+        pass
     try:
         with LOG_FILE.open("a", encoding="utf-8") as fh:
             fh.write(s + "\n")
@@ -290,6 +302,30 @@ def scan_models() -> list[dict[str, Any]]:
     return sorted(out, key=lambda m: m["size_bytes"])
 
 
+def vision_models_on_disk() -> list[str]:
+    """Names of models on this computer that Yukti's llama.cpp can run with photos (an image module (mmproj) next to them)."""
+    return [m["name"] for m in scan_models() if m.get("mmproj")]
+
+
+def vision_ready() -> bool:
+    """The loaded model looks at photos itself (not only the text read from them)."""
+    return state.status == "ready" and state.vision
+
+
+async def vision_status() -> dict[str, Any]:
+    """Can Yukti look at photos? `installed`: a model that can see is on this computer (the photo add-on, a model with its
+    image module from LM Studio, or a vision model in Ollama such as gemma3) or is loaded; `active`: the loaded one can."""
+    active = vision_ready()
+    models = await asyncio.to_thread(vision_models_on_disk)
+    if not models and not active:
+        try:
+            info = await probe("ollama")
+            models = [f"{m['id']} (Ollama)" for m in info.get("model_info") or [] if m.get("vision")]
+        except Exception:  # noqa: BLE001
+            models = []
+    return {"installed": active or bool(models), "active": active, "loaded": state.status == "ready", "models": models[:5]}
+
+
 def _short_path(path: str) -> str:
     if path.isascii() or not hasattr(__import__("ctypes"), "windll"):
         return path
@@ -528,6 +564,14 @@ def load(engine: str, model_id: str, cfg: dict[str, Any], _auto: bool = False) -
     extra: list[str] = []
     if m.get("mmproj") and cfg.get("vision", True) is not False:
         extra = ["--mmproj", _short_path(m["mmproj"])]
+    # voice input on the GPU needs ~1.2 GB next to the AI model: keep that much video memory free when auto-fitting
+    # (otherwise the recogniser falls back to the processor and a question takes 30 s instead of 1 s)
+    try:
+        from . import speech
+        if backend == "cuda" and speech.gpu_installed() and cfg.get("fit", "on") == "on":
+            extra += ["--fit-target", "2048"]
+    except Exception as e:  # noqa: BLE001
+        log(f"[speech] could not check voice input before loading the model: {e}")
     args = [binary, *filter_args(binary, llama_args(cfg, _short_path(m["path"]), _short_path(draft) if draft else draft) + extra + [
         "--host", "127.0.0.1", "--port", str(LLAMA_PORT), "--alias", m["name"], "--no-webui", "--metrics",
         "--slot-save-path", str(LOG_DIR.parent / "slots"), "--offline"])]

@@ -179,10 +179,15 @@ This takes about 30 s. To reset, stop the server, delete `data\store\` and start
 | **Employee** (engineer, HSE, process, contractor…) | Chat over the knowledge they may see, view sources and facts, request access, work their inbox, give feedback, manage their own password and MFA |
 | **Head of Department** (`dept_manager`) | Everything above, plus **add and remove documents for their own department only**, approve access requests, act on findings, view the audit log |
 | **Plant manager** | Approve access and findings, view the audit log and production |
+| **Top management** (`executive`: MD, Chairman, Directors) | The **only** role that sees company-level information: finances, strategy and company-wide figures (the Company page and those facts in chat). Reads documents across departments, capped by their clearance |
 | **Planner** | Production intelligence, and enter or edit the plant model used by the optimizer |
 | **Auditor** | Audit log, chain verification and export |
 | **Administrator** | **All LLM configuration** (models, engines, 67 load + 35 sampling parameters, AI settings, presets), users, usage and health, backups and restore, policies, Laya benchmark, developer logs |
 
+Access is **need-to-know**. Engineers and heads of department see their own department's documents and their own
+units' equipment. Company-level information stays with top management; that includes the head of an engineering
+department, the Chief GM and the IT administrator. A company-level question from anyone else gets a short, polite
+answer instead of the data, and the check runs on the server, not just in the screens.
 Employees never see or change LLM settings. Every chat uses the organisation settings the administrator chose.
 Administrators do not upload documents; that belongs to the HOD of each department.
 
