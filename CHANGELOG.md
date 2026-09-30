@@ -5,6 +5,27 @@ All notable changes to Yukti are documented here. The format follows [Keep a Cha
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-09-30
+
+### Added
+- **Ask with a photo.** Add up to 4 photos to a question with the camera, the gallery, paste or drag-and-drop.
+  - The text on the photo (stencils, tag plates, nameplates) is read offline by OCR, and equipment tags are matched to the asset register within the person's access.
+  - Documents about the photographed tag are preferred.
+  - "What Yukti read in the photo" shows the lines read and the tags found.
+  - The model names a line or chemical only from a readable tag and the documents, never from colour. It says so when no tag is readable, and points out rust, leaks and damage.
+- **Privacy of photos:** photos are stripped of EXIF/GPS, resized, visible only to the sender and deleted with their chat.
+- **Gemma 3 4B with its image module** is the new default model: it sees photos and answers well in English, Hindi and Kannada. Models in Ollama that can see photos (e.g. `gemma3`) are detected too.
+- **Speak instead of typing.** Offline Whisper speech recognition (whisper.cpp): large-v3-turbo on NVIDIA GPUs (well under a second), small on the processor.
+  - It is hinted with the plant's own tags ("pump A2", "exchanger E-310").
+  - Silence never turns into words.
+  - The transcript goes into the question box for checking and is never sent automatically.
+- **Setup:** new components *Voice input* and *Voice model*. The GPU version is downloaded only on PCs with an NVIDIA GPU.
+
+### Changed
+- **Updating:** running a newer `Yukti-Setup.exe` over an existing installation now offers the update once
+  ("Update now" / "Later"), instead of silently starting the old version.
+- The assistant answers only what was asked and writes isolation steps only when asked and only from the approved procedure.
+
 ## [0.4.0] — 2026-09-30
 
 ### Added

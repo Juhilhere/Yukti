@@ -92,7 +92,7 @@ check("employee cannot see params schema", t.get("/api/params/schema").status_co
 check("employee cannot load models", t.post("/api/models/load", json={"model_id": "x"}).status_code == 403)
 check("employee cannot see engines", t.get("/api/engines").status_code == 403)
 lm = t.get("/api/models/loaded").json()
-check("employee sees only model name/status", set(lm) <= {"status", "engine", "model_name"}, lm)
+check("employee sees only model name/status", set(lm) <= {"status", "engine", "model_name", "vision"}, lm)
 check("disable user", a.patch(f"/api/admin/users/{uid}", json={"status": "disabled"}).json().get("status") == "disabled")
 check("disabled user session revoked", t.get("/api/auth/me").status_code == 401)
 check("disabled user cannot login", session("test.user", "NewPassword2026x").last_login.status_code == 403)

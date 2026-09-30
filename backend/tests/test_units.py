@@ -116,3 +116,12 @@ def test_every_translation_has_hindi_and_kannada():
             import string
             names = {f for _, f, _, _ in string.Formatter().parse(t[lang]) if f}
             assert names <= set(rx.groupindex), (rx.pattern, lang, names)
+
+
+def test_speech_language_folds_whisper_guesses_onto_yukti_languages():
+    from app.speech import pick_language
+    kannada_heard_as_tamil = {"ta": 0.31, "hi": 0.11, "gu": 0.11, "kn": 0.04, "te": 0.02, "en": 0.01}
+    assert pick_language(kannada_heard_as_tamil, "kn") == "kn"
+    assert pick_language({"ur": 0.6, "hi": 0.3}, "en") == "hi"          # Hindi heard as Urdu
+    assert pick_language({"en": 0.999, "hi": 0.001}, "kn") == "en"      # English with a Kannada screen stays English
+    assert pick_language({}, "hi") == "hi" and pick_language({}, "") == "en"

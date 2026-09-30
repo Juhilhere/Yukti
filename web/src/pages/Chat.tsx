@@ -1,19 +1,19 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowRight, BookOpen, PanelRightOpen, ShieldCheck } from 'lucide-react';
+import { ArrowRight, BookOpen, Camera, Eye, PanelRightOpen, ShieldCheck } from 'lucide-react';
 import { api, errMsg } from '../lib/api';
 import { streamSSE } from '../lib/sse';
 import { qk, uiStore, useLoaded } from '../lib/queries';
 import { setSettings, useSettings } from '../lib/settings';
-import type { ChatDetail, Denied, Fact, GenStats, GuardDecision, RouteDecision, Source } from '../lib/types';
+import type { ChatDetail, Denied, Fact, GenStats, GuardDecision, PhotoReading, RouteDecision, Source } from '../lib/types';
 import { cx } from '../lib/format';
 import { Badge, Dot, ErrorBox, Loading } from '../components/ui';
 import { Logo } from '../components/Logo';
 import { toast } from '../components/Toast';
 import { ChatSidebar } from '../components/chat/ChatSidebar';
 import { ConfigSidebar } from '../components/chat/ConfigSidebar';
-import { Composer } from '../components/chat/Composer';
+import { Composer, type ComposerHandle } from '../components/chat/Composer';
 import { AssistantMessage, UserMessage } from '../components/chat/AssistantMessage';
 import { SUGGESTIONS, type UIMessage } from '../components/chat/types';
 import { useAuth } from '../lib/auth';
@@ -42,6 +42,9 @@ export default function Chat() {
   const dirtyRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const stickRef = useRef(true);
+  const composerRef = useRef<ComposerHandle>(null);
+  const dragDepth = useRef(0);
+  const [dragging, setDragging] = useState(false);
 
   const detail = useQuery({
     queryKey: qk.chat(chatId ?? ''),
@@ -125,6 +128,7 @@ export default function Chat() {
             upd((m) => ({ ...m, sources: r.sources ?? [], denied: r.denied ?? null }));
             break;
           }
+          case 'photo': upd((m) => ({ ...m, photo: data as PhotoReading })); break;
           case 'reasoning': upd((m) => ({ ...m, reasoning: (m.reasoning ?? '') + ((data as { t?: string })?.t ?? '') })); break;
           case 'token': upd((m) => ({ ...m, content: m.content + ((data as { t?: string })?.t ?? '') })); break;
           case 'reset': upd((m) => ({ ...m, content: '', reasoning: undefined })); break;  // model restarted mid-answer: regenerating
@@ -167,7 +171,7 @@ export default function Chat() {
     }
   }, [qc]);
 
-  const send = useCallback(async (text: string) => {
+  const send = useCallback(async (text: string, images: string[] = []) => {
     if (busy) return;
     let cid = chatId;
     if (!cid) {
@@ -192,11 +196,12 @@ export default function Chat() {
     const aid = `local-a-${stamp}`;
     setMessages((ms) => [
       ...ms,
-      { id: `local-u-${stamp}`, role: 'user', content: text, created_at: now },
+      { id: `local-u-${stamp}`, role: 'user', content: text, created_at: now, images: images.length ? images : undefined },
       { id: aid, role: 'assistant', content: '', created_at: now, streaming: true },
     ]);
     // Per-chat LLM overrides are admin-only; employees use the organisation AI settings.
     const body: Record<string, unknown> = { content: text, use_knowledge: useKnowledge };
+    if (images.length) body.images = images;
     if (isLlmAdmin) { body.system_prompt = systemPrompt || undefined; body.prediction = prediction; }
     void runStream(cid, `/api/chats/${cid}/messages`, body, aid);
   }, [busy, chatId, systemPrompt, prediction, useKnowledge, nav, qc, runStream, isLlmAdmin]);
@@ -225,12 +230,35 @@ export default function Chat() {
   const width = settings.chatFullWidth ? 'max-w-none' : 'max-w-[860px]';
   const title = chatId ? (detail.data?.title || (detail.isLoading ? '' : t('chat.untitled'))) : t('btn.newChat');
   const showEmpty = messages.length === 0 && !(chatId && detail.isLoading) && !(chatId && detail.error);
+  const vision = modelReady ? loaded.data?.vision : undefined;
+
+  /* ---- drag & drop photos anywhere on the chat ---- */
+  const hasFiles = (e: DragEvent) => Array.from(e.dataTransfer?.types ?? []).includes('Files');
+  const dnd = {
+    onDragEnter: (e: DragEvent) => { if (!hasFiles(e)) return; e.preventDefault(); dragDepth.current += 1; setDragging(true); },
+    onDragOver: (e: DragEvent) => { if (!hasFiles(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; },
+    onDragLeave: (e: DragEvent) => { if (!hasFiles(e)) return; dragDepth.current = Math.max(0, dragDepth.current - 1); if (!dragDepth.current) setDragging(false); },
+    onDrop: (e: DragEvent) => {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      dragDepth.current = 0;
+      setDragging(false);
+      composerRef.current?.addFiles(Array.from(e.dataTransfer.files ?? []));
+    },
+  };
 
   return (
     <div className="flex h-full min-h-0">
       <ChatSidebar activeId={chatId} onNew={() => nav('/chat')} />
 
-      <section className="flex min-w-0 flex-1 flex-col">
+      <section className="relative flex min-w-0 flex-1 flex-col" {...dnd}>
+        {dragging && (
+          <div className="pointer-events-none absolute inset-2 z-40 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-cyan/70 bg-bg/85 text-cyan">
+            <Camera size={34} />
+            <div className="text-[15px] font-semibold">{t('photo.dropHere')}</div>
+            <div className="text-[12px] text-muted">{t('photo.dropHint')}</div>
+          </div>
+        )}
         <header className="flex h-10 shrink-0 items-center gap-2 border-b border-border px-4">
           <div className="min-w-0 flex-1 truncate font-medium">{title}</div>
           {useKnowledge
@@ -240,6 +268,9 @@ export default function Chat() {
             <Badge tone="muted" mono className="max-w-[220px] truncate">
               <Dot tone={modelReady ? 'ok' : loaded.data.status === 'loading' ? 'cyan' : 'muted'} />{loaded.data.model_name}
             </Badge>
+          )}
+          {vision === true && (
+            <Badge tone="violet" title={t('photo.model.visionTip')}><Eye size={11} />{t('photo.model.vision')}</Badge>
           )}
           {isLlmAdmin && !settings.configSidebarOpen && (
             <button className="btn btn-ghost btn-icon text-muted" title={t('chat.showConfig')} onClick={() => setSettings({ configSidebarOpen: true })}>
@@ -264,13 +295,14 @@ export default function Chat() {
                 : (
                   <AssistantMessage key={m.id} m={m} isLast={i === lastAssistantIdx} busy={busy} showStats={settings.showStats}
                     question={messages[i - 1]?.role === 'user' ? messages[i - 1].content : undefined}
+                    withPhotos={messages[i - 1]?.role === 'user' && !!messages[i - 1].images?.length}
                     onRegenerate={regenerate} />
                 ))}
             </div>
           )}
         </div>
 
-        <Composer busy={busy} onSend={(t) => void send(t)} onStop={stop} useKnowledge={useKnowledge}
+        <Composer ref={composerRef} vision={vision} busy={busy} onSend={(t, imgs) => void send(t, imgs)} onStop={stop} useKnowledge={useKnowledge}
           onToggleKnowledge={() => setUseKnowledge((v) => !v)} sendWithEnter={settings.sendWithEnter}
           modelReady={modelReady} canLoadModel={isLlmAdmin} onOpenLoader={() => uiStore.openLoader()} fullWidth={settings.chatFullWidth} />
       </section>

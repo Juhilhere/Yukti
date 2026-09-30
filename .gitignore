@@ -8,3 +8,4 @@ __pycache__/
 desktop/dist/
 backend/build/
 *.spec
+/speech/

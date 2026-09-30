@@ -49,7 +49,8 @@ const fmtEta = (s) => {
 function msg(el, text, kind) { el.textContent = text || ''; el.className = 'msg ' + (kind || ''); }
 function show(el, on) { el.classList.toggle('hidden', !on); }
 const friendlyName = (a) => a.name === 'server-core' ? T('setup.step.app') : a.name === 'llama-cuda' ? T('setup.step.engineGpu')
-  : a.name === 'llama-vulkan' ? T('setup.step.engine') : a.name.startsWith('model') ? T('setup.step.model') : (a.label || a.name);
+  : a.name === 'llama-vulkan' ? T('setup.step.engine') : a.name.startsWith('model') ? T('setup.step.model')
+  : a.name.startsWith('speech') ? T('setup.step.voice') : a.name.startsWith('voice') ? T('setup.step.voiceModel') : (a.label || a.name);
 
 /** Installer / network errors → plain words (+ whether to retry automatically). */
 function classify(raw) {
@@ -149,6 +150,9 @@ function refreshGo() {
   $('s-go').textContent = primaryLabel();
   $('s-go').disabled = installing;
   show($('s-go'), !installing);
+  // an update is offered: "Later" opens the installed version
+  const inst = planRes && planRes.installed && planRes.installed.version;
+  show($('s-later'), !installing && view === 'simple' && !!(p && inst && p.todoCount > 0));
 }
 function renderPlan() {
   const r = planRes;
@@ -316,6 +320,7 @@ $('s-go').addEventListener('click', async () => {
   if (inst && p.todoCount === 0) return startInstalled();
   return runInstall();
 });
+$('s-later').addEventListener('click', () => { if (!installing) startInstalled(); });
 async function startInstalled() {
   $('s-go').disabled = true; $('go').disabled = true;
   msg($('s-msg'), T('adv.starting')); msg($('go-msg'), T('adv.starting'));

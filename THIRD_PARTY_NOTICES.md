@@ -13,7 +13,10 @@ under `_internal\`; for Node, `node_modules/*/LICENSE`).
 |---|---|---|
 | [llama.cpp](https://github.com/ggml-org/llama.cpp) (build b11255, CUDA 12.4 and Vulkan) | Local LLM inference server | MIT |
 | NVIDIA CUDA runtime libraries (shipped with the llama.cpp CUDA build) | GPU runtime | NVIDIA CUDA Toolkit EULA (redistributable components); see upstream |
-| [Gemma 2](https://ai.google.dev/gemma) 2B-it, Q8_0 GGUF (lmstudio-community conversion) | Default language model | [Gemma Terms of Use](https://ai.google.dev/gemma/terms) |
+| [Gemma 3](https://ai.google.dev/gemma) 4B-it, Q4_K_M GGUF and F16 image module (mmproj), [ggml-org conversion](https://huggingface.co/ggml-org/gemma-3-4b-it-GGUF) | Default language and vision model | [Gemma Terms of Use](https://ai.google.dev/gemma/terms) |
+| [whisper.cpp](https://github.com/ggml-org/whisper.cpp) (release b5130, CPU/OpenBLAS and CUDA 12.4 builds; `whisper-server` only) | Offline speech recognition | MIT |
+| [OpenAI Whisper](https://github.com/openai/whisper) large-v3-turbo (q5_0) and small (q8_0) weights, [ggml conversion](https://huggingface.co/ggerganov/whisper.cpp) | Speech recognition models | MIT |
+| [OpenBLAS](https://github.com/OpenMathLib/OpenBLAS) (shipped with the whisper.cpp CPU build) | Maths library | BSD-3-Clause |
 | RapidOCR PP-OCR ONNX models (derived from PaddleOCR) | OCR of scanned pages | Apache-2.0 |
 
 ## Backend (Python)

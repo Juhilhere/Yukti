@@ -12,6 +12,7 @@ import { cx, num } from '../../lib/format';
 import { FactsTable } from './FactsTable';
 import { DeniedCard, SourcesRow } from './SourcesRow';
 import { flashSource, linkCitations, type UIMessage } from './types';
+import { PhotoReadingCard, UserPhotos } from './PhotoParts';
 
 function urgencyPct(u: unknown): number {
   if (typeof u === 'number') return u <= 1 ? u * 100 : u <= 5 ? (u / 5) * 100 : Math.min(100, u);
@@ -164,8 +165,10 @@ function StatsFooter({ m, canRegen, onRegen }: { m: UIMessage; canRegen: boolean
   );
 }
 
-function AssistantMessageImpl({ m, isLast, busy, showStats, question, onRegenerate }: {
+function AssistantMessageImpl({ m, isLast, busy, showStats, question, onRegenerate, withPhotos }: {
   m: UIMessage; isLast: boolean; busy: boolean; showStats: boolean; question?: string; onRegenerate?: () => void;
+  /** the question came with photos (shows "Reading the photo…" until the photo event arrives) */
+  withPhotos?: boolean;
 }) {
   const t = useT();
   const cite = (sid: string) => flashSource(m.id, sid);
@@ -195,8 +198,9 @@ function AssistantMessageImpl({ m, isLast, busy, showStats, question, onRegenera
           {m.guard && <GuardChip guard={m.guard} />}
           {!hasHeader && m.streaming && <span className="text-[11px] text-faint">{t('chat.routing')}</span>}
         </div>
+        {m.photo && <PhotoReadingCard photo={m.photo} />}
         {m.reasoning ? <Thinking text={m.reasoning} streaming={!!m.streaming && !m.content} /> : null}
-        {waiting && <div className="flex items-center gap-2 py-1 text-[12px] text-muted"><Spinner size={12} />{t('chat.generating')}</div>}
+        {waiting && <div className="flex items-center gap-2 py-1 text-[12px] text-muted"><Spinner size={12} />{withPhotos && !m.photo ? t('photo.reading') : t('chat.generating')}</div>}
         {m.content && (
           <div className={cx('md', m.streaming && 'caret')}>
             <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>{linkCitations(m.content)}</ReactMarkdown>
@@ -222,11 +226,15 @@ function AssistantMessageImpl({ m, isLast, busy, showStats, question, onRegenera
 export const AssistantMessage = memo(AssistantMessageImpl);
 
 export function UserMessage({ m }: { m: UIMessage }) {
+  const images = m.images ?? [];
   return (
-    <div className="flex justify-end">
-      <div className="max-w-[80%] whitespace-pre-wrap break-words rounded-lg rounded-br-sm border border-border bg-surface-2 px-3 py-2 text-[13.5px]">
-        {m.content}
-      </div>
+    <div className="flex flex-col items-end gap-1.5">
+      {images.length > 0 && <UserPhotos ids={images} />}
+      {m.content && (
+        <div className="max-w-[80%] whitespace-pre-wrap break-words rounded-lg rounded-br-sm border border-border bg-surface-2 px-3 py-2 text-[13.5px]">
+          {m.content}
+        </div>
+      )}
     </div>
   );
 }

@@ -527,3 +527,47 @@ M("(AI wording withheld: it contained numbers that are not in the optimizer outp
   "(AI का लिखा पाठ नहीं दिखाया गया: उसमें ऐसी संख्याएँ थीं जो गणना के नतीजे में नहीं हैं।)",
   "(AI ಬರೆದ ಪಠ್ಯ ತೋರಿಸಲಾಗಿಲ್ಲ: ಅದರಲ್ಲಿ ಲೆಕ್ಕಾಚಾರದ ಫಲಿತಾಂಶದಲ್ಲಿ ಇಲ್ಲದ ಸಂಖ್ಯೆಗಳಿದ್ದವು.)")
 P(r"\(AI wording unavailable: (?P<e>.*)\)", "(AI का लिखा पाठ उपलब्ध नहीं: {e})", "(AI ಬರೆದ ಪಠ್ಯ ಲಭ್ಯವಿಲ್ಲ: {e})")
+
+
+# ============================================================== photos in questions (attachments.py, chat.py)
+M("The photo is larger than 15 MB. Please send a smaller photo.", "फ़ोटो 15 MB से बड़ी है। कृपया छोटी फ़ोटो भेजें।",
+  "ಫೋಟೋ 15 MB ಗಿಂತ ದೊಡ್ಡದಾಗಿದೆ. ದಯವಿಟ್ಟು ಚಿಕ್ಕ ಫೋಟೋ ಕಳುಹಿಸಿ.")
+M("The photo is too large. Please send a smaller photo.", "फ़ोटो बहुत बड़ी है। कृपया छोटी फ़ोटो भेजें।",
+  "ಫೋಟೋ ತುಂಬಾ ದೊಡ್ಡದಾಗಿದೆ. ದಯವಿಟ್ಟು ಚಿಕ್ಕ ಫೋಟೋ ಕಳುಹಿಸಿ.")
+M("This file is not a supported photo. Please send a JPG, PNG or WEBP photo.",
+  "यह फ़ाइल समर्थित फ़ोटो नहीं है। कृपया JPG, PNG या WEBP फ़ोटो भेजें।",
+  "ಈ ಫೈಲ್ ಬೆಂಬಲಿತ ಫೋಟೋ ಅಲ್ಲ. ದಯವಿಟ್ಟು JPG, PNG ಅಥವಾ WEBP ಫೋಟೋ ಕಳುಹಿಸಿ.")
+M("Photo not found", "फ़ोटो नहीं मिली", "ಫೋಟೋ ಸಿಗಲಿಲ್ಲ")
+M("Photo", "फ़ोटो", "ಫೋಟೋ")
+M("The loaded model cannot see photos, so Yukti answers only from the text it read on the photo. "
+  "An administrator can load a model that understands photos (for example Gemma 3).",
+  "अभी चल रहा AI मॉडल फ़ोटो नहीं देख सकता, इसलिए युक्ति केवल फ़ोटो पर पढ़े गए लिखे हुए शब्दों से जवाब देगा। "
+  "एडमिन ऐसा मॉडल लोड कर सकते हैं जो फ़ोटो समझता है (जैसे Gemma 3)।",
+  "ಈಗ ಲೋಡ್ ಆಗಿರುವ AI ಮಾದರಿ ಫೋಟೋವನ್ನು ನೋಡಲಾರದು, ಆದ್ದರಿಂದ ಯುಕ್ತಿ ಫೋಟೋದಲ್ಲಿ ಓದಿದ ಬರಹದಿಂದ ಮಾತ್ರ ಉತ್ತರಿಸುತ್ತದೆ. "
+  "ಫೋಟೋ ಅರ್ಥಮಾಡಿಕೊಳ್ಳುವ ಮಾದರಿಯನ್ನು (ಉದಾ. Gemma 3) ಆಡ್ಮಿನ್ ಲೋಡ್ ಮಾಡಬಹುದು.")
+M("images must be a list of photo ids", "फ़ोटो की सूची सही नहीं है।", "ಫೋಟೋಗಳ ಪಟ್ಟಿ ಸರಿಯಾಗಿಲ್ಲ.")
+M("At most 4 photos per question", "एक सवाल के साथ ज़्यादा से ज़्यादा 4 फ़ोटो भेजी जा सकती हैं",
+  "ಒಂದು ಪ್ರಶ್ನೆಗೆ ಗರಿಷ್ಠ 4 ಫೋಟೋಗಳನ್ನು ಕಳುಹಿಸಬಹುದು")
+M("Type a question or attach a photo", "सवाल लिखें या फ़ोटो जोड़ें", "ಪ್ರಶ್ನೆ ಬರೆಯಿರಿ ಅಥವಾ ಫೋಟೋ ಸೇರಿಸಿ")
+
+# ============================================================== voice input (speech.py)
+M("Voice input is not installed on the server. Open Yukti's setup screen to add the Voice input component.",
+  "सर्वर पर आवाज़ से लिखने की सुविधा (Voice input) इंस्टॉल नहीं है। इसे जोड़ने के लिए युक्ति की सेटअप स्क्रीन खोलें।",
+  "ಸರ್ವರ್‌ನಲ್ಲಿ ಧ್ವನಿ ಇನ್‌ಪುಟ್ (Voice input) ಅನುಸ್ಥಾಪಿಸಿಲ್ಲ. ಇದನ್ನು ಸೇರಿಸಲು ಯುಕ್ತಿಯ ಸೆಟಪ್ ಪರದೆಯನ್ನು ತೆರೆಯಿರಿ.")
+M("The voice recogniser could not start. Details are in the server log (speech.log).",
+  "आवाज़ पहचानने वाला प्रोग्राम शुरू नहीं हो सका। विवरण सर्वर लॉग (speech.log) में है।",
+  "ಧ್ವನಿ ಗುರುತಿಸುವ ಪ್ರೋಗ್ರಾಂ ಪ್ರಾರಂಭವಾಗಲಿಲ್ಲ. ವಿವರಗಳು ಸರ್ವರ್ ಲಾಗ್‌ನಲ್ಲಿ (speech.log) ಇವೆ.")
+M("The voice recogniser took too long to start.", "आवाज़ पहचानने वाला प्रोग्राम शुरू होने में बहुत समय लगा।",
+  "ಧ್ವನಿ ಗುರುತಿಸುವ ಪ್ರೋಗ್ರಾಂ ಪ್ರಾರಂಭವಾಗಲು ತುಂಬಾ ಸಮಯ ತೆಗೆದುಕೊಂಡಿತು.")
+M("The voice recogniser stopped unexpectedly. Please try again.", "आवाज़ पहचानने वाला प्रोग्राम अचानक बंद हो गया। कृपया फिर से कोशिश करें।",
+  "ಧ್ವನಿ ಗುರುತಿಸುವ ಪ್ರೋಗ್ರಾಂ ಅನಿರೀಕ್ಷಿತವಾಗಿ ನಿಂತಿತು. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.")
+M("The recording could not be read. Please try again.", "रिकॉर्डिंग पढ़ी नहीं जा सकी। कृपया फिर से कोशिश करें।",
+  "ರೆಕಾರ್ಡಿಂಗ್ ಓದಲಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.")
+M("The recording must be 16 kHz mono 16-bit WAV.", "रिकॉर्डिंग 16 kHz mono 16-bit WAV होनी चाहिए।",
+  "ರೆಕಾರ್ಡಿಂಗ್ 16 kHz mono 16-bit WAV ಆಗಿರಬೇಕು.")
+M("Recordings can be at most 60 seconds long.", "रिकॉर्डिंग ज़्यादा से ज़्यादा 60 सेकंड की हो सकती है।",
+  "ರೆಕಾರ್ಡಿಂಗ್ ಗರಿಷ್ಠ 60 ಸೆಕೆಂಡುಗಳಷ್ಟು ಇರಬಹುದು.")
+M("The recording is too short. Hold the microphone button and speak.", "रिकॉर्डिंग बहुत छोटी है। माइक बटन दबाकर बोलें।",
+  "ರೆಕಾರ್ಡಿಂಗ್ ತುಂಬಾ ಚಿಕ್ಕದಾಗಿದೆ. ಮೈಕ್ ಬಟನ್ ಒತ್ತಿ ಮಾತನಾಡಿ.")
+M("The recording could not be converted to text. Please try again.", "रिकॉर्डिंग को लिखे हुए शब्दों में नहीं बदला जा सका। कृपया फिर से कोशिश करें।",
+  "ರೆಕಾರ್ಡಿಂಗ್ ಅನ್ನು ಬರಹಕ್ಕೆ ಪರಿವರ್ತಿಸಲಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.")

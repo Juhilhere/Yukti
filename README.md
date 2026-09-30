@@ -51,6 +51,8 @@ Yukti does it differently:
 | 📚 | **Policy-filtered retrieval** | SQLite FTS5 (BM25) over OCR'd and digital documents. Superseded revisions are down-weighted. Withheld documents are counted, never shown. |
 | ⚖️ | **Evidence, not vibes** | Facts are marked KNOWN / MISSING / CONFLICTING, with candidates, revisions and a recommended value. |
 | 🧠 | **Local LLM with citations** | Bundled llama.cpp (CUDA or Vulkan, chosen automatically). A watchdog restarts a crashed or hung engine. Every answer cites `[S#]` / `[F#]`. |
+| 📷 | **Ask with a photo** | Photograph a pipe stencil, tag plate, nameplate or gauge. The text on it is read offline (OCR) and matched to the asset register, and Gemma 3 looks at the picture. The line or chemical is named only from a readable tag and the plant's documents, never guessed from colour. Rust, leaks and damage are pointed out. Photos are stripped of location data and visible only to the sender. |
+| 🎙️ | **Speak instead of typing** | Offline Whisper speech recognition (large-v3-turbo on an NVIDIA GPU, small on the processor), hinted with the plant's own tags. The words land in the question box for checking; nothing is sent until you press Send. English, Hindi and Kannada. |
 | 🧾 | **Hash-chained audit** | Append-only SHA-256 chain with one-click verification and CSV/JSONL export. |
 | 📥 | **Governed knowledge** | Only Heads of Department add or remove documents, and only for their own department. Uploads are OCR'd, tagged, chunked and indexed. |
 | ✅ | **Access and findings workflows** | Time-bound access grants approved by the HOD. Inspection findings with per-role allowed actions and escalation. |
@@ -122,7 +124,7 @@ See the [User Guide](docs/USER_GUIDE.md).
 ### For administrators: run the server
 
 The **Yukti Server** package is self-contained. It includes `yukti-server.exe`, llama.cpp CUDA 12.4 and Vulkan builds,
-the default model Gemma-2-2B-it Q8_0, a pre-trained Laya, the UI and the data. You do **not** need to install Python,
+the default model Gemma-3-4B-it Q4_K_M with its image module, Whisper speech recognition (whisper.cpp), a pre-trained Laya, the UI and the data. You do **not** need to install Python,
 Bionic/LM Studio, Ollama or vLLM. If they are present, Yukti can use them too: models already downloaded in **Ollama**, an **LM Studio**
 server, **vLLM**, or any **OpenAI-compatible server by URL** (Model loader → engine → Connection → *Test & save*).
 
@@ -208,6 +210,16 @@ Measured on an RTX 4050 laptop GPU (6 GB) with Gemma-2-2B-it Q8_0:
 | llama.cpp CUDA 12.4 | **51.7 tok/s** | 0.2 s |
 | llama.cpp Vulkan | 50.8 tok/s | not recorded |
 | CPU only | 13.4 tok/s | not recorded |
+
+Version 0.5.0 ships Gemma-3-4B-it Q4_K_M with its image module instead, measured on the same GPU:
+
+| What | Measured |
+|---|---|
+| Gemma 3 4B generation (llama.cpp CUDA) | 44–58 tok/s |
+| Answer to a photo question (OCR + model) | 4–10 s |
+| Speech to text, Whisper large-v3-turbo on the GPU | 0.3–0.4 s for a 4 s question (first use ~3 s while it loads) |
+| Speech to text, Whisper small on the processor | ~3.5 s per question |
+| Gemma 3 + Whisper turbo together | 5.1 of 6 GB video memory |
 
 Laya routes in about 1 ms. The usage dashboard reports only values measured on your own server.
 

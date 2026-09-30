@@ -1,5 +1,13 @@
 Default model shipped with Yukti
-  gemma-2-2b-it-GGUF\gemma-2-2b-it-Q8_0.gguf   (Google Gemma 2 2B instruction-tuned, Q8_0 GGUF, lmstudio-community conversion)
-  SHA-256: 2D448A9AAB894B8E8E18168CF3F490CB9F65632222F29F93514AC9ECC754DEBE
+  gemma-3-4b-it-GGUF\gemma-3-4b-it-Q4_K_M.gguf     (Google Gemma 3 4B instruction-tuned, Q4_K_M GGUF, ggml-org conversion)
+  SHA-256: 882E8D2DB44DC554FB0EA5077CB7E4BC49E7342A1F0DA57901C0802EA21A0863
+  gemma-3-4b-it-GGUF\mmproj-gemma-3-4b-it-f16.gguf (its image module: lets the model see photos; ggml-org mmproj-model-f16.gguf)
+  SHA-256: 8C0FB064B019A6972856AAAE2C7E4792858AF3CA4561BE2DBF649123BA6C40CB
   Licence: Gemma Terms of Use (https://ai.google.dev/gemma/terms)
+
+Voice input (speech\models; OpenAI Whisper, MIT licence; ggml conversions from huggingface.co/ggerganov/whisper.cpp)
+  ggml-large-v3-turbo-q5_0.bin  (used on NVIDIA GPUs)   SHA-256: 394221709CD5AD1F40C46E6031CA61BCE88931E6E088C188294C6D5A55FFA7E2
+  ggml-small-q8_0.bin           (used on the processor) SHA-256: 49C8FB02B65E6049D5FA6C04F81F53B867B5EC9540406812C643F177317F779F
+
 Add larger models for GPU servers in the app: Admin > Models > Import from path (e.g. a USB drive). Any llama.cpp GGUF works.
+A model can see photos when its image module (a file with "mmproj" in its name) is in the same folder.

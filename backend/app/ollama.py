@@ -58,6 +58,12 @@ async def probe(url: str) -> dict[str, Any]:
                 info.append({"id": m.get("name") or m.get("model"), "size_bytes": m.get("size") or 0,
                              "family": d.get("family") or "", "params": d.get("parameter_size") or "",
                              "quant": d.get("quantization_level") or "", "format": d.get("format") or ""})
+            for i in info:   # which models can see photos (gemma3, llava, qwen2.5vl ... report "vision")
+                try:
+                    s = await c.post(f"{base}/api/show", json={"model": i["id"]})
+                    i["vision"] = "vision" in (s.json().get("capabilities") or [])
+                except Exception:  # noqa: BLE001
+                    i["vision"] = False
             out.update(available=True, models=[i["id"] for i in info], model_info=info)
             if not info:
                 out["error"] = "Ollama is running but has no models. Download one first, e.g.: ollama pull gemma3:4b"
@@ -131,6 +137,15 @@ def preload(url: str, model: str, cfg: dict[str, Any]) -> tuple[bool, str]:
     return True, detail
 
 
+def has_vision(url: str, model: str) -> bool:
+    """Ollama reports what a model can do (e.g. gemma3 includes "vision")."""
+    try:
+        r = httpx.post(f"{root(url)}/api/show", json={"model": model}, timeout=10)
+        return "vision" in (r.json().get("capabilities") or [])
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def release(url: str, model: str) -> None:
     """Ask Ollama to free the model's memory (best effort)."""
     try:
@@ -142,6 +157,8 @@ def release(url: str, model: str) -> None:
 async def stream(url: str, model: str, messages: list[dict[str, Any]], pred: dict[str, Any],
                  load_cfg: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
     """Native /api/chat streaming -> Yukti events ('token' | 'reasoning' | 'error' | 'done')."""
+    from .engine import state as _state   # photos only for models that can see them
+    messages = [{k: v for k, v in m.items() if k != "images" or (_state.vision and v)} for m in messages]
     body: dict[str, Any] = {"model": model, "messages": messages, "stream": True, "options": options(pred, load_cfg),
                             "keep_alive": load_cfg.get("keep_alive") or "30m"}
     if pred.get("enable_thinking") in ("on", "off"):

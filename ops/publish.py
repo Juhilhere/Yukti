@@ -128,13 +128,19 @@ def main() -> None:
     models = sorted((pkg / "models").rglob("*.gguf"))
     specs = [
         {"name": "server-core", "kind": "zip", "check": "yukti-server.exe", "replace_dir": "_internal", "label": "Yukti server, UI, Laya, public data, examples",
-         "members": [p for p in pkg.iterdir() if p.name not in ("llama", "models", "data")] +
+         "members": [p for p in pkg.iterdir() if p.name not in ("llama", "models", "data", "speech")] +
                     [p for p in (pkg / "data").iterdir() if p.name != "store"] + [pkg / "data" / "store" / "laya", pkg / "models" / "MODELS.txt"]},
         {"name": "llama-cuda", "kind": "zip", "check": "llama/cuda/llama-server.exe", "requires": "nvidia", "replace_dir": "llama/cuda",
          "label": "llama.cpp CUDA 12.4 runtime", "members": [pkg / "llama" / "cuda"]},
         {"name": "llama-vulkan", "kind": "zip", "check": "llama/vulkan/llama-server.exe", "replace_dir": "llama/vulkan",
          "label": "llama.cpp Vulkan / CPU runtime", "members": [pkg / "llama" / "vulkan"]},
-    ] + [{"name": "model-" + m.stem.lower(), "kind": "file", "dest": m.relative_to(pkg).as_posix(), "check": m.relative_to(pkg).as_posix(),
+        {"name": "speech-cuda", "kind": "zip", "check": "speech/cuda/whisper-server.exe", "requires": "nvidia", "replace_dir": "speech/cuda",
+         "label": "Voice input (NVIDIA GPU)", "members": [pkg / "speech" / "cuda"]},
+        {"name": "speech-cpu", "kind": "zip", "check": "speech/cpu/whisper-server.exe", "replace_dir": "speech/cpu",
+         "label": "Voice input", "members": [pkg / "speech" / "cpu"]},
+    ] + [{"name": "voice-" + m.stem.lower(), "kind": "file", "dest": m.relative_to(pkg).as_posix(), "check": m.relative_to(pkg).as_posix(),
+          "label": f"Voice model {m.name}", "src": m, **({"requires": "nvidia"} if "turbo" in m.name else {})}
+         for m in sorted((pkg / "speech" / "models").glob("*.bin"))] + [{"name": "model-" + m.stem.lower(), "kind": "file", "dest": m.relative_to(pkg).as_posix(), "check": m.relative_to(pkg).as_posix(),
           "label": f"Model {m.name}", "src": m} for m in models]
     artifacts = []
     for s in specs:

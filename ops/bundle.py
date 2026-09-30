@@ -10,8 +10,8 @@ Users extract the zip and double-click Yukti.exe: it starts the bundled server a
 %LOCALAPPDATA%\\Yukti, so a newer version's zip can replace the folder without losing anything.
 
 Usage:
-  python ops/bundle.py --app desktop/dist/win-unpacked --package E:/yukti-build/Yukti-Server-0.4.0 \
-                       --out E:/yukti-build/publish --version 0.4.0 [--no-page]
+  python ops/bundle.py --app desktop/dist/win-unpacked --package E:/yukti-build/Yukti-Server-0.5.0 \
+                       --out E:/yukti-build/publish --version 0.5.0 [--no-page]
 """
 from __future__ import annotations
 

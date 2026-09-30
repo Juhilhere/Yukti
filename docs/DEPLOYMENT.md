@@ -12,7 +12,7 @@ Both use the same self-contained **Yukti Server package**. No Python, Bionic/LM 
 | | Laptop / single user | Plant GPU server |
 |---|---|---|
 | Purpose | Demo, evaluation, one engineer | Many concurrent employees on the LAN |
-| GPU | Any NVIDIA GPU with about 6 GB VRAM runs the default Gemma-2-2B-it Q8_0 comfortably. AMD/Intel GPUs work through Vulkan. CPU-only works but is slower. | A data-centre or workstation NVIDIA GPU with more VRAM. This allows larger GGUF models, longer context and more parallel slots. |
+| GPU | Any NVIDIA GPU with about 6 GB VRAM runs the default Gemma-3-4B-it Q4_K_M (with photos) and Whisper voice input together. AMD/Intel GPUs work through Vulkan. CPU-only works but is slower. | A data-centre or workstation NVIDIA GPU with more VRAM. This allows larger GGUF models, longer context and more parallel slots. |
 | Memory | 8 GB RAM minimum, 16 GB recommended | Enough RAM for the model if it is partly offloaded, plus OCR during uploads |
 | Disk | Package + model + documents (the download page shows the exact size) | Also plan space for documents, backups and additional models |
 | Network | Local only (`127.0.0.1`) | Fixed IP or DNS name; TCP 8000 open **to the plant subnet only** |
@@ -35,7 +35,9 @@ Built with `ops\build-release.ps1` (see §6). Output: `E:\yukti-build\Yukti-Serv
 yukti-server.exe, _internal\        Yukti backend (PyInstaller)
 llama\cuda\                          llama.cpp b11255, CUDA 12.4 (used automatically on NVIDIA GPUs)
 llama\vulkan\                        llama.cpp b11255, Vulkan (AMD/Intel GPUs, or CPU)
-models\gemma-2-2b-it-GGUF\           default model, Gemma-2-2B-it Q8_0
+models\gemma-3-4b-it-GGUF\           default model, Gemma-3-4B-it Q4_K_M + image module (mmproj) for photos
+speech\cuda\, speech\cpu\            voice input: whisper.cpp b5130 whisper-server (NVIDIA GPU / processor)
+speech\models\                       Whisper large-v3-turbo q5_0 (GPU) and small q8_0 (processor)
 data\store\laya\                     pre-trained Laya router (ONNX)
 data\mrpl\, data\structured\         MRPL public research; example structured data
 data\corpus\                         15 EXAMPLE documents (watermarked)

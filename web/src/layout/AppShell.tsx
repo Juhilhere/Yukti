@@ -6,7 +6,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Activity, Bell, BookOpen, Building2, Cpu, Factory, Globe2, HelpCircle, Inbox, KeyRound, LogOut, MemoryStick, MessageSquare,
   MonitorSmartphone, Settings, ShieldCheck, ShieldHalf, ScrollText, User2, Wrench, Gauge, Zap, AlertTriangle, CheckCheck,
-  Bug,
+  Bug, Eye,
 } from 'lucide-react';
 import { useT } from '../lib/i18n';
 import { ADMIN_PERMS } from '../pages/admin/AdminLayout';
@@ -125,7 +125,19 @@ function ModelChip() {
       <span className={cx('flex-1 truncate text-left', ready ? 'font-medium' : 'text-muted')}>
         {ready ? st?.model_name ?? st?.model_id : st?.status === 'loading' ? t('shell.model.loading') : t('shell.model.notLoaded')}
       </span>
+      {ready && st?.vision && <VisionMark />}
     </div>
+  );
+}
+
+/** Small eye mark: the loaded AI model can look at photos itself. */
+function VisionMark() {
+  const t = useT();
+  return (
+    <span title={t('photo.model.visionTip')} aria-label={t('photo.model.vision')}
+      className="inline-flex items-center gap-1 rounded border border-violet-500/40 bg-violet-500/10 px-1 py-px text-[10.5px] text-violet-300">
+      <Eye size={11} /><span className="hidden xl:inline">{t('photo.model.vision')}</span>
+    </span>
   );
 }
 
@@ -144,6 +156,7 @@ function ModelPill() {
       <span className={cx('flex-1 truncate text-left', ready ? 'font-medium' : 'text-amber')}>
         {ready ? st?.model_name ?? st?.model_id : loading ? t('shell.model.loadingName', { name: st?.model_name ?? st?.model_id ?? t('shell.model.theModel') }) : errored ? t('shell.model.loadFailed') : t('shell.model.select')}
       </span>
+      {ready && st?.vision && <VisionMark />}
       {(ready || loading) && st?.engine && <Badge tone="cyan" mono>{ENGINE_LABEL[st.engine] ?? st.engine}</Badge>}
       {ready && typeof st?.ctx_used_pct === 'number' && (
         <span className="flex items-center gap-1 font-mono text-[10.5px] text-muted" title={t('shell.model.ctxUsed')}>

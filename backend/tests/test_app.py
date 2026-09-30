@@ -41,7 +41,7 @@ def test_employee_cannot_access_llm_config(login, path):
 
 
 def test_employee_sees_only_model_name(login):
-    assert set(login("ravi.e").get("/api/models/loaded").json()) <= {"status", "engine", "model_name"}
+    assert set(login("ravi.e").get("/api/models/loaded").json()) <= {"status", "engine", "model_name", "vision"}
 
 
 def test_admin_ai_settings_roundtrip(login):
@@ -460,3 +460,95 @@ def test_chat_error_and_notifications_follow_language(login):
     kn = u.get(f"/api/chats/{chat['id']}", headers={"X-Lang": "kn"}).json()["messages"][-1]["error"]["message"]
     assert errs and errs[0]["message"] == tr(en, "hi") != en  # no model / engine unreachable, in Hindi
     assert kn == tr(en, "kn") != en
+
+
+# ---------------------------------------------------------------- photos and voice
+def _photo_bytes(text: str = "V-501 LEAN AMINE") -> bytes:
+    import io
+    from PIL import Image, ImageDraw, ImageFont
+    img = Image.new("RGB", (1400, 500), (170, 90, 40))
+    d = ImageDraw.Draw(img)
+    d.rectangle((60, 150, 1340, 350), fill=(245, 245, 235))
+    d.text((100, 190), text, fill=(10, 10, 10), font=ImageFont.load_default(size=110))
+    exif = Image.Exif()
+    exif[0x010F] = "PhoneMaker"          # camera make
+    exif[0x8825] = {1: "N", 2: (12.0, 55.0, 1.0)}  # GPS
+    buf = io.BytesIO()
+    img.save(buf, "JPEG", exif=exif)
+    return buf.getvalue()
+
+
+def _events(text: str) -> dict:
+    import json as _j
+    ev, name = {}, None
+    for line in text.splitlines():
+        if line.startswith("event:"):
+            name = line[6:].strip()
+        elif line.startswith("data:") and name:
+            ev.setdefault(name, _j.loads(line[5:]))
+    return ev
+
+
+def test_photo_upload_is_cleaned_and_owner_only(login):
+    import io
+    from PIL import Image
+    u = login("meera.me")
+    r = u.post("/api/attachments", files={"file": ("p.jpg", _photo_bytes(), "image/jpeg")})
+    assert r.status_code == 200, r.text
+    ph = r.json()
+    assert ph["mime"] == "image/jpeg" and max(ph["width"], ph["height"]) <= 1600
+    img = u.get(f"/api/attachments/{ph['id']}")
+    assert img.status_code == 200 and not Image.open(io.BytesIO(img.content)).getexif()  # EXIF and GPS removed
+    assert max(Image.open(io.BytesIO(u.get(f"/api/attachments/{ph['id']}?thumb=1").content)).size) <= 320
+    assert login("ravi.e").get(f"/api/attachments/{ph['id']}").status_code == 404
+    assert u.get("/api/attachments/..%2F..%2Fyukti.db").status_code == 404
+    assert u.post("/api/attachments", files={"file": ("x.pdf", b"%PDF-1.4 nope", "application/pdf")}).status_code == 422
+
+
+def test_photo_question_reads_tags_without_a_model(login):
+    u = login("meera.me")
+    ph = u.post("/api/attachments", files={"file": ("p.jpg", _photo_bytes(), "image/jpeg")}).json()
+    chat = u.post("/api/chats", json={}).json()
+    r = u.post(f"/api/chats/{chat['id']}/messages", json={"content": "", "use_knowledge": True, "images": [ph["id"]]},
+               headers={"X-Lang": "hi"})
+    ev = _events(r.text)
+    photo = ev["photo"]
+    assert "V-501" in photo["images"][0]["text"].replace(" ", "")
+    assert {"tag": "V-501", "asset_name": "Amine regenerator"} in photo["images"][0]["tags"]
+    assert photo["vision"] is False and photo["note"] and not photo["note"].startswith("The loaded model")  # translated
+    assert "error" in ev  # no model loaded in tests
+    msgs = u.get(f"/api/chats/{chat['id']}").json()["messages"]
+    assert msgs[0]["images"] == [ph["id"]] and msgs[-1]["photo"]["images"][0]["tags"]
+    # someone else cannot use this photo; too many photos / empty question are refused
+    other = login("ravi.e")
+    oc = other.post("/api/chats", json={}).json()
+    ev2 = _events(other.post(f"/api/chats/{oc['id']}/messages", json={"content": "x", "images": [ph["id"]]}).text)
+    assert "photo" not in ev2 and ev2["error"]["code"] == "not_found"
+    assert u.post(f"/api/chats/{chat['id']}/messages", json={"content": "x", "images": [ph["id"]] * 5}).status_code == 422
+    assert u.post(f"/api/chats/{chat['id']}/messages", json={"content": "  "}).status_code == 422
+    # deleting the chat deletes its photos
+    u.delete(f"/api/chats/{chat['id']}")
+    assert u.get(f"/api/attachments/{ph['id']}").status_code == 404
+
+
+def test_speech_endpoints_validate_audio(login):
+    import io
+    import wave
+    u = login("ravi.e")
+    st = u.get("/api/speech/status").json()
+    assert set(st) >= {"available", "device", "model"}
+    assert u.post("/api/speech/transcribe", files={"audio": ("a.wav", b"RIFF0000", "audio/wav")}).status_code == 422
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as w:
+        w.setnchannels(2); w.setsampwidth(2); w.setframerate(44100); w.writeframes(b"\x00" * 44100 * 4)
+    assert u.post("/api/speech/transcribe", files={"audio": ("a.wav", buf.getvalue(), "audio/wav")}).status_code == 422
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as w:
+        w.setnchannels(1); w.setsampwidth(2); w.setframerate(16000); w.writeframes(b"\x00\x00" * 16000)
+    r = u.post("/api/speech/transcribe", files={"audio": ("s.wav", buf.getvalue(), "audio/wav")}, data={"language": "hi"})
+    assert r.status_code == 200 and r.json()["text"] == "" and r.json()["no_speech"]  # silence never becomes words
+
+
+def test_microphone_allowed_for_the_app_only(app_client):
+    pp = app_client.get("/api/health").headers["Permissions-Policy"]
+    assert "microphone=(self)" in pp and "camera=()" in pp

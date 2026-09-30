@@ -18,7 +18,7 @@ from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import admin, audit, chat, engine, laya, mrpl, production, rag, seed
+from . import admin, attachments, audit, chat, engine, laya, mrpl, production, rag, seed, speech
 from .auth import Ctx, current, err, notify, router as auth_router, user_by_id
 from .config import CLEARANCE_LABELS, CLEARANCE_BY_LABEL, DEMO_MODE, REPORTS, VERSION, WEB_DIST
 from . import scope
@@ -152,6 +152,7 @@ def startup() -> None:
 
 def shutdown() -> None:
     engine.unload()
+    speech.stop()
 
 
 from contextlib import asynccontextmanager  # noqa: E402
@@ -277,7 +278,7 @@ async def models(ctx: Ctx = Depends(current)) -> list[dict[str, Any]]:
                 pb = re.match(r"([\d.]+)\s*[bB]", m.get("params") or "")
                 ms.append({"id": m["id"], "name": m["id"], "file_name": f"Ollama · {m['id']}", "path": "", "size_bytes": m["size_bytes"],
                            "family": m.get("family") or m["id"].split(":")[0], "params_b": float(pb.group(1)) if pb else None,
-                           "quant": m.get("quant") or "?", "arch": m.get("family") or "", "source": "ollama", "engine": "ollama", "vision": False})
+                           "quant": m.get("quant") or "?", "arch": m.get("family") or "", "source": "ollama", "engine": "ollama", "vision": bool(m.get("vision"))})
             continue
         for mid in info.get("models", []) or []:
             ms.append({"id": mid, "name": mid, "file_name": "", "path": "", "size_bytes": 0, "family": mid.split("/")[-1].split("-")[0],
@@ -289,7 +290,7 @@ async def models(ctx: Ctx = Depends(current)) -> list[dict[str, Any]]:
 def loaded(ctx: Ctx = Depends(current)) -> dict[str, Any]:
     pub = _engine_out(engine.state.public())
     if "models.manage" not in ctx.perms:
-        return {k: pub[k] for k in ("status", "engine", "model_name")}
+        return {k: pub[k] for k in ("status", "engine", "model_name", "vision")}
     return pub
 
 
@@ -479,8 +480,50 @@ def patch_chat(cid: str, body: dict[str, Any], ctx: Ctx = Depends(current)) -> d
 
 @app.delete("/api/chats/{cid}")
 def delete_chat(cid: str, ctx: Ctx = Depends(current)) -> dict[str, Any]:
+    if q1("SELECT 1 FROM chats WHERE id=? AND user_id=?", (cid, ctx.user["id"])):
+        attachments.delete(ctx.user["id"], chat.chat_images(cid))  # the chat's photos go with it
     ex("DELETE FROM chats WHERE id=? AND user_id=?", (cid, ctx.user["id"]))
     return {"ok": True}
+
+
+@app.post("/api/attachments")
+async def upload_photo(file: UploadFile = File(...), ctx: Ctx = Depends(current)) -> dict[str, Any]:
+    """A photo for a chat question: cleaned (no EXIF/GPS), resized, visible only to the uploader."""
+    data = await file.read(attachments.MAX_BYTES + 1)
+    try:
+        out = await asyncio.to_thread(attachments.save, ctx.user["id"], data)
+    except attachments.PhotoError as e:
+        raise err(e.status, e.code, e.message)
+    audit.write(ctx.actor, "photo.upload", f"photo:{out['id']}", {"bytes": out["size_bytes"], "w": out["width"], "h": out["height"]})
+    return out
+
+
+@app.get("/api/attachments/{aid}")
+def get_photo(aid: str, thumb: int = 0, ctx: Ctx = Depends(current)) -> FileResponse:
+    try:
+        p = attachments.file_path(ctx.user["id"], aid, bool(thumb))
+    except attachments.PhotoError as e:
+        raise err(e.status, e.code, e.message)
+    return FileResponse(p, media_type="image/jpeg", headers={"Cache-Control": "private, max-age=86400"})
+
+
+@app.get("/api/speech/status")
+def speech_status(ctx: Ctx = Depends(current)) -> dict[str, Any]:
+    st = speech.status()
+    return {**st, "reason": tr(st["reason"])} if st.get("reason") else st
+
+
+@app.post("/api/speech/transcribe")
+async def speech_transcribe(audio: UploadFile = File(...), language: str = Form("auto"), ctx: Ctx = Depends(current)) -> dict[str, Any]:
+    """Microphone recording -> text for the question box (never sent to the model automatically)."""
+    data = await audio.read(4 * 1024 * 1024)  # 60 s of 16 kHz 16-bit mono is ~1.9 MB
+    try:
+        out = await speech.transcribe(ctx.subject, data, language)
+    except speech.SpeechError as e:
+        raise err(e.status, e.code, e.message)
+    audit.write(ctx.actor, "speech.transcribe", "speech", {"seconds": out["duration_s"], "language": out["language"],
+                                                          "device": out.get("device"), "chars": len(out["text"])})
+    return out
 
 
 def _sse_response(gen) -> StreamingResponse:  # type: ignore[no-untyped-def]
@@ -500,13 +543,21 @@ async def send_message(cid: str, body: dict[str, Any], ctx: Ctx = Depends(curren
             ex("UPDATE chats SET prediction_json=?, system_prompt=? WHERE id=?", (j(body.get("prediction") or {}), sp or "", cid))
     else:  # employees always use organisation settings
         pred, sp = org["prediction"], org["system_prompt"]
-    return _sse_response(chat.run_turn(ctx, cid, str(body.get("content", "")), sp, pred, bool(body.get("use_knowledge", True))))
+    images = body.get("images") or []
+    if not isinstance(images, list) or not all(isinstance(x, str) for x in images):
+        raise err(422, "invalid", "images must be a list of photo ids")
+    if len(images) > attachments.MAX_PER_MESSAGE:
+        raise err(422, "invalid", f"At most {attachments.MAX_PER_MESSAGE} photos per question")
+    content = str(body.get("content", ""))
+    if not content.strip() and not images:
+        raise err(422, "invalid", "Type a question or attach a photo")
+    return _sse_response(chat.run_turn(ctx, cid, content, sp, pred, bool(body.get("use_knowledge", True)), images=images))
 
 
 @app.post("/api/chats/{cid}/regenerate")
 async def regenerate(cid: str, body: dict[str, Any], ctx: Ctx = Depends(current)) -> StreamingResponse:
-    last_user = q1("SELECT content FROM messages WHERE chat_id=? AND role='user' ORDER BY created_at DESC, rowid DESC LIMIT 1", (cid,))
     c = q1("SELECT * FROM chats WHERE id=? AND user_id=?", (cid, ctx.user["id"]))
+    last_user = chat.last_user_turn(cid) if c else None
     if not c or not last_user:
         raise err(404, "not_found", "Nothing to regenerate")
     org = admin.ai_settings()
@@ -514,7 +565,8 @@ async def regenerate(cid: str, body: dict[str, Any], ctx: Ctx = Depends(current)
         pred, spr = {**org["prediction"], **(body.get("prediction") or uj(c["prediction_json"], {}))}, (c["system_prompt"] or org["system_prompt"])
     else:
         pred, spr = org["prediction"], org["system_prompt"]
-    return _sse_response(chat.run_turn(ctx, cid, last_user["content"], spr, pred, bool(body.get("use_knowledge", True)), regenerate=True))
+    return _sse_response(chat.run_turn(ctx, cid, last_user["content"], spr, pred, bool(body.get("use_knowledge", True)), regenerate=True,
+                                       images=last_user["images"]))
 
 
 @app.post("/api/chats/{cid}/stop")
@@ -1194,7 +1246,7 @@ async def security_headers(request: Request, call_next):  # type: ignore[no-unty
     h.setdefault("X-Content-Type-Options", "nosniff")
     h.setdefault("X-Frame-Options", "DENY")
     h.setdefault("Referrer-Policy", "no-referrer")
-    h.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()")
+    h.setdefault("Permissions-Policy", "camera=(), microphone=(self), geolocation=(), payment=(), usb=()")
     h.setdefault("Cross-Origin-Opener-Policy", "same-origin")
     h.setdefault("Cross-Origin-Resource-Policy", "same-origin")
     if request.url.path.startswith("/api/"):

@@ -3,11 +3,12 @@
 #   desktop\dist\Yukti-Setup-<ver>.exe   (employee desktop client)
 # Requirements on the BUILD machine only: uv, Node 22, the llama.cpp release folders and a GGUF model.
 param(
-  [string]$Version = "0.4.0",
+  [string]$Version = "0.5.0",
   [string]$Out = "E:\yukti-build",
   [string]$LlamaCuda = "E:\tools\llama-cuda",      # llama-bXXXX-bin-win-cuda-12.4-x64.zip + cudart zip, extracted
   [string]$LlamaVulkan = "E:\tools\llama-vulkan",  # llama-bXXXX-bin-win-vulkan-x64.zip, extracted
-  [string]$Model = "$env:USERPROFILE\.lmstudio\models\lmstudio-community\gemma-2-2b-it-GGUF\gemma-2-2b-it-Q8_0.gguf",
+  [string]$ModelDir = "E:\yukti-build\research\models",   # ggml-org/gemma-3-4b-it-GGUF: model + image module (mmproj)
+  [string]$Whisper = "E:\yukti-build\research\whisper",   # whisper.cpp b5130 blas + cublas-12.4 builds, ggml Whisper models
   [switch]$Demo                                    # include the DEMO_MODE marker (sample accounts on the login page)
 )
 $ErrorActionPreference = "Stop"
@@ -33,7 +34,7 @@ Pop-Location
 
 Write-Host "3/5 Assemble package"
 if (Test-Path $pkg) { Remove-Item $pkg -Recurse -Force -Confirm:$false }
-New-Item -ItemType Directory -Force "$pkg\backend\policies", "$pkg\web", "$pkg\data\corpus", "$pkg\data\store\laya", "$pkg\models\gemma-2-2b-it-GGUF", "$pkg\llama\cuda", "$pkg\llama\vulkan" | Out-Null
+New-Item -ItemType Directory -Force "$pkg\backend\policies", "$pkg\web", "$pkg\data\corpus", "$pkg\data\store\laya", "$pkg\models\gemma-3-4b-it-GGUF", "$pkg\llama\cuda", "$pkg\llama\vulkan", "$pkg\speech\cuda", "$pkg\speech\cpu", "$pkg\speech\models" | Out-Null
 Copy-Item "$Out\pyi-dist\yukti-server\*" $pkg -Recurse
 Copy-Item "$root\backend\policies\core.yaml" "$pkg\backend\policies\"
 Copy-Item "$root\web\dist" "$pkg\web\dist" -Recurse
@@ -42,7 +43,12 @@ Copy-Item "$root\data\corpus\manifest.json" "$pkg\data\corpus\"
 $examples = python -c "import re;s=open(r'$root\backend\app\seed.py',encoding='utf8').read();i=s.index('EXAMPLE_FILES');print('\n'.join(re.findall(r'\""([^\""]+\.(?:pdf|docx|png|txt|xlsx))\""', s[i:s.index(']',i)])))"
 $examples -split "`n" | Where-Object { $_ } | ForEach-Object { Copy-Item "$root\data\corpus\$($_.Trim())" "$pkg\data\corpus\" }
 Copy-Item "$root\data\store\laya\*" "$pkg\data\store\laya\"
-Copy-Item $Model "$pkg\models\gemma-2-2b-it-GGUF\"
+Copy-Item "$ModelDir\gemma-3-4b-it-Q4_K_M.gguf", "$ModelDir\mmproj-gemma-3-4b-it-f16.gguf" "$pkg\models\gemma-3-4b-it-GGUF\"
+# voice input: whisper-server only (the CUDA build uses the CUDA runtime DLLs already shipped in llama\cuda)
+$wcommon = @("whisper-server.exe", "whisper.dll", "ggml.dll", "ggml-base.dll", "ggml-cpu-*.dll")
+($wcommon + "ggml-cuda.dll") | ForEach-Object { Copy-Item "$Whisper\cublas\Release\$_" "$pkg\speech\cuda\" }
+($wcommon + "ggml-blas.dll", "libopenblas.dll") | ForEach-Object { Copy-Item "$Whisper\blas\Release\$_" "$pkg\speech\cpu\" }
+Copy-Item "$Whisper\ggml-large-v3-turbo-q5_0.bin", "$Whisper\ggml-small-q8_0.bin" "$pkg\speech\models\"
 Copy-Item "$LlamaCuda\*.exe", "$LlamaCuda\*.dll" "$pkg\llama\cuda\"
 Copy-Item "$LlamaVulkan\*.exe", "$LlamaVulkan\*.dll" "$pkg\llama\vulkan\"
 Copy-Item "$root\ops\package\*.cmd", "$root\ops\package\README.txt" $pkg

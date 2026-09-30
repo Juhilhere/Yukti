@@ -10,6 +10,12 @@ Needs: Windows 10/11 (64-bit), 8 GB RAM (16 GB recommended), about 8 GB free dis
 
 Problems? In Yukti: **Help → Report a problem**, or email **juhilprogramming@gmail.com**.
 
+**New in this version:**
+- 📷 **Ask with a photo.** Photograph a pipe label, tag plate or nameplate. Yukti reads it and tells you what the line or equipment is from the plant's documents. It never guesses from the colour, and it points out rust and leaks.
+- 🎙️ **Speak instead of typing.** Speak in English, Hindi or Kannada. The words appear in the question box so you can check them before sending.
+
+Already using Yukti? Download and run the new **Yukti-Setup.exe**, then click **Update now**. Your documents, chats and settings are kept.
+
 ---
 
 ### हिंदी
@@ -17,10 +23,14 @@ Problems? In Yukti: **Help → Report a problem**, or email **juhilprogramming@g
 2. Yukti खुलेगा और खुद को तैयार करेगा — अपना AI एक बार डाउनलोड करेगा (लगभग 3.4 GB)। विंडो खुली रखें।
 3. साइन इन करें। इसके बाद Yukti **बिना इंटरनेट** के चलता है।
 
+**नया:** 📷 फ़ोटो भेजकर सवाल पूछें (पाइप का लेबल, टैग प्लेट, नेमप्लेट) · 🎙️ टाइप करने की जगह बोलें (हिंदी, English, ಕನ್ನಡ)।
+
 ### ಕನ್ನಡ
 1. **Yukti-Setup.exe** ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ ಅದರ ಮೇಲೆ ಡಬಲ್-ಕ್ಲಿಕ್ ಮಾಡಿ (Windows ಎಚ್ಚರಿಕೆ ತೋರಿಸಿದರೆ: **More info → Run anyway**).
 2. Yukti ತೆರೆದು ತಾನೇ ಸಿದ್ಧವಾಗುತ್ತದೆ — ತನ್ನ AI ಅನ್ನು ಒಮ್ಮೆ ಡೌನ್‌ಲೋಡ್ ಮಾಡುತ್ತದೆ (ಸುಮಾರು 3.4 GB). ವಿಂಡೋ ತೆರೆದಿಡಿ.
 3. ಸೈನ್ ಇನ್ ಮಾಡಿ. ನಂತರ Yukti **ಇಂಟರ್ನೆಟ್ ಇಲ್ಲದೆ** ಕೆಲಸ ಮಾಡುತ್ತದೆ.
+
+**ಹೊಸದು:** 📷 ಫೋಟೋ ಕಳುಹಿಸಿ ಪ್ರಶ್ನೆ ಕೇಳಿ (ಪೈಪ್ ಲೇಬಲ್, ಟ್ಯಾಗ್ ಪ್ಲೇಟ್, ನೇಮ್‌ಪ್ಲೇಟ್) · 🎙️ ಟೈಪ್ ಮಾಡುವ ಬದಲು ಮಾತನಾಡಿ (ಕನ್ನಡ, हिंदी, English).
 
 ---
 

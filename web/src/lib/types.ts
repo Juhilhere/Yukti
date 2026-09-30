@@ -37,6 +37,8 @@ export type LoadedModel = {
   status: 'idle' | 'loading' | 'ready' | 'error';
   engine: string | null; model_id: string | null; model_name: string | null;
   load_config: Record<string, unknown> | null; started_at: string | null; error?: string; port?: number; ctx_used_pct?: number;
+  /** true when the loaded model can look at photos itself (otherwise Yukti answers from the text read in the photo) */
+  vision?: boolean;
 };
 
 export type ParamField = {
@@ -75,11 +77,25 @@ export type GenStats = {
   tokens_in: number; tokens_out: number; tok_per_s: number; ttft_ms: number; total_ms: number;
   stop_reason: string; model_name: string; engine: string;
 };
+/* ---- photos & voice ---- */
+export type Attachment = { id: string; width: number; height: number; size_bytes: number; mime: string };
+export type PhotoLine = { text: string; conf: number };
+export type PhotoTag = { tag: string; asset_name: string | null };
+export type PhotoImage = { id: string; text: string; lines: PhotoLine[]; tags: PhotoTag[] };
+/** SSE "photo" event / stored on assistant messages: what Yukti read in the attached photos. */
+export type PhotoReading = { images: PhotoImage[]; vision: boolean; note: string };
+export type SpeechStatus = { available: boolean; device: 'gpu' | 'cpu' | null; model: string | null; reason?: string };
+export type Transcript = { text: string; language: string; duration_s: number; elapsed_s: number };
+
 export type Message = {
   id: string; role: 'user' | 'assistant' | 'system'; content: string; created_at: string;
   route?: RouteDecision | null; guard?: GuardDecision | null; sources?: Source[] | null; denied?: Denied | null;
   facts?: Fact[] | null; stats?: GenStats | null; reasoning?: string | null;
   feedback?: { rating: number; comment?: string | null } | number | null;
+  /** user messages: attachment ids of the photos sent with the question */
+  images?: string[] | null;
+  /** assistant messages: what was read in those photos */
+  photo?: PhotoReading | null;
 };
 export type ChatDetail = {
   id: string; title: string; project_id: string | null; system_prompt: string | null;

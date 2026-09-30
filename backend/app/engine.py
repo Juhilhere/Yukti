@@ -275,11 +275,13 @@ def scan_models() -> list[dict[str, Any]]:
             qm = QUANT_RE.search(p.stem)
             pm = PARAMS_RE.search(p.stem)
             fam = re.split(r"[-_]", p.stem)[0].lower()
-            vision = False  # Yukti's chat is text-only; a vision projector next to the model is not used
+            mm = sorted(x for x in p.parent.glob("*.gguf") if "mmproj" in x.name.lower())
             out.append({
                 "id": str(p), "name": p.stem, "file_name": p.name, "path": str(p), "size_bytes": p.stat().st_size,
                 "family": fam, "params_b": float(pm.group(1)) if pm else None, "quant": qm.group(1).upper() if qm else "?",
-                "arch": fam, "source": "lmstudio" if ".lmstudio" in str(p) else "yukti", "vision": vision,
+                "arch": fam, "source": "lmstudio" if ".lmstudio" in str(p) else "yukti",
+                # an image projector (mmproj) next to the model lets it see photos
+                "vision": bool(mm), "mmproj": str(mm[0]) if mm else None,
             })
     for m in ollama.library_models():
         if m["path"] not in seen:
@@ -322,11 +324,12 @@ class EngineState:
         self.restarts: list[float] = []         # timestamps of automatic restarts (crash-loop guard)
         self.port = LLAMA_PORT
         self.api_key: str | None = None      # random per load; llama-server rejects requests without it
+        self.vision = False                  # the loaded model can see images
 
     def public(self) -> dict[str, Any]:
         return {"status": self.status, "engine": self.engine, "model_id": self.model_id, "model_name": self.model_name,
                 "load_config": self.load_config, "started_at": (time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(self.started_at)) if self.started_at else None), "error": self.error,
-                "port": self.port if self.engine == "llamacpp" else None,
+                "port": self.port if self.engine == "llamacpp" else None, "vision": self.vision,
                 "command": redacted_command(), "last_stats": self.last_stats}
 
 
@@ -455,6 +458,7 @@ def unload() -> None:
         state.proc = None
         state.ready_proc = None
         state.status = "idle"
+        state.vision = False
         state.engine = "llamacpp"  # an unloaded engine is not "selected" any more
         state.model_id = None
         state.model_name = None
@@ -482,6 +486,7 @@ def load(engine: str, model_id: str, cfg: dict[str, Any], _auto: bool = False) -
                 url, _ = engine_url("ollama")
                 log(f"Loading {model_id} in Ollama at {ollama.root(url)} (num_ctx {ollama.load_options(cfg).get('num_ctx')})")
                 ok, detail = ollama.preload(url, model_id, cfg or {})
+                state.vision = ok and ollama.has_vision(url, model_id)
                 if state.last_load and state.last_load[1] != model_id:
                     return  # superseded by another load
                 if ok:
@@ -501,6 +506,7 @@ def load(engine: str, model_id: str, cfg: dict[str, Any], _auto: bool = False) -
                                + ", ".join(info["models"][:8]))
             else:
                 state.status = "ready"
+                state.vision = bool((cfg or {}).get("vision"))
                 state.started_at = time.time()
                 log(f"Connected to {engine} at {info['base_url']} using model {model_id}")
                 return
@@ -519,12 +525,16 @@ def load(engine: str, model_id: str, cfg: dict[str, Any], _auto: bool = False) -
     backend = pick_backend(cfg.get("backend"))
     binary = LLAMA_BINARIES.get(backend) or LLAMA_SERVER
     log(f"Compute backend: {backend} ({binary})")
-    args = [binary, *filter_args(binary, llama_args(cfg, _short_path(m["path"]), _short_path(draft) if draft else draft) + [
+    extra: list[str] = []
+    if m.get("mmproj") and cfg.get("vision", True) is not False:
+        extra = ["--mmproj", _short_path(m["mmproj"])]
+    args = [binary, *filter_args(binary, llama_args(cfg, _short_path(m["path"]), _short_path(draft) if draft else draft) + extra + [
         "--host", "127.0.0.1", "--port", str(LLAMA_PORT), "--alias", m["name"], "--no-webui", "--metrics",
         "--slot-save-path", str(LOG_DIR.parent / "slots"), "--offline"])]
     (LOG_DIR.parent / "slots").mkdir(exist_ok=True)
     state.port = _free_port()
     args[args.index("--port") + 1] = str(state.port)
+    state.vision = "--mmproj" in args
     state.api_key = secrets.token_urlsafe(24) if "--api-key" in supported_flags(binary) else None
     if state.api_key:
         args += ["--api-key", state.api_key]
@@ -595,10 +605,25 @@ def is_gemma2(name: str | None) -> bool:
     return bool(name and re.search(r"gemma-?2", name, re.I))
 
 
+def openai_images(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Internal form {"content": str, "images": [base64 JPEG]} -> OpenAI content parts (text + image_url).
+    Photos are dropped when the loaded model cannot see images (the chat then relies on the text read by OCR)."""
+    out = []
+    for m in messages:
+        imgs = m.get("images") or []
+        mm = {k: v for k, v in m.items() if k != "images"}
+        if imgs and state.vision:
+            mm["content"] = [{"type": "text", "text": m.get("content") or ""}] + [
+                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b}"}} for b in imgs]
+        out.append(mm)
+    return out
+
+
 def prepare_messages(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Some templates (Gemma 2) reject the system role: merge it into the first user turn."""
     if not is_gemma2(state.model_name):
-        return messages
+        return openai_images(messages)
+    messages = [{k: v for k, v in m.items() if k != "images"} for m in messages]  # Gemma 2 cannot see images
     sys = "\n\n".join(m["content"] for m in messages if m["role"] == "system")
     rest = [dict(m) for m in messages if m["role"] != "system"]
     # Gemma requires strict user/assistant alternation
@@ -763,7 +788,8 @@ def autoload_default() -> None:
     if not ms:
         log("No local GGUF models found.")
         return
-    pick = next((m for m in ms if "gemma" in m["name"].lower()), ms[0])
+    # prefer a model that can also see photos (Gemma 3 with its image module), then any Gemma
+    pick = next((m for m in ms if m.get("vision") and "gemma" in m["name"].lower()), None) or         next((m for m in ms if "gemma" in m["name"].lower()), ms[0])
     log(f"Auto-loading default model {pick['name']}")
     load("llamacpp", pick["id"], {"backend": "auto", "ctx_size": 16384, "gpu_layers": 99, "flash_attn": "on",
                                   "cache_type_k": "q8_0", "cache_type_v": "q8_0", "parallel": 2})

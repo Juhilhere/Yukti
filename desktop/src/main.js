@@ -104,6 +104,16 @@ function normUrl(u) {
 }
 const manifestUrl = () => config.manifestUrl || distribution().manifestUrl || '';
 
+// The microphone only works on a secure page. A plant server on the LAN is usually plain http, so that one saved origin
+// (and nothing else) is treated as secure. Chromium switches must be set before the app is ready.
+try {
+  const saved = JSON.parse(fs.readFileSync(cfgPath(), 'utf8'));
+  const o = saved.mode === 'remote' && saved.serverUrl ? normUrl(saved.serverUrl) : '';
+  if (o.startsWith('http://') && !/^http:\/\/(127\.0\.0\.1|localhost|\[::1\])(:|$)/.test(o)) {
+    app.commandLine.appendSwitch('unsafely-treat-insecure-origin-as-secure', o);
+  }
+} catch { /* first start: no saved server yet */ }
+
 // ------------------------------------------------------------ health
 async function health(base, timeoutMs = 4000) {
   const ctl = new AbortController();
@@ -477,9 +487,12 @@ app.on('web-contents-created', (_e, wc) => {
 
 function setupSession() {
   const ses = session.defaultSession;
-  // deny powerful permissions except clipboard write / notifications from the configured server
+  // deny powerful permissions except clipboard write / notifications / the microphone (voice input; never the camera)
+  // from the configured server
   ses.setPermissionRequestHandler((wc, perm, cb, details) => {
-    const ok = ['clipboard-sanitized-write', 'notifications', 'fullscreen'].includes(perm) && sameOrigin(details.requestingUrl || wc.getURL(), activeUrl);
+    const mic = perm === 'media' && (details.mediaTypes || []).length > 0 && details.mediaTypes.every((t) => t === 'audio');
+    const ok = (mic || ['clipboard-sanitized-write', 'notifications', 'fullscreen'].includes(perm)) &&
+      sameOrigin(details.requestingUrl || wc.getURL(), activeUrl);
     cb(ok);
   });
   ses.on('will-download', (_e, item) => {
@@ -742,6 +755,16 @@ if (!app.requestSingleInstanceLock()) {
     if (runningFromZipPreview()) {
       showSetup(T('main.zip'));
       return;
+    }
+    // this app is newer than the installed server (the user ran a new Yukti-Setup.exe): offer the update once
+    if (!bundle && config.mode === 'local' && serverKind(config.installRoot) && manifestUrl() && config.updateOffered !== app.getVersion()) {
+      const inst = await installer.installedVersion(config.installRoot);
+      if (inst && inst.version && inst.version !== app.getVersion()) {
+        config.updateOffered = app.getVersion(); saveConfig();
+        log(`[setup] installed Yukti ${inst.version}, this app is ${app.getVersion()}: offering the update`);
+        showSetup();
+        return;
+      }
     }
     if (config.mode === 'local' && serverKind(config.installRoot)) bootLocal();
     else if (config.mode === 'remote') {

@@ -231,7 +231,7 @@ and only to the server origin. Downloads prompt for a location.
       "parts": [ { "url": "files/server-core.part00", "size": 0, "sha256": "…" } ] },
     { "name": "llama-cuda", "kind": "zip", "requires": "nvidia", "check": "llama/cuda/llama-server.exe", "replace_dir": "llama/cuda", "…": "…" },
     { "name": "llama-vulkan", "kind": "zip", "check": "llama/vulkan/llama-server.exe", "replace_dir": "llama/vulkan", "…": "…" },
-    { "name": "model-gemma-2-2b-it-q8_0", "kind": "file", "dest": "models/gemma-2-2b-it-GGUF/gemma-2-2b-it-Q8_0.gguf", "…": "…" }
+    { "name": "model-gemma-3-4b-it-q4_k_m", "kind": "file", "dest": "models/gemma-3-4b-it-GGUF/gemma-3-4b-it-Q4_K_M.gguf", "…": "…" }
   ]
 }
 ```

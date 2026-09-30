@@ -154,6 +154,7 @@ CREATE TABLE IF NOT EXISTS feedback(id TEXT PRIMARY KEY, message_id TEXT, user_i
 CREATE TABLE IF NOT EXISTS answer_stats(id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT, user_id TEXT, department TEXT, intent TEXT, engine TEXT, model TEXT,
   tokens_in INTEGER, tokens_out INTEGER, tok_per_s REAL, ttft_ms REAL, total_ms REAL, error TEXT, denied INTEGER DEFAULT 0);
 CREATE TABLE IF NOT EXISTS engines(id TEXT PRIMARY KEY, base_url TEXT, api_key TEXT);
+CREATE TABLE IF NOT EXISTS attachments(id TEXT PRIMARY KEY, user_id TEXT, width INTEGER, height INTEGER, size_bytes INTEGER, ocr_json TEXT, created_at TEXT);
 CREATE TABLE IF NOT EXISTS laya_log(id INTEGER PRIMARY KEY AUTOINCREMENT, text TEXT, decision_json TEXT, latency_ms REAL, at TEXT);
 
 CREATE TABLE IF NOT EXISTS audit_log(
