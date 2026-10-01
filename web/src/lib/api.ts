@@ -84,12 +84,13 @@ export async function request<T = unknown>(method: string, path: string, body?: 
     });
   } catch (e) {
     if ((e as Error)?.name === 'AbortError') throw e;
-    recordProblem('api', `${method} ${path}: server not reachable`);
+    // kept for the user's own problem report only: with the server unreachable it cannot be written to the journal there
+    recordProblem('api', `${method} ${path}: server not reachable`, false);
     throw new ApiError(0, 'network', tr('err.network', 'Yukti cannot reach its server. If Yukti was just started, wait a moment; otherwise restart the Yukti app.'));
   }
   if (!res.ok) {
     const err = await parseError(res);
-    if (res.status >= 500 || res.status === 0) recordProblem('api', `${method} ${path}: ${res.status} ${err.code} ${err.message}`);
+    if (res.status >= 500 || res.status === 0) recordProblem('api', `${method} ${path}: ${res.status} ${err.code} ${err.message}`, res.status !== 0);
     if (!opts.silent) notifyError(err, path);
     throw err;
   }

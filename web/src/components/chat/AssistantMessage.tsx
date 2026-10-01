@@ -248,7 +248,8 @@ function AssistantMessageImpl({ m, isLast, busy, showStats, technical = true, qu
         {m.error && (
           <div className="mt-2 flex items-start gap-2 rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-[12.5px] text-red-200">
             <AlertTriangle size={14} className="mt-0.5 shrink-0 text-danger" />
-            <div><span className="font-mono text-[11px] text-red-300">{m.error.code}</span> {m.error.message}</div>
+            {/* the internal error code is for administrators (or behind "Details"); employees read just the plain message */}
+            <div>{(technical || detailsOpen) && <><span className="font-mono text-[11px] text-red-300">{m.error.code}</span>{' '}</>}{m.error.message}</div>
           </div>
         )}
         {m.facts && m.facts.length > 0 && <FactsTable facts={m.facts} onCite={cite} />}

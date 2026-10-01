@@ -125,7 +125,8 @@ export function useVoiceInput(onText: (text: string) => void) {
   const onTextRef = useRef(onText);
   onTextRef.current = onText;
   const stateRef = useRef<VoiceState>('idle');
-  const set = (s: VoiceState) => { stateRef.current = s; setState(s); };
+  const startGen = useRef(0);
+  const set =(s: VoiceState) => { stateRef.current = s; setState(s); };
 
   const teardown = useCallback(() => {
     cancelAnimationFrame(raf.current);
@@ -190,21 +191,30 @@ export function useVoiceInput(onText: (text: string) => void) {
     setError(null);
     if (!micSupported()) { setError({ title: tr('voice.err.insecure'), body: tr('voice.err.insecureHow') }); return; }
     set('starting');
+    const my = ++startGen.current;
+    // cancelled, or the chat screen went away, while waiting for the microphone
+    const cancelled = () => (stateRef.current as VoiceState) !== 'starting' || startGen.current !== my;
     let stream: MediaStream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 },
       });
     } catch (e) {
+      if (cancelled()) return;
       set('idle');
       setError(micErrorText(e));
       return;
     }
-    if ((stateRef.current as VoiceState) !== 'starting') { stream.getTracks().forEach((t) => t.stop()); return; }  // cancelled meanwhile
+    if (cancelled()) { stream.getTracks().forEach((t) => t.stop()); return; }
     try {
       const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       const ctx = new Ctx();
       if (ctx.state === 'suspended') await ctx.resume();
+      if (cancelled()) {  // the microphone must not start after the user cancelled or left the chat
+        stream.getTracks().forEach((t) => t.stop());
+        void ctx.close().catch(() => undefined);
+        return;
+      }
       const src = ctx.createMediaStreamSource(stream);
       const proc = ctx.createScriptProcessor(4096, 1, 1);
       const analyser = ctx.createAnalyser();
@@ -212,12 +222,17 @@ export function useVoiceInput(onText: (text: string) => void) {
       const mute = ctx.createGain();
       mute.gain.value = 0;  // the processor must reach the destination to run, but we never play the mic back
       const r: Rec = { stream, ctx, src, proc, analyser, mute, chunks: [], count: 0, rate: ctx.sampleRate, peak: 0 };
+      // The 60 s limit is enforced here as well as in the on-screen timer below: the timer (requestAnimationFrame) is
+      // paused while the window is hidden or minimised, the audio callback is not.
+      const maxCount = MAX_SECONDS * r.rate;
       proc.onaudioprocess = (ev) => {
+        ev.outputBuffer.getChannelData(0).fill(0);
+        if (r.count >= maxCount) return;  // limit reached: collect nothing more
         const d = ev.inputBuffer.getChannelData(0);
         r.chunks.push(new Float32Array(d));
         r.count += d.length;
         for (let i = 0; i < d.length; i++) { const a = Math.abs(d[i]); if (a > r.peak) r.peak = a; }
-        ev.outputBuffer.getChannelData(0).fill(0);
+        if (r.count >= maxCount) void finish();
       };
       src.connect(analyser);
       src.connect(proc);
@@ -274,7 +289,8 @@ export function useVoiceInput(onText: (text: string) => void) {
   }, [state, cancel]);
 
   // release the microphone if the chat screen goes away
-  useEffect(() => () => { abort.current?.abort(); teardown(); }, [teardown]);
+  // (state back to 'idle' so a microphone request that is still pending does not start recording afterwards)
+  useEffect(() => () => { stateRef.current = 'idle'; abort.current?.abort(); teardown(); }, [teardown]);
 
   return { state, elapsed, level, error, clearError: () => setError(null), toggle, cancel, stop: finish };
 }

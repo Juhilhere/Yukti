@@ -72,6 +72,11 @@ const assert = (c, m) => { if (!c) { console.error('FAIL:', m); process.exit(1);
   assert(paused, 'pause (abort) stops the download');
   const pl2 = await installer.plan({ manifestUrl: url, dest, forceGpu: false });
   assert(pl2.todoCount === 1 && pl2.partialBytes > 0, 'plan after pause: core installed, partial model bytes kept');
+  // disk space: what is already downloaded is on the disk and is not needed a second time
+  assert(installer.neededBytes(1000, 0) === 2100 && installer.neededBytes(1000, 400) === 1700 && installer.neededBytes(0, 0) === 0,
+    'disk-space formula: (total - already downloaded) + 1.1 x total');
+  assert(pl.needBytes === installer.neededBytes(pl.totalBytes, 0) && pl2.needBytes === installer.neededBytes(pl2.totalBytes, pl2.partialBytes) &&
+    pl2.needBytes === Math.ceil(pl2.totalBytes * 11 / 10) + pl2.totalBytes - pl2.partialBytes, 'plan: needed disk space takes the partial bytes into account');
   const states = {};
   const r = await installer.install({ manifestUrl: url, dest, forceGpu: false,
     onProgress: (p) => { if (p.phase === 'artifact') states[p.artifact] = p.state; } });
@@ -112,6 +117,31 @@ const assert = (c, m) => { if (!c) { console.error('FAIL:', m); process.exit(1);
   const pr = await installer.plan({ manifestUrl: url, dest, forceGpu: false });
   assert(!fs.existsSync(path.join(dest, 'speech', 'models', 'v.bin')) && !pr.features.voice.on && pr.todoCount === 0, 'add-on removed and switched off');
   assert(fs.existsSync(path.join(dest, 'yukti-server.exe')), 'removing an add-on keeps Yukti itself');
+  // Every download goes through the fetch that is handed in (the app passes Electron's net.fetch: Windows proxy and
+  // certificate store). And a complete file left in .download by an earlier run - checked, but not yet put in place -
+  // is used as it is instead of being downloaded again.
+  const seen = [];
+  const countingFetch = (u, init) => { seen.push(String(u)); return fetch(u, init); };
+  const dest2 = path.join(tmp, 'install2');
+  fs.mkdirSync(path.join(dest2, '.download'), { recursive: true });
+  fs.writeFileSync(path.join(dest2, '.download', 'model'), model);
+  const pw = await installer.plan({ manifestUrl: url, dest: dest2, forceGpu: false, fetch: countingFetch });
+  assert(seen.length === 1 && /manifest\.json$/.test(seen[0]), 'injected fetch: used for the manifest');
+  assert(pw.artifacts.find((x) => x.name === 'model').partialBytes === model.length && pw.needBytes === installer.neededBytes(pw.totalBytes, model.length),
+    'plan: a complete file in .download counts as already downloaded');
+  seen.length = 0;
+  await installer.install({ manifestUrl: url, dest: dest2, forceGpu: false, fetch: countingFetch });
+  assert(seen.some((u) => /server-core\.part00$/.test(u)), 'injected fetch: used for the parts');
+  assert(!seen.some((u) => /model\.part/.test(u)) && sha(fs.readFileSync(path.join(dest2, 'models', 'm.gguf'))) === sha(model),
+    'verified whole file in .download reused (not downloaded again), installed byte-identical');
+  // …but a leftover with the right size and the wrong content is not trusted
+  const dest3 = path.join(tmp, 'install3');
+  fs.mkdirSync(path.join(dest3, '.download'), { recursive: true });
+  fs.writeFileSync(path.join(dest3, '.download', 'model'), crypto.randomBytes(model.length));
+  seen.length = 0;
+  await installer.install({ manifestUrl: url, dest: dest3, forceGpu: false, fetch: countingFetch });
+  assert(seen.some((u) => /model\.part00$/.test(u)) && sha(fs.readFileSync(path.join(dest3, 'models', 'm.gguf'))) === sha(model),
+    'damaged whole file in .download discarded and downloaded again');
   fs.writeFileSync(path.join(files, 'model.part02'), Buffer.from('tampered'));
   fs.rmSync(path.join(dest, 'models', 'm.gguf'));
   let failed = false;

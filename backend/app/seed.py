@@ -16,7 +16,7 @@ from datetime import date, timedelta
 from . import audit, rag
 from .auth import hash_password
 from .config import CLEARANCE_BY_LABEL, CORPUS, DATA
-from .db import ex, j, new_id, now_iso, q, q1
+from .db import ex, j, new_id, now_iso, q, q1, uj
 
 STRUCT = DATA / "structured"
 
@@ -64,21 +64,60 @@ def seeded() -> bool:
     return bool(q1("SELECT 1 FROM users LIMIT 1"))
 
 
+# Accounts that exist ONLY in demonstration mode. The top-management sample account sees company-level information; a
+# real installation must never contain such an account with a password that is printed in the documentation.
+DEMO_ONLY = {"director.md"}
+TOP_MANAGEMENT_NOTICE = "Assign the Top management role to the people who may see company information"
+TOP_MANAGEMENT_NOTICE_BODY = ("Nobody has the Top management role yet, so company-level information (finances and company-wide "
+                              "figures) is hidden from everyone. Open Administration > Users to assign it.")
+
+
+def _insert_persona(p: tuple, demo: bool) -> None:
+    u, name, post, dept, cl, roles, scopes, pw = p
+    # outside demonstration mode the well-known starting passwords must be changed at first login
+    ex("""INSERT INTO users(id, username, display_name, post, department, clearance, roles_json, asset_scopes_json,
+          password_hash, demo_password, must_change_password, created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)""",
+       (new_id(), u, name, post, dept, cl, j(roles), j(scopes), hash_password(pw), pw if demo else None,
+        0 if demo else 1, now_iso()))
+
+
+def ensure_top_management() -> None:
+    """Run at every start. If nobody holds the `executive` (Top management) role - an installation made before the role
+    existed, or a production installation - then: demonstration mode gets the fictional sample account; a production
+    installation gets NO account (never one with a published password): the administrators are told to assign the role."""
+    from . import journal
+    from .config import DEMO_MODE
+    users = q("SELECT id, username, roles_json FROM users")
+    if not users or any("executive" in uj(u["roles_json"], []) for u in users):
+        return
+    if DEMO_MODE:
+        p = next(x for x in PERSONAS if x[0] == "director.md")
+        if not any(u["username"] == p[0] for u in users):
+            _insert_persona(p, True)
+            audit.write("system", "seed.demo_account_added", f"user:{p[0]}", {"roles": p[5]})
+            journal.event("seed", "demonstration account for top management added", username=p[0])
+        return
+    journal.warn("seed", "nobody has the Top management role: company-level information is hidden from everyone until an "
+                         "administrator assigns it (Administration > Users)")
+    for u in users:
+        if "admin" in uj(u["roles_json"], []) and not q1("SELECT 1 FROM notifications WHERE user_id=? AND title=?",
+                                                         (u["id"], TOP_MANAGEMENT_NOTICE)):
+            ex("INSERT INTO notifications(id, user_id, kind, title, body, link, created_at) VALUES(?,?,?,?,?,?,?)",
+               (new_id(), u["id"], "admin_task", TOP_MANAGEMENT_NOTICE, TOP_MANAGEMENT_NOTICE_BODY, "/admin/users", now_iso()))
+
+
 def run(ingest: bool = True) -> None:
     if seeded():
         return
     from .config import DEMO_MODE
-    for u, name, post, dept, cl, roles, scopes, pw in PERSONAS:
-        # outside demonstration mode the well-known starting passwords must be changed at first login
-        ex("""INSERT INTO users(id, username, display_name, post, department, clearance, roles_json, asset_scopes_json,
-              password_hash, demo_password, must_change_password, created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)""",
-           (new_id(), u, name, post, dept, cl, j(roles), j(scopes), hash_password(pw), pw if DEMO_MODE else None,
-            0 if DEMO_MODE else 1, now_iso()))
+    personas = [p for p in PERSONAS if DEMO_MODE or p[0] not in DEMO_ONLY]
+    for p in personas:
+        _insert_persona(p, DEMO_MODE)
     for dept, mgr in MANAGERS.items():
         uid = q1("SELECT id FROM users WHERE username=?", (mgr,))["id"]
         ex("INSERT OR IGNORE INTO departments(id, code, name, manager_user_id) VALUES(?,?,?,?)", (new_id(), dept, dept, uid))
     # on-call contacts are the employees themselves (no invented directory)
-    for u in PERSONAS:
+    for u in personas:
         ex("INSERT INTO contacts(id, name, dept, role, ext, on_call) VALUES(?,?,?,?,?,?)",
            (new_id(), u[1], u[3], u[2], "", int(u[0] in ON_CALL)))
     kept_tags = _example_tags()
@@ -113,7 +152,7 @@ def run(ingest: bool = True) -> None:
            (new_id(), tag, f["slot"], f["attribute"], None if f.get("value") is None else str(f["value"]), f.get("unit") or "",
             dn if not dn.startswith("ASSET-MASTER") else "Asset master (M-A2)", f.get("revision"), f.get("effective_date"),
             f.get("page"), kind))
-    audit.write("system", "seed.completed", "demo", {"employees": len(PERSONAS), "example_documents": len(EXAMPLE_FILES)})
+    audit.write("system", "seed.completed", "demo", {"employees": len(personas), "example_documents": len(EXAMPLE_FILES)})
     if ingest:
         ingest_examples()
         seed_workflows()

@@ -41,6 +41,7 @@ export default function Chat() {
 
   const abortRef = useRef<AbortController | null>(null);
   const streamChatRef = useRef<string | null>(null);
+  const sendingRef = useRef(false);
   const loadedFor = useRef<string | null>(null);
   const dirtyRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -174,39 +175,47 @@ export default function Chat() {
     }
   }, [qc]);
 
-  const send = useCallback(async (text: string, images: string[] = []) => {
-    if (busy) return;
-    let cid = chatId;
-    if (!cid) {
-      try {
-        const c = await api.post<{ id: string }>('/api/chats', { title: text.slice(0, 60) });
-        cid = c.id;
-        loadedFor.current = cid;
-        streamChatRef.current = cid;
-        if (isLlmAdmin && (systemPrompt || Object.keys(prediction).length)) {
-          api.patch(`/api/chats/${cid}`, { system_prompt: systemPrompt, prediction }).catch(() => undefined);
+  /** Resolves true once the question is on its way; false when nothing was sent (the composer then keeps the text and photos). */
+  const send = useCallback(async (text: string, images: string[] = []): Promise<boolean> => {
+    // sendingRef is set synchronously: a double click must not create two chats / two answers
+    if (busy || sendingRef.current) return false;
+    sendingRef.current = true;
+    try {
+      let cid = chatId;
+      if (!cid) {
+        try {
+          const c = await api.post<{ id: string }>('/api/chats', { title: text.slice(0, 60) });
+          cid = c.id;
+          loadedFor.current = cid;
+          streamChatRef.current = cid;
+          if (isLlmAdmin && (systemPrompt || Object.keys(prediction).length)) {
+            api.patch(`/api/chats/${cid}`, { system_prompt: systemPrompt, prediction }).catch(() => undefined);
+          }
+          dirtyRef.current = false;
+          nav(`/chat/${cid}`);
+          qc.invalidateQueries({ queryKey: qk.chats });
+        } catch (e) {
+          toast.error(tr('chat.toast.createFailed'), errMsg(e));
+          return false;
         }
-        dirtyRef.current = false;
-        nav(`/chat/${cid}`);
-        qc.invalidateQueries({ queryKey: qk.chats });
-      } catch (e) {
-        toast.error(tr('chat.toast.createFailed'), errMsg(e));
-        return;
       }
+      const now = new Date().toISOString();
+      const stamp = Date.now();
+      const aid = `local-a-${stamp}`;
+      setMessages((ms) => [
+        ...ms,
+        { id: `local-u-${stamp}`, role: 'user', content: text, created_at: now, images: images.length ? images : undefined },
+        { id: aid, role: 'assistant', content: '', created_at: now, streaming: true },
+      ]);
+      // Per-chat LLM overrides are admin-only; employees use the organisation AI settings.
+      const body: Record<string, unknown> = { content: text, use_knowledge: useKnowledge };
+      if (images.length) body.images = images;
+      if (isLlmAdmin) { body.system_prompt = systemPrompt || undefined; body.prediction = prediction; }
+      void runStream(cid, `/api/chats/${cid}/messages`, body, aid);
+      return true;
+    } finally {
+      sendingRef.current = false;
     }
-    const now = new Date().toISOString();
-    const stamp = Date.now();
-    const aid = `local-a-${stamp}`;
-    setMessages((ms) => [
-      ...ms,
-      { id: `local-u-${stamp}`, role: 'user', content: text, created_at: now, images: images.length ? images : undefined },
-      { id: aid, role: 'assistant', content: '', created_at: now, streaming: true },
-    ]);
-    // Per-chat LLM overrides are admin-only; employees use the organisation AI settings.
-    const body: Record<string, unknown> = { content: text, use_knowledge: useKnowledge };
-    if (images.length) body.images = images;
-    if (isLlmAdmin) { body.system_prompt = systemPrompt || undefined; body.prediction = prediction; }
-    void runStream(cid, `/api/chats/${cid}/messages`, body, aid);
   }, [busy, chatId, systemPrompt, prediction, useKnowledge, nav, qc, runStream, isLlmAdmin]);
 
   const stop = useCallback(() => {
@@ -249,6 +258,18 @@ export default function Chat() {
       composerRef.current?.addFiles(Array.from(e.dataTransfer.files ?? []));
     },
   };
+  // a file dropped outside the chat area (side lists, top bar) must not make the browser open it in place of Yukti
+  useEffect(() => {
+    const block = (e: globalThis.DragEvent) => {
+      if (!Array.from(e.dataTransfer?.types ?? []).includes('Files')) return;
+      // the chat area's own handlers run first and mark the event; everywhere else shows "not allowed"
+      if (e.type === 'dragover' && !e.defaultPrevented && e.dataTransfer) e.dataTransfer.dropEffect = 'none';
+      e.preventDefault();
+    };
+    window.addEventListener('dragover', block);
+    window.addEventListener('drop', block);
+    return () => { window.removeEventListener('dragover', block); window.removeEventListener('drop', block); };
+  }, []);
 
   return (
     <div className="flex h-full min-h-0">
@@ -306,7 +327,7 @@ export default function Chat() {
           )}
         </div>
 
-        <Composer ref={composerRef} vision={vision} busy={busy} onSend={(t, imgs) => void send(t, imgs)} onStop={stop} useKnowledge={useKnowledge}
+        <Composer ref={composerRef} vision={vision} busy={busy} onSend={send} onStop={stop} useKnowledge={useKnowledge}
           onToggleKnowledge={() => setUseKnowledge((v) => !v)} sendWithEnter={settings.sendWithEnter}
           modelReady={modelReady} canLoadModel={isLlmAdmin} showTokens={seesAnswerDetails} onOpenLoader={() => uiStore.openLoader()} fullWidth={settings.chatFullWidth} />
       </section>

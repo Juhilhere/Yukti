@@ -3,7 +3,7 @@ import { AlertTriangle, ArrowUp, BookOpen, BookX, Camera, ImagePlus, Info, Squar
 import { cx, estimateTokens } from '../../lib/format';
 import { Kbd, Spinner, Tip } from '../ui';
 import { useT } from '../../lib/i18n';
-import { isImageFile, MAX_PHOTOS, MAX_UPLOAD_BYTES, photoErrorText, preparePhoto, uploadPhoto } from '../../lib/photos';
+import { deleteUploadedPhoto, isImageFile, MAX_PHOTOS, MAX_SOURCE_BYTES, MAX_UPLOAD_BYTES, photoErrorText, preparePhoto, uploadPhoto } from '../../lib/photos';
 import { useSpeechStatus, useVoiceInput } from '../../lib/voice';
 import { MicButton, VoiceBar } from './VoiceInput';
 
@@ -18,7 +18,9 @@ export type ComposerHandle = { addFiles: (files: File[]) => void };
 const coarsePointer = () => { try { return window.matchMedia('(pointer: coarse)').matches; } catch { return false; } };
 
 export const Composer = forwardRef<ComposerHandle, {
-  busy: boolean; onSend: (text: string, images: string[]) => void; onStop: () => void; useKnowledge: boolean; onToggleKnowledge: () => void;
+  busy: boolean;
+  /** resolves true when the question was sent; false = nothing was sent, so the text and photos stay in the box */
+  onSend: (text: string, images: string[]) => Promise<boolean>; onStop: () => void; useKnowledge: boolean; onToggleKnowledge: () => void;
   sendWithEnter: boolean; modelReady: boolean; canLoadModel: boolean;
   /** show the rough token count of the question (administrators) */
   showTokens?: boolean; onOpenLoader: () => void; fullWidth: boolean;
@@ -35,6 +37,9 @@ export const Composer = forwardRef<ComposerHandle, {
   const attsRef = useRef<Att[]>([]);
   attsRef.current = atts;
   const aborts = useRef(new Map<string, () => void>());
+  const dead = useRef(false);
+  const submitting = useRef(false);
+  const prepQueue = useRef<Promise<void>>(Promise.resolve());
   const [touch] = useState(coarsePointer);
 
   const speech = useSpeechStatus();
@@ -60,19 +65,43 @@ export const Composer = forwardRef<ComposerHandle, {
   }, [text]);
 
   useEffect(() => { ref.current?.focus(); }, []);
-  useEffect(() => () => { aborts.current.forEach((abort) => abort()); }, []);
+  // `dead` = the composer went away: a photo that is still being prepared must not start uploading afterwards
+  useEffect(() => {
+    dead.current = false;
+    const running = aborts.current;
+    return () => { dead.current = true; running.forEach((abort) => abort()); };
+  }, []);
+  // a newer photo notice replaces an older voice message (otherwise the old one would hide it)
+  const clearVoiceError = voice.clearError;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (notice) clearVoiceError(); }, [notice]);
 
   const patch = (key: string, p: Partial<Att>) => setAtts((as) => as.map((a) => (a.key === key ? { ...a, ...p } : a)));
 
+  const gone = (key: string) => dead.current || !attsRef.current.some((a) => a.key === key);  // removed / screen closed meanwhile
+
+  /** Photos are prepared one after another: decoding several large pictures at once can exhaust the PC's memory. */
+  const prepareInTurn = (key: string, file: File) => {
+    const run = prepQueue.current.then(() => {
+      if (gone(key)) throw new DOMException('aborted', 'AbortError');
+      return preparePhoto(file);
+    });
+    prepQueue.current = run.then(() => undefined, () => undefined);
+    return run;
+  };
+
   const processOne = async (key: string, file: File) => {
     try {
-      const prep = await preparePhoto(file);
-      if (!attsRef.current.some((a) => a.key === key)) return;  // removed meanwhile
+      // far too large to even open: say so without decoding it
+      if (file.size > MAX_SOURCE_BYTES) { patch(key, { status: 'error', error: t('photo.err.tooBig') }); return; }
+      const prep = await prepareInTurn(key, file);
+      if (gone(key)) return;
       if (prep.blob.size > MAX_UPLOAD_BYTES) { patch(key, { status: 'error', preview: prep.preview, error: t('photo.err.tooBig') }); return; }
       patch(key, { status: 'uploading', preview: prep.preview, progress: 0 });
       const up = uploadPhoto(prep.blob, prep.name, (pct) => patch(key, { progress: pct }));
       aborts.current.set(key, up.abort);
       const res = await up.promise;
+      if (gone(key)) { deleteUploadedPhoto(res.id); return; }  // removed just as the upload finished: don't leave it on the server
       patch(key, { status: 'done', id: res.id, progress: 100 });
     } catch (e) {
       if ((e as Error)?.name === 'AbortError') return;
@@ -102,8 +131,12 @@ export const Composer = forwardRef<ComposerHandle, {
   useImperativeHandle(fwd, () => ({ addFiles }), [addFiles]);
 
   const remove = (key: string) => {
+    if (submitting.current) return;  // the question is going out with this photo right now
     aborts.current.get(key)?.();
     aborts.current.delete(key);
+    // already on the server: remove it there too (best effort; never holds up the user)
+    const id = attsRef.current.find((a) => a.key === key)?.id;
+    if (id) deleteUploadedPhoto(id);
     attsRef.current = attsRef.current.filter((a) => a.key !== key);
     setAtts((as) => as.filter((a) => a.key !== key));
     focusEnd();
@@ -116,13 +149,18 @@ export const Composer = forwardRef<ComposerHandle, {
   const ready = atts.filter((a) => a.status === 'done' && a.id);
   const canSend = !busy && !uploading && voice.state === 'idle' && (!!text.trim() || ready.length > 0);
 
-  const submit = () => {
-    if (busy) return;
+  const submit = async () => {
+    // not while a question is going out, and not while recording / converting speech (Enter must not send then)
+    if (busy || submitting.current || voice.state !== 'idle') return;
     if (uploading) { setNotice({ title: t('photo.waitUpload') }); return; }
     const q = text.trim();
     if (!q && !ready.length) return;
-    onSend(q || t('photo.defaultQuestion'), ready.map((a) => a.id!));
-    setText('');
+    submitting.current = true;
+    let sent = false;
+    try { sent = await onSend(q || t('photo.defaultQuestion'), ready.map((a) => a.id!)); } catch { sent = false; } finally { submitting.current = false; }
+    if (!sent) return;  // nothing was sent (e.g. Yukti is restarting): keep the question and the photos
+    // only what was typed before sending is cleared; anything typed while it was going out stays
+    setText((cur) => (cur.trim() === q ? '' : cur));
     setAtts([]);
     attsRef.current = [];
     setNotice(null);
@@ -137,8 +175,9 @@ export const Composer = forwardRef<ComposerHandle, {
   const noVision = vision === false && modelReady;
   const photoTip = full ? t('photo.err.max', { n: MAX_PHOTOS }) : noVision ? t('photo.noVisionHint') : t('photo.addTip');
   const speechUnavailable = speech.data && !speech.data.available ? (speech.data.reason || t('voice.unavailableReason')) : null;
-  const showMic = speech.isSuccess;  // endpoint missing / failing -> no mic button at all
+  const showMic = !!speech.data;  // never answered -> no mic button; a failed re-check later keeps the last known answer
   const errors = atts.filter((a) => a.status === 'error');
+  // a notice clears the voice message when it is set (effect above), so whichever of the two is newer is shown
   const shownNotice: Notice | null = voice.error ?? notice;
   const closeNotice = () => { voice.clearError(); setNotice(null); };
 
@@ -201,7 +240,7 @@ export const Composer = forwardRef<ComposerHandle, {
             onKeyDown={(e) => {
               if (e.key !== 'Enter' || e.nativeEvent.isComposing) return;
               const wantsSend = sendWithEnter ? !e.shiftKey : (e.ctrlKey || e.metaKey);
-              if (wantsSend) { e.preventDefault(); submit(); }
+              if (wantsSend) { e.preventDefault(); void submit(); }
             }} />
           <div className="flex flex-wrap items-center gap-1.5 px-2 pb-2">
             <input ref={cameraInput} type="file" accept="image/*" capture="environment" multiple hidden onChange={pickFiles} />
@@ -243,7 +282,7 @@ export const Composer = forwardRef<ComposerHandle, {
             {busy ? (
               <button className="btn btn-danger btn-sm" onClick={onStop} title={t('composer.stopTip')}><Square size={11} fill="currentColor" />{t('composer.stop')}</button>
             ) : (
-              <button className="btn btn-primary btn-icon !rounded-md !px-1.5" disabled={!canSend} onClick={submit}
+              <button className="btn btn-primary btn-icon !rounded-md !px-1.5" disabled={!canSend} onClick={() => void submit()}
                 title={uploading ? t('photo.waitUpload') : t('composer.sendTip')} aria-label={t('composer.sendTip')}>
                 {uploading ? <Spinner size={15} className="!text-[#1a1204]" /> : <ArrowUp size={15} />}
               </button>

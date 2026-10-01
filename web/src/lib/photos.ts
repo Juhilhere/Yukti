@@ -1,14 +1,22 @@
 // Photos in chat: client-side downscale (canvas -> JPEG) and upload with progress to POST /api/attachments.
 // No blob: URLs are created (CSP); previews are small data: URLs.
-import { ApiError, getCsrf, notifyError } from './api';
+import { api, ApiError, getCsrf, notifyError } from './api';
 import { getLang, tr } from './i18n';
 import type { Attachment } from './types';
 
 export const MAX_PHOTOS = 4;
 export const MAX_SIDE = 1600;
 export const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
+/** Originals above this are refused before decoding (decoding a huge picture can exhaust the PC's memory). */
+export const MAX_SOURCE_BYTES = 40 * 1024 * 1024;
+const UPLOAD_TIMEOUT_MS = 60_000;
 
 export const attachmentUrl = (id: string, thumb = false) => `/api/attachments/${encodeURIComponent(id)}${thumb ? '?thumb=1' : ''}`;
+
+/** The user took an uploaded photo out of the question again: remove it on the server too. Best effort, never throws. */
+export function deleteUploadedPhoto(id: string): void {
+  void api.del(`/api/attachments/${encodeURIComponent(id)}`, { silent: true }).catch(() => undefined);
+}
 
 const IMAGE_EXT = /\.(jpe?g|png|gif|webp|bmp|heic|heif|tiff?|avif)$/i;
 export function isImageFile(f: File): boolean {
@@ -99,6 +107,8 @@ export function uploadPhoto(blob: Blob, name: string, onProgress: (pct: number) 
       reject(err);
     };
     xhr.onerror = () => reject(new ApiError(0, 'network', tr('err.network')));
+    xhr.timeout = UPLOAD_TIMEOUT_MS;  // a stalled connection must not leave the photo "uploading" for ever
+    xhr.ontimeout = () => reject(new ApiError(0, 'network', tr('err.network')));
     xhr.onabort = () => reject(new DOMException('aborted', 'AbortError'));
     const fd = new FormData();
     fd.append('file', blob, name);

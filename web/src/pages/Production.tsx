@@ -488,6 +488,8 @@ type Tab = 'overview' | 'model' | 'scenario';
 
 export default function Production() {
   const t = useT();
+  const { has } = useAuth();
+  const seesFinancials = has('company.view');  // company financials are for top management only (need-to-know)
   const ov = useQuery({ queryKey: ['production', 'overview'], queryFn: () => api.get<ProductionOverview>('/api/production/overview') });
   const model = useModelQuery();
   const [tab, setTab] = useState<Tab>('overview');
@@ -521,7 +523,7 @@ export default function Production() {
             </div>
             {d.note && <div className="text-[11.5px] text-faint">{d.note}</div>}
             <ProductionByFy rows={d.public?.production_by_fy ?? []} />
-            <Financials rows={d.public?.financials ?? []} />
+            {seesFinancials && <Financials rows={d.public?.financials ?? []} />}
           </>}
         </>}
         {tab === 'model' && <ModelEditor q={model} />}

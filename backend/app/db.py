@@ -167,6 +167,8 @@ CREATE TRIGGER IF NOT EXISTS audit_no_delete BEFORE DELETE ON audit_log BEGIN SE
 
 MIGRATIONS = [
     "ALTER TABLE grants ADD COLUMN max_classification INTEGER",
+    # earlier versions kept the question text in the router log: replace it by its length (texts are never stored)
+    "UPDATE laya_log SET text = 'len=' || length(text) WHERE text NOT LIKE 'len=%'",
 ]
 
 

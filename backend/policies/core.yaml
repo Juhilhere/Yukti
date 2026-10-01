@@ -27,8 +27,15 @@ rules:
   - id: R-FINANCE-COMMERCIAL
     effect: deny
     resources: [document]
-    when: "resource.department in ['Finance & Accounts', 'Internal Audit'] and subject.department not in ['Finance & Accounts', 'Internal Audit', 'MD Office'] and 'plant_manager' not in subject.roles and not grant_covers(subject, resource, action)"
+    when: "resource.department in ['Finance & Accounts', 'Internal Audit'] and subject.department not in ['Finance & Accounts', 'Internal Audit', 'MD Office'] and 'plant_manager' not in subject.roles and 'executive' not in subject.roles and not grant_covers(subject, resource, action)"
     reason: "Finance records are restricted to Finance & Accounts, Internal Audit and the MD Office."
+
+  - id: R-COMPANY-LEVEL
+    effect: deny
+    resources: [document]
+    # need-to-know: briefings about the company itself (finances, shareholding, leadership, strategy) are for top management
+    when: "resource.doc_type == 'company_briefing' and 'executive' not in subject.roles"
+    reason: "Company-level information is for top management only."
 
   # ---------- documents: allows ----------
   - id: R-PUBLIC
@@ -88,7 +95,7 @@ rules:
   - id: G-PROCESS-CHEM
     effect: allow
     resources: [guard]
-    when: "resource.category in ['process_chemistry', 'hazmat_handling', 'formulation_confidential'] and len(set(subject.roles) & {'engineer', 'hse', 'process', 'operations', 'lab', 'plant_manager', 'admin', 'dept_manager'}) > 0"
+    when: "resource.category in ['process_chemistry', 'hazmat_handling', 'formulation_confidential'] and len(set(subject.roles) & {'engineer', 'hse', 'process', 'operations', 'lab', 'plant_manager', 'executive', 'admin', 'dept_manager'}) > 0"
   - id: G-GENERAL
     effect: allow
     resources: [guard]

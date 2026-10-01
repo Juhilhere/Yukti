@@ -29,7 +29,20 @@ LOG_FILE = LOG_DIR / "engine.log"
 _PROBLEM = re.compile(r"\b(error|failed|fail|could not|cannot|crash|out of memory|exited|not responding|timed out)\b", re.I)
 
 
+KEY_MASK = "<per-load key>"
+
+
+def _redact(line: str) -> str:
+    """The per-load API key of llama-server never reaches a log, whoever prints it (Yukti or llama-server itself)."""
+    st = globals().get("state")
+    key = getattr(st, "api_key", None)
+    if key and key in line:
+        line = line.replace(key, KEY_MASK)
+    return re.sub(r"(--api-key[ =])(?!<)\S+", lambda m: m.group(1) + KEY_MASK, line)
+
+
 def log(line: str) -> None:
+    line = _redact(line)
     s = f"{time.strftime('%H:%M:%S')} {line.rstrip()}"
     LOG.append(s)
     try:  # engine problems also go into the local journal (errors.log), the rest stays in engine.log
@@ -142,9 +155,13 @@ def _attach_to_job(proc: subprocess.Popen) -> None:
 def redacted_command() -> str | None:
     if not state.command:
         return None
-    args = list(state.command)
-    if "--api-key" in args:
-        args[args.index("--api-key") + 1] = "<per-load key>"
+    return _redacted_args(state.command)
+
+
+def _redacted_args(command: list[str]) -> str:
+    args = list(command)
+    if "--api-key" in args and args.index("--api-key") + 1 < len(args):
+        args[args.index("--api-key") + 1] = KEY_MASK
     return " ".join(args)
 
 
@@ -273,6 +290,36 @@ QUANT_RE = re.compile(r"(IQ\d_[A-Z]+|Q\d_K_[SML]|Q\d_K|Q\d_\d|Q\d_[01]|F16|BF16|
 PARAMS_RE = re.compile(r"(\d+(?:\.\d+)?)[bB](?![a-z])")
 
 
+def _name_stem(p: Path) -> str:
+    """Model name without what differs between a model file and its image module: "mmproj", the quantisation, the shard
+    number. gemma-3-4b-it-Q4_K_M.gguf and mmproj-gemma-3-4b-it-f16.gguf both give "gemma-3-4b-it"."""
+    s = re.sub(r"-\d{5}-of-\d{5}$", "", p.stem.lower())
+    s = re.sub(r"mmproj", " ", s)
+    s = QUANT_RE.sub(" ", s)
+    toks = [t for t in re.split(r"[-_. ]+", s) if t and t not in ("model", "gguf", "vision", "projector")]
+    return "-".join(toks)
+
+
+def mmproj_for(p: Path) -> Path | None:
+    """The image module (mmproj) that belongs to model file `p`. A folder with one model: the module next to it. A folder
+    with several models: only a module that shares the model's name, never some other model's module (which would
+    make the model fail to load)."""
+    files = list(p.parent.glob("*.gguf"))
+    mms = sorted(x for x in files if "mmproj" in x.name.lower())
+    if not mms:
+        return None
+    models = {_name_stem(x) + "|" + (QUANT_RE.search(x.stem).group(1).upper() if QUANT_RE.search(x.stem) else "")
+              for x in files if "mmproj" not in x.name.lower()}
+    if len(models) <= 1:
+        return mms[0]
+    mine = _name_stem(p)
+    for m in mms:
+        theirs = _name_stem(m)
+        if theirs and mine and (mine == theirs or mine.startswith(theirs + "-") or theirs.startswith(mine + "-")):
+            return m
+    return None
+
+
 def scan_models() -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     seen: set[str] = set()
@@ -287,13 +334,13 @@ def scan_models() -> list[dict[str, Any]]:
             qm = QUANT_RE.search(p.stem)
             pm = PARAMS_RE.search(p.stem)
             fam = re.split(r"[-_]", p.stem)[0].lower()
-            mm = sorted(x for x in p.parent.glob("*.gguf") if "mmproj" in x.name.lower())
+            mm = mmproj_for(p)
             out.append({
                 "id": str(p), "name": p.stem, "file_name": p.name, "path": str(p), "size_bytes": p.stat().st_size,
                 "family": fam, "params_b": float(pm.group(1)) if pm else None, "quant": qm.group(1).upper() if qm else "?",
                 "arch": fam, "source": "lmstudio" if ".lmstudio" in str(p) else "yukti",
                 # an image projector (mmproj) next to the model lets it see photos
-                "vision": bool(mm), "mmproj": str(mm[0]) if mm else None,
+                "vision": bool(mm), "mmproj": str(mm) if mm else None,
             })
     for m in ollama.library_models():
         if m["path"] not in seen:
@@ -316,14 +363,29 @@ async def vision_status() -> dict[str, Any]:
     """Can Yukti look at photos? `installed`: a model that can see is on this computer (the photo add-on, a model with its
     image module from LM Studio, or a vision model in Ollama such as gemma3) or is loaded; `active`: the loaded one can."""
     active = vision_ready()
-    models = await asyncio.to_thread(vision_models_on_disk)
-    if not models and not active:
-        try:
-            info = await probe("ollama")
-            models = [f"{m['id']} (Ollama)" for m in info.get("model_info") or [] if m.get("vision")]
-        except Exception:  # noqa: BLE001
-            models = []
+    # scanning the model folders (and asking Ollama) for every page load and every photo is wasteful: the list of models
+    # that can see is remembered for 30 s and forgotten at once when a model is loaded, unloaded, imported or deleted
+    models = _VISION_CACHE["models"] if time.time() - _VISION_CACHE["at"] < VISION_CACHE_S else None
+    if models is None:
+        gen = _VISION_CACHE["gen"]
+        models = await asyncio.to_thread(vision_models_on_disk)
+        if not models and not active:
+            try:
+                info = await probe("ollama")
+                models = [f"{m['id']} (Ollama)" for m in info.get("model_info") or [] if m.get("vision")]
+            except Exception:  # noqa: BLE001
+                models = []
+        if gen == _VISION_CACHE["gen"]:  # not invalidated while we were looking
+            _VISION_CACHE.update(at=time.time(), models=models)
     return {"installed": active or bool(models), "active": active, "loaded": state.status == "ready", "models": models[:5]}
+
+
+VISION_CACHE_S = 30.0
+_VISION_CACHE: dict[str, Any] = {"at": 0.0, "models": None, "gen": 0}
+
+
+def invalidate_vision_cache() -> None:
+    _VISION_CACHE.update(at=0.0, models=None, gen=_VISION_CACHE["gen"] + 1)
 
 
 def _short_path(path: str) -> str:
@@ -479,6 +541,7 @@ threading.Thread(target=_health_monitor, daemon=True, name="llama-health").start
 
 
 def unload() -> None:
+    invalidate_vision_cache()  # also covers load(), which always unloads first
     if state.engine == "ollama" and state.model_id and state.status in ("ready", "loading"):
         url, _ = engine_url("ollama")
         threading.Thread(target=ollama.release, args=(url, state.model_id), daemon=True).start()
@@ -586,7 +649,7 @@ def load(engine: str, model_id: str, cfg: dict[str, Any], _auto: bool = False) -
     state.model_id = model_id
     state.model_name = m["name"]
     state.status = "loading"
-    log("Launching: " + " ".join(args))
+    log("Launching: " + _redacted_args(args))  # the key itself is never written to a log
     try:
         state.proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8",
                                       errors="replace", creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
@@ -605,8 +668,15 @@ def load(engine: str, model_id: str, cfg: dict[str, Any], _auto: bool = False) -
             if proc.poll() is not None:
                 if not state.intentional_stop:
                     time.sleep(0.5)  # let the reader thread collect the last lines
+                    why = diagnose(list(_TAILS.get(proc.pid, [])))
+                    if "--mmproj" in args and proc is state.proc:
+                        # the image module may be the reason (wrong or damaged module, not enough memory for it):
+                        # try once more without it, so people can at least ask questions (photos are then read as text)
+                        log(f"[engine] load failed with the image module (mmproj): {why} - retrying once without it")
+                        load(engine, model_id, {**(cfg or {}), "vision": False}, _auto=_auto)
+                        return
                     state.status = "error"
-                    state.error = diagnose(list(_TAILS.get(proc.pid, [])))
+                    state.error = why
                     log(f"[engine] load failed: {state.error}")
                 return
             try:

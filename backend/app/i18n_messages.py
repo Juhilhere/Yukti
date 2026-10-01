@@ -625,3 +625,32 @@ M("Company-level information is for top management only.", "कंपनी स�
 M("Top management (MD, Chairman, Directors) — company-level information incl. finances, reads across departments",
   "शीर्ष प्रबंधन (MD, अध्यक्ष, निदेशक) — वित्त सहित कंपनी स्तर की जानकारी, सभी विभागों के दस्तावेज़ पढ़ सकते हैं",
   "ಉನ್ನತ ಆಡಳಿತ (MD, ಅಧ್ಯಕ್ಷರು, ನಿರ್ದೇಶಕರು) — ಹಣಕಾಸು ಸೇರಿ ಕಂಪನಿ ಮಟ್ಟದ ಮಾಹಿತಿ, ಎಲ್ಲಾ ವಿಭಾಗಗಳ ದಾಖಲೆಗಳನ್ನು ಓದಬಹುದು")
+
+# ============================================================== review fixes (speech.py, attachments.py, main.py, seed.py, admin.py)
+M("The voice recogniser took too long to answer. Please try again with a shorter recording.",
+  "आवाज़ पहचानने वाले प्रोग्राम को जवाब देने में बहुत समय लगा। कृपया छोटी रिकॉर्डिंग के साथ फिर से कोशिश करें।",
+  "ಧ್ವನಿ ಗುರುತಿಸುವ ಪ್ರೋಗ್ರಾಂ ಉತ್ತರಿಸಲು ತುಂಬಾ ಸಮಯ ತೆಗೆದುಕೊಂಡಿತು. ದಯವಿಟ್ಟು ಚಿಕ್ಕ ರೆಕಾರ್ಡಿಂಗ್‌ನೊಂದಿಗೆ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.")
+M("You have added too many photos today. Please try again tomorrow.",
+  "आज आपने बहुत ज़्यादा फ़ोटो जोड़ी हैं। कृपया कल फिर से कोशिश करें।",
+  "ಇಂದು ನೀವು ತುಂಬಾ ಹೆಚ್ಚು ಫೋಟೋಗಳನ್ನು ಸೇರಿಸಿದ್ದೀರಿ. ದಯವಿಟ್ಟು ನಾಳೆ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.")
+M("This photo is part of a saved question. Delete the chat to remove it.",
+  "यह फ़ोटो एक सहेजे गए सवाल का हिस्सा है। इसे हटाने के लिए वह चैट हटाएँ।",
+  "ಈ ಫೋಟೋ ಉಳಿಸಿದ ಪ್ರಶ್ನೆಯ ಭಾಗವಾಗಿದೆ. ಇದನ್ನು ತೆಗೆದುಹಾಕಲು ಆ ಚಾಟ್ ಅನ್ನು ಅಳಿಸಿ.")
+M("The request is too large.", "अनुरोध बहुत बड़ा है।", "ವಿನಂತಿ ತುಂಬಾ ದೊಡ್ಡದಾಗಿದೆ.")
+M("JSON expected", "JSON डेटा अपेक्षित है", "JSON ಡೇಟಾ ನಿರೀಕ್ಷಿಸಲಾಗಿದೆ")
+M("This file is too large to upload.", "यह फ़ाइल अपलोड करने के लिए बहुत बड़ी है।", "ಈ ಫೈಲ್ ಅಪ್‌ಲೋಡ್ ಮಾಡಲು ತುಂಬಾ ದೊಡ್ಡದಾಗಿದೆ.")
+M("Assign the Top management role to the people who may see company information",
+  "जिन लोगों को कंपनी की जानकारी देखने की अनुमति है, उन्हें 'शीर्ष प्रबंधन' भूमिका दें",
+  "ಕಂಪನಿಯ ಮಾಹಿತಿಯನ್ನು ನೋಡಬಹುದಾದವರಿಗೆ 'ಉನ್ನತ ಆಡಳಿತ' ಪಾತ್ರವನ್ನು ನೀಡಿ")
+M("Nobody has the Top management role yet, so company-level information (finances and company-wide "
+  "figures) is hidden from everyone. Open Administration > Users to assign it.",
+  "अभी किसी के पास 'शीर्ष प्रबंधन' भूमिका नहीं है, इसलिए कंपनी स्तर की जानकारी (वित्त और पूरी कंपनी के आँकड़े) "
+  "सबसे छिपी हुई है। इसे देने के लिए प्रशासन > उपयोगकर्ता खोलें।",
+  "ಇನ್ನೂ ಯಾರಿಗೂ 'ಉನ್ನತ ಆಡಳಿತ' ಪಾತ್ರ ಇಲ್ಲ, ಆದ್ದರಿಂದ ಕಂಪನಿ ಮಟ್ಟದ ಮಾಹಿತಿ (ಹಣಕಾಸು ಮತ್ತು ಇಡೀ ಕಂಪನಿಯ ಅಂಕಿಅಂಶಗಳು) "
+  "ಎಲ್ಲರಿಂದ ಮರೆಯಾಗಿದೆ. ಅದನ್ನು ನೀಡಲು ಆಡಳಿತ > ಬಳಕೆದಾರರು ತೆರೆಯಿರಿ.")
+P(r"A top-management account was created by (?P<a>.+)",
+  "{a} ने शीर्ष प्रबंधन स्तर का एक खाता बनाया है", "{a} ಅವರು ಉನ್ನತ ಆಡಳಿತ ಮಟ್ಟದ ಖಾತೆಯನ್ನು ರಚಿಸಿದ್ದಾರೆ")
+P(r"A top-management account was changed by (?P<a>.+)",
+  "{a} ने शीर्ष प्रबंधन स्तर के एक खाते में बदलाव किया है", "{a} ಅವರು ಉನ್ನತ ಆಡಳಿತ ಮಟ್ಟದ ಖಾತೆಯನ್ನು ಬದಲಾಯಿಸಿದ್ದಾರೆ")
+P(r"Account (?P<u>.+): roles (?P<r>.*); clearance (?P<c>.+)",
+  "खाता {u}: भूमिकाएँ {r}; गोपनीयता स्तर {c}", "ಖಾತೆ {u}: ಪಾತ್ರಗಳು {r}; ಗೌಪ್ಯತಾ ಮಟ್ಟ {c}")

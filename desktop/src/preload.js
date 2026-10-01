@@ -24,11 +24,13 @@ if (location.protocol === 'file:') {
     setLang: (l) => ipcRenderer.invoke('yukti:setLang', l),
     report: (req) => ipcRenderer.invoke('yukti:report', req),
     onInstallProgress: on('install:progress'),
-    // add-ons page
-    featuresPlan: () => ipcRenderer.invoke('yukti:featuresPlan'),
+    // setup and add-ons pages: the language was changed in the menu (the page changes its texts without reloading)
+    onLang: on('ui:lang'),
+    // add-ons page ({stateOnly: true} only asks whether a download / removal is still running)
+    featuresPlan: (req) => ipcRenderer.invoke('yukti:featuresPlan', req),
     featureInstall: (f) => ipcRenderer.invoke('yukti:featureInstall', f),
     featureRemove: (f) => ipcRenderer.invoke('yukti:featureRemove', f),
-    featuresDone: (req) => ipcRenderer.invoke('yukti:featuresDone', req),
+    featuresDone: () => ipcRenderer.invoke('yukti:featuresDone'),
     // startup page
     splashInit: () => ipcRenderer.invoke('yukti:splashInit'),
     splashAction: (a) => ipcRenderer.invoke('yukti:splashAction', a),

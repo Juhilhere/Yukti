@@ -137,8 +137,12 @@ check("A2 sources are EXAMPLE docs", all("[EXAMPLE]" in s["title"] for s in ev.g
 check("finance withheld for electrician", ev.get("retrieval", {}).get("denied", {}).get("count", 0) >= 1)
 mid = ev.get("done", {}).get("message_id")
 check("feedback", ravi.post(f"/api/messages/{mid}/feedback", json={"rating": -1, "comment": "test"}).status_code == 200)
+# need-to-know: company leadership is company-level information - declined for an engineer, answered for top management
 ev, ans = ask(ravi, "Who is the managing director of MRPL?")
-check("MRPL MD answer", "Kamath" in ans, ans[:200])
+check("MRPL MD question declined for an engineer", ev.get("done", {}).get("stats", {}).get("stop_reason") == "need_to_know"
+      and "Kamath" not in ans, ans[:200])
+ev, ans = ask(session("director.md", "Kavya@2026"), "Who is the managing director of MRPL?")
+check("MRPL MD answer for top management", "Kamath" in ans, ans[:200])
 
 print("== access request flow")
 a.post("/api/admin/demo/reset")

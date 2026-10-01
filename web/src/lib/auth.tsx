@@ -14,7 +14,8 @@ type AuthCtx = {
   /** LLM configuration rights (admin only): model loader, sampling, presets, system prompt. */
   isLlmAdmin: boolean;
   logout: (all?: boolean) => Promise<void>;
-  refresh: () => Promise<Me | null>;
+  /** `notify`: the user asked for it ("Stay signed in"), so tell them when the server could not be reached. */
+  refresh: (notify?: boolean) => Promise<Me | null>;
   can: (perm?: string | string[]) => boolean;
   /**
    * Need-to-know check: true only when the user's own roles grant the permission. Unlike can(), the IT 'admin' role is
@@ -72,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPwForced(!!m?.user?.must_change_password);
   }, []);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (notify = false) => {
     try {
       const m = await api.get<Me>('/api/auth/me', { silent: true });
       apply(m);
@@ -82,6 +83,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // signed-in user stays on the page instead of being thrown to the sign-in screen
       const serverSaidNo = e instanceof ApiError && (e.status === 401 || e.status === 403);
       if (serverSaidNo || !meRef.current) apply(null);
+      // the user pressed "Stay signed in" but the server could not be reached: say so, the session was not extended
+      else if (notify) toast.warn(tr('shell.idle.stayFailed'), tr('shell.idle.stayFailedBody'));
       return serverSaidNo ? null : meRef.current;
     }
   }, [apply]);

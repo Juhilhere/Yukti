@@ -53,11 +53,11 @@ export function IdleWatcher() {
   if (!me) return null;
   const absolute = isFinite(absAt) && absAt <= idleAt;
   return (
-    <Modal open={warn} onClose={() => { lastRefresh.current = Date.now(); void refresh(); }} width={420}
+    <Modal open={warn} onClose={() => { lastRefresh.current = Date.now(); void refresh(true); }} width={420}
       title={<span className="flex items-center gap-2"><Clock size={15} className="text-amber" /> {t('shell.idle.title')}</span>}
       footer={<>
         <button className="btn" onClick={() => void logout(false)}>{t('shell.idle.logoutNow')}</button>
-        {!absolute && <button className="btn btn-primary" onClick={() => { lastRefresh.current = Date.now(); void refresh(); }}>{t('shell.idle.stay')}</button>}
+        {!absolute && <button className="btn btn-primary" onClick={() => { lastRefresh.current = Date.now(); void refresh(true); }}>{t('shell.idle.stay')}</button>}
       </>}>
       <div className="space-y-2 text-center">
         <div className="font-mono text-[34px] font-semibold text-amber">{countdown(new Date(expiry).toISOString(), now)}</div>

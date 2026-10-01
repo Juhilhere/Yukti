@@ -582,6 +582,7 @@ def test_photo_ability_never_offered_when_a_model_can_already_see(login, monkeyp
     # 1) nothing on this computer can see photos -> offer the add-on; photo note asks to add it
     monkeypatch.setattr(engine, "vision_models_on_disk", lambda: [])
     monkeypatch.setattr(engine, "probe", asyncio.run(ollama_with([])))
+    engine.invalidate_vision_cache()  # the list of seeing models is remembered for 30 s
     f = a.get("/api/features").json()["vision"]
     assert f == {"installed": False, "active": False, "loaded": False, "models": []}
     ph = a.post("/api/attachments", files={"file": ("p.jpg", _photo_bytes(), "image/jpeg")}).json()
@@ -590,6 +591,7 @@ def test_photo_ability_never_offered_when_a_model_can_already_see(login, monkeyp
     assert ev["photo"]["note"] == chat.NOTE_NOT_ADDED
     # 2) gemma3 in Ollama can see photos (not loaded): nothing to download; the note says to switch model
     monkeypatch.setattr(engine, "probe", asyncio.run(ollama_with(["gemma3:4b"])))
+    engine.invalidate_vision_cache()
     f = a.get("/api/features").json()["vision"]
     assert f["installed"] is True and f["active"] is False and f["models"] == ["gemma3:4b (Ollama)"]
     ev = _events(a.post(f"/api/chats/{c['id']}/regenerate", json={}).text)
@@ -598,5 +600,7 @@ def test_photo_ability_never_offered_when_a_model_can_already_see(login, monkeyp
     monkeypatch.setattr(engine, "probe", asyncio.run(ollama_with([])))
     monkeypatch.setattr(engine.state, "status", "ready")
     monkeypatch.setattr(engine.state, "vision", True)
+    engine.invalidate_vision_cache()
     f = a.get("/api/features").json()["vision"]
     assert f["installed"] is True and f["active"] is True
+    engine.invalidate_vision_cache()  # nothing remembered from the stand-ins above

@@ -5,7 +5,8 @@ import { tr } from '../lib/i18n';
 import { uiStore } from '../lib/queries';
 
 /** A crash in one page shows a friendly screen (reload / report) instead of a blank window. */
-export class ErrorBoundary extends Component<{ children: ReactNode; resetKey?: string }, { error: Error | null }> {
+/** `root`: the outermost boundary around the whole app. The report dialog lives inside the app, so there only "Reload" is offered. */
+export class ErrorBoundary extends Component<{ children: ReactNode; resetKey?: string; root?: boolean }, { error: Error | null }> {
   state = { error: null as Error | null };
 
   static getDerivedStateFromError(error: Error) { return { error }; }
@@ -26,7 +27,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode; resetKey?: s
           <h2 className="mt-3 text-[17px] font-semibold">{tr('crash.title', 'Something went wrong on this page')}</h2>
           <p className="mt-1.5 text-[13px] text-muted">{tr('crash.body', 'Your work is saved. Reload the page to continue. If it happens again, please report it so we can fix it.')}</p>
           <div className="mt-4 flex justify-center gap-2">
-            <button className="btn" onClick={() => uiStore.openReport(`${tr('crash.reportPrefix', 'The page crashed')}: ${error.message}`)}><Bug size={13} />{tr('report.title', 'Report a problem')}</button>
+            {!this.props.root && <button className="btn" onClick={() => uiStore.openReport(`${tr('crash.reportPrefix', 'The page crashed')}: ${error.message}`)}><Bug size={13} />{tr('report.title', 'Report a problem')}</button>}
             <button className="btn btn-primary" onClick={() => window.location.reload()}><RotateCcw size={13} />{tr('crash.reload', 'Reload page')}</button>
           </div>
         </div>

@@ -92,8 +92,17 @@ def departments() -> list[dict[str, Any]]:
              "description": r["description"] or "", "manager_name": r["manager_name"], "evidence_url": r["evidence_url"]} for r in rows]
 
 
+# Briefings about the company itself (finances, shareholding, leadership, strategy) are need-to-know: top management
+# only (policy rule R-COMPANY-LEVEL). The refinery-configuration and product briefings are plant knowledge for everyone.
+COMPANY_LEVEL_TOPICS = {"corporate", "finance_esg"}
+
+
+def briefing_doc_type(topic: str) -> str:
+    return "company_briefing" if topic in COMPANY_LEVEL_TOPICS else "public_briefing"
+
+
 def ensure_public_docs() -> int:
-    """Ingest each researched briefing (.md) as a PUBLIC document so chat can cite it. Idempotent by sha256."""
+    """Ingest each researched briefing (.md) as a document so chat can cite it. Idempotent by sha256."""
     n = 0
     for t in TOPICS:
         p = MRPL_DIR / f"{t}.md"
@@ -103,15 +112,17 @@ def ensure_public_docs() -> int:
         data = p.read_bytes()
         import hashlib
         sha = hashlib.sha256(data).hexdigest()
-        cur = q1("SELECT id, sha256 FROM documents WHERE doc_number=?", (doc_number,))
+        cur = q1("SELECT id, sha256, doc_type FROM documents WHERE doc_number=?", (doc_number,))
         if cur and cur["sha256"] == sha:
+            if cur["doc_type"] != briefing_doc_type(t):  # installations made before the need-to-know rule
+                ex("UPDATE documents SET doc_type=? WHERE id=?", (briefing_doc_type(t), cur["id"]))
             continue
         if cur:
             for c in q("SELECT id FROM chunks WHERE document_id=?", (cur["id"],)):
                 ex("DELETE FROM chunks_fts WHERE chunk_id=?", (c["id"],))
             ex("DELETE FROM documents WHERE id=?", (cur["id"],))
         meta = {"title": title, "doc_number": doc_number, "revision": (load().get("retrieved_on") or "2026-09-29"),
-                "status": "CURRENT", "doc_type": "public_briefing", "department": "Corporate Branding & Corporate Communication",
+                "status": "CURRENT", "doc_type": briefing_doc_type(t), "department": "Corporate Branding & Corporate Communication",
                 "classification": 0, "effective_date": load().get("retrieved_on"), "asset_tags": [], "is_public": 1}
         did = rag.create_document(meta, f"{doc_number}.txt", data, "system")
         rag.ingest(did, None, "system")

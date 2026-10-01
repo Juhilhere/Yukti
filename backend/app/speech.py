@@ -17,12 +17,13 @@ import subprocess
 import threading
 import time
 import wave
+import weakref
 from pathlib import Path
 from typing import Any
 
 import httpx
 
-from . import engine
+from . import engine, journal
 from .config import FROZEN, ROOT, has_nvidia_gpu
 from .db import q
 from .policy import Subject
@@ -73,7 +74,8 @@ def gpu_installed() -> bool:
 
 def choose() -> dict[str, Any]:
     """Which recogniser this computer can run: {'device', 'binary', 'model', 'model_name'} or {'reason'}."""
-    if _first(BIN["gpu"]) and _model("gpu") and has_nvidia_gpu() and (_S.device == "gpu" or _gpu_free_mb() >= 1200):
+    gpu_allowed = time.time() >= _S.gpu_disabled_until  # after a failed GPU start the processor is used for a while
+    if gpu_allowed and _first(BIN["gpu"]) and _model("gpu") and has_nvidia_gpu() and (_S.device == "gpu" or _gpu_free_mb() >= 1200):
         return {"device": "gpu", "binary": _first(BIN["gpu"]), "model": _model("gpu"), "model_name": MODEL["gpu"][1]}
     cpu_model = _model("cpu") or _model("gpu")  # turbo also runs on the processor, just slower
     if _first(BIN["cpu"]) and cpu_model:
@@ -89,17 +91,59 @@ class _State:
         self.device: str | None = None
         self.model_name: str | None = None
         self.last_used = 0.0
+        self.path = ""                       # random request path of the running recogniser
+        self.log_f: Any = None               # open handle on speech.log, owned by the running recogniser
+        self.gpu_disabled_until = 0.0        # a GPU start failed: use the processor until this time
+        # Guards start/stop. A start can hold it for up to 90 s (model loading), so it is only ever taken in worker
+        # threads (asyncio.to_thread, the idle watcher) - NEVER on the event loop thread.
         self.lock = threading.Lock()
 
 
 _S = _State()
+GPU_RETRY_S = 10 * 60
+LOG_MAX_BYTES = 5 * 2**20
+
+# One recognition at a time (whisper-server handles one request at a time anyway; a second one would only time out).
+# An asyncio.Lock belongs to one event loop, so there is one per loop.
+_REC_LOCKS: "weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, asyncio.Lock]" = weakref.WeakKeyDictionary()
+
+
+def _rec_lock() -> asyncio.Lock:
+    loop = asyncio.get_running_loop()
+    lk = _REC_LOCKS.get(loop)
+    if lk is None:
+        lk = _REC_LOCKS[loop] = asyncio.Lock()
+    return lk
+
+
+def _close_log() -> None:
+    f, _S.log_f = _S.log_f, None
+    if f is not None:
+        try:
+            f.close()
+        except Exception as e:  # noqa: BLE001
+            journal.swallowed("speech", "closing speech.log", e)
+
+
+def _open_log() -> Any:
+    """speech.log for the recogniser's own output; started afresh (one old copy kept) once it is larger than 5 MB."""
+    _close_log()
+    path = engine.LOG_DIR / "speech.log"
+    try:
+        if path.exists() and path.stat().st_size > LOG_MAX_BYTES:
+            os.replace(path, path.with_name("speech.log.1"))
+    except OSError as e:  # still held by a recogniser that is shutting down: rotate next time
+        journal.swallowed("speech", "rotating speech.log", e)
+    _S.log_f = open(path, "a", encoding="utf-8")  # noqa: SIM115
+    return _S.log_f
 
 
 def status() -> dict[str, Any]:
     c = choose()
     if "reason" in c:
         return {"available": False, "device": None, "model": None, "reason": c["reason"]}
-    return {"available": True, "device": c["device"], "model": c["model_name"], "running": bool(_S.proc and _S.proc.poll() is None)}
+    p = _S.proc
+    return {"available": True, "device": c["device"], "model": c["model_name"], "running": bool(p and p.poll() is None)}
 
 
 def _start() -> None:
@@ -120,18 +164,23 @@ def _start() -> None:
     if c["device"] == "gpu":  # CUDA runtime libraries are shared with the bundled llama.cpp CUDA build
         extra = [str(p) for p in (ROOT / "llama" / "cuda", Path(r"E:\tools\llama-cuda")) if p.exists()]
         env["PATH"] = os.pathsep.join([str(c["binary"].parent), *extra, env.get("PATH", "")])
-    log_f = open(engine.LOG_DIR / "speech.log", "a", encoding="utf-8")  # noqa: SIM115
-    proc = subprocess.Popen(args, stdout=log_f, stderr=subprocess.STDOUT, env=env, cwd=str(c["binary"].parent),
-                            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    _S.proc = None  # whatever was there has exited (checked above)
+    log_f = _open_log()
+    try:
+        proc = subprocess.Popen(args, stdout=log_f, stderr=subprocess.STDOUT, env=env, cwd=str(c["binary"].parent),
+                                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    except OSError:
+        _close_log()
+        raise RuntimeError("The voice recogniser could not start. Details are in the server log (speech.log).")
     engine._attach_to_job(proc)
     t0 = time.time()
     while time.time() - t0 < 90:  # the model is loaded before the port opens
         if proc.poll() is not None:
-            log_f.close()
+            _close_log()
             if c["device"] == "gpu":  # e.g. not enough video memory next to the language model: fall back to the processor
-                engine.log("[speech] GPU recogniser did not start; trying the processor")
+                engine.log("[speech] GPU recogniser did not start; using the processor for the next 10 minutes")
                 _S.device = "cpu-fallback"
-                BIN["gpu"] = []
+                _S.gpu_disabled_until = time.time() + GPU_RETRY_S  # time-boxed: the GPU is tried again later
                 return _start()
             raise RuntimeError("The voice recogniser could not start. Details are in the server log (speech.log).")
         try:
@@ -141,26 +190,56 @@ def _start() -> None:
         except OSError:
             time.sleep(0.3)
     else:
-        proc.kill()
+        try:
+            proc.kill()
+        except Exception as e:  # noqa: BLE001
+            journal.swallowed("speech", "stopping a recogniser that did not start", e)
+        _close_log()
         raise RuntimeError("The voice recogniser took too long to start.")
     _S.proc, _S.port, _S.device, _S.model_name = proc, port, c["device"], c["model_name"]
-    _S.path = args[args.index("--request-path") + 1]  # type: ignore[attr-defined]
+    _S.path = args[args.index("--request-path") + 1]
     engine.log(f"[speech] {c['model_name']} ready on the {'GPU' if c['device'] == 'gpu' else 'processor'}")
 
 
-def stop() -> None:
-    with _S.lock:
-        if _S.proc and _S.proc.poll() is None:
-            _S.proc.kill()
-        _S.proc = None
+def _stop_proc(proc: subprocess.Popen | None, wait: bool = True) -> None:
+    """Stop THIS recogniser process (never a newer one that replaced it). The kill itself never waits; tidying the
+    shared state takes the start/stop lock, which a start in progress may hold for a long time - so with wait=True
+    this must run in a worker thread, never on the event loop thread."""
+    if proc is None:
+        return
+    try:
+        if proc.poll() is None:
+            proc.kill()
+    except Exception as e:  # noqa: BLE001
+        journal.swallowed("speech", "stopping the recogniser", e)
+    if not _S.lock.acquire(timeout=-1 if wait else 0.2):
+        return  # a start is in progress; it sees that the old process has exited and tidies up itself
+    try:
+        if _S.proc is proc:
+            _S.proc = None
+            _close_log()
+    finally:
+        _S.lock.release()
+
+
+def stop(wait: bool = True) -> None:
+    """Stop the recogniser (server shutdown, tests). wait=False never blocks for more than a moment."""
+    _stop_proc(_S.proc, wait)
 
 
 def _idle_watch() -> None:
     while True:
         time.sleep(30)
-        if _S.proc and _S.proc.poll() is None and time.time() - _S.last_used > IDLE_S:
-            engine.log("[speech] stopped after 10 idle minutes")
-            stop()
+        try:
+            with _S.lock:  # same lock as a start: a recogniser that has just been started is never stopped as "idle"
+                p = _S.proc
+                if p is not None and p.poll() is None and time.time() - _S.last_used > IDLE_S:
+                    p.kill()
+                    _S.proc = None
+                    _close_log()
+                    engine.log("[speech] stopped after 10 idle minutes")
+        except Exception as e:  # noqa: BLE001 - the watcher must survive anything, or the recogniser would never be stopped again
+            journal.swallowed("speech", "idle watcher", e)
 
 
 threading.Thread(target=_idle_watch, daemon=True, name="speech-idle").start()
@@ -259,17 +338,29 @@ def pick_language(probs: dict[str, float], preferred: str) -> str:
     return best if score[best] > 0 else (preferred if preferred in FAMILY else "en")
 
 
-async def _recognise(data: bytes, lang: str, prompt: str, detect_only: bool = False) -> dict[str, Any]:
+async def _recognise(data: bytes, lang: str, prompt: str, detect_only: bool = False,
+                     srv: tuple[subprocess.Popen | None, int, str] | None = None) -> dict[str, Any]:
+    """One request to the recogniser `srv` = (process, port, request path) - captured BEFORE the request, so that a
+    failure only ever stops that same process and never a newer one started in the meantime."""
+    proc, port, path = srv or (_S.proc, _S.port, _S.path)
     form = {"response_format": "verbose_json", "language": lang, "prompt": prompt, "temperature": "0.0",
             "temperature_inc": "0.2", "no_timestamps": "true", "detect_language": "true" if detect_only else "false"}
+    _S.last_used = time.time()
     try:
         async with httpx.AsyncClient(timeout=httpx.Timeout(120, connect=5)) as c:
-            r = await c.post(f"http://127.0.0.1:{_S.port}{getattr(_S, 'path', '')}/inference", data=form,
+            r = await c.post(f"http://127.0.0.1:{port}{path}/inference", data=form,
                              files={"file": ("speech.wav", data, "audio/wav")})
     except Exception as e:  # noqa: BLE001
-        engine.log(f"[speech] request failed: {e!r}")
-        stop()
-        raise SpeechError(503, "speech_unavailable", "The voice recogniser stopped unexpectedly. Please try again.")
+        slow = isinstance(e, httpx.TimeoutException) and not isinstance(e, httpx.ConnectTimeout)
+        exited = proc is None or proc.poll() is not None
+        engine.log(f"[speech] request failed: {type(e).__name__}" + (" (recogniser has exited)" if exited else ""))
+        if exited or not slow:
+            # the connection broke or the process is gone: stop that process (and only that one), off the event loop -
+            # the start/stop lock may be held for a long time by a start in progress
+            await asyncio.to_thread(_stop_proc, proc)
+            raise SpeechError(503, "speech_unavailable", "The voice recogniser stopped unexpectedly. Please try again.")
+        # only slow (a long recording on a busy computer): the recogniser is alive and stays
+        raise SpeechError(504, "speech_timeout", "The voice recogniser took too long to answer. Please try again with a shorter recording.")
     _S.last_used = time.time()
     if r.status_code != 200:
         engine.log(f"[speech] recogniser answered {r.status_code}: {r.text[:200]}")
@@ -284,29 +375,33 @@ async def transcribe(s: Subject, data: bytes, language: str) -> dict[str, Any]:
     t0 = time.time()
     if rms < 0.002:  # silence: Whisper would otherwise invent words such as "Thank you."
         return {"text": "", "language": preferred or "en", "duration_s": round(dur, 1), "elapsed_s": 0.0, "no_speech": True}
-    try:
-        await asyncio.to_thread(_locked_start)
-    except RuntimeError as e:
-        raise SpeechError(503, "speech_unavailable", str(e))
-    _S.last_used = time.time()
-    # the plant-vocabulary hint helps English a lot but pushes Hindi/Kannada into Latin script (measured on FLEURS:
-    # Kannada character errors 20% -> 87%), so it is used only once the speech is known to be English
-    det = await _recognise(data, "auto", "", detect_only=True)  # which language is spoken (encoder only, fast)
-    heard = str(det.get("detected_language") or det.get("language") or "").lower()
-    heard = {"english": "en", "hindi": "hi", "kannada": "kn"}.get(heard, heard[:2])
-    lang = pick_language(det.get("language_probabilities") or {heard: 1.0}, preferred)
-    if lang == "en":
-        out = await _recognise(data, lang, vocabulary(s))
-        text = _clean(str(out.get("text") or ""))
-    else:
-        parts = [_clean(str((await _recognise(piece, lang, "")).get("text") or "")) for piece in split_wav(data)]
-        text = " ".join(p for p in parts if p and p.lower() not in HALLUCINATIONS)
+    async with _rec_lock():  # recordings are recognised one after the other
+        try:
+            srv = await asyncio.to_thread(_locked_start)  # may load the model (up to 90 s): in a worker thread
+        except RuntimeError as e:
+            raise SpeechError(503, "speech_unavailable", str(e))
+        device = _S.device
+        # the plant-vocabulary hint helps English a lot but pushes Hindi/Kannada into Latin script (measured on FLEURS:
+        # Kannada character errors 20% -> 87%), so it is used only once the speech is known to be English
+        det = await _recognise(data, "auto", "", detect_only=True, srv=srv)  # which language is spoken (encoder only, fast)
+        heard = str(det.get("detected_language") or det.get("language") or "").lower()
+        heard = {"english": "en", "hindi": "hi", "kannada": "kn"}.get(heard, heard[:2])
+        lang = pick_language(det.get("language_probabilities") or {heard: 1.0}, preferred)
+        if lang == "en":
+            out = await _recognise(data, lang, vocabulary(s), srv=srv)
+            text = _clean(str(out.get("text") or ""))
+        else:
+            parts = [_clean(str((await _recognise(piece, lang, "", srv=srv)).get("text") or "")) for piece in split_wav(data)]
+            text = " ".join(p for p in parts if p and p.lower() not in HALLUCINATIONS)
     if text.lower() in HALLUCINATIONS and rms < 0.02:
         text = ""
     return {"text": text, "language": lang, "duration_s": round(dur, 1), "elapsed_s": round(time.time() - t0, 2),
-            "device": _S.device, "no_speech": not text}
+            "device": device, "no_speech": not text}
 
 
-def _locked_start() -> None:
+def _locked_start() -> tuple[subprocess.Popen | None, int, str]:
+    """Start the recogniser if needed and say which one is running. Blocking: call it in a worker thread."""
     with _S.lock:
         _start()
+        _S.last_used = time.time()  # inside the lock: the idle watcher cannot see a fresh recogniser as "idle"
+        return _S.proc, _S.port, _S.path

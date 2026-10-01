@@ -55,16 +55,24 @@ const friendlyName = (a) => a.name === 'server-core' ? T('setup.step.app') : a.n
 /** Installer / network errors → plain words (+ whether to retry automatically). */
 function classify(raw) {
   const e = String(raw || '');
+  // office / plant networks first: a proxy or a security check in between is not "no internet", and waiting does not
+  // help (their error names also contain words like "signature" or "network", so they are tested before those)
+  if (/ERR_PROXY|ERR_TUNNEL_CONNECTION|ERR_MANDATORY_PROXY|\(407\)|proxy/i.test(e)) return { text: T('setup.err.proxy'), auto: false };
+  if (/ERR_CERT|ERR_SSL|CERT_|SELF_SIGNED|UNABLE_TO_VERIFY|UNABLE_TO_GET_ISSUER|certificate/i.test(e)) return { text: T('setup.err.cert'), auto: false };
   if (/signature/i.test(e)) return { text: T('setup.err.signature'), auto: false };
   if (/checksum/i.test(e)) return { text: T('setup.err.damaged'), auto: false };
-  if (/ENOSPC|no space|disk full/i.test(e)) {
+  if (/ENOSPC|no space|disk full|not enough disk space/i.test(e)) {
     const p = planRes && planRes.plan;
-    return { text: T('setup.err.disk', { need: fmtBytes(p && p.needBytes), free: fmtBytes(p && p.freeBytes) }), auto: false };
+    // the numbers of the check itself when the plan is not at hand ("… need ~3.1 GB, have 1.2 GB")
+    const m = /need ~([\d.]+ GB), have ([\d.]+ GB)/.exec(e);
+    return { text: T('setup.err.disk', { need: p ? fmtBytes(p.needBytes) : m ? m[1] : '?', free: p && p.freeBytes != null ? fmtBytes(p.freeBytes) : m ? m[2] : '?' }), auto: false };
   }
-  if (/fetch failed|ENOTFOUND|EAI_AGAIN|ECONNRESET|ECONNREFUSED|ETIMEDOUT|network|socket|terminated|UND_ERR/i.test(e)) return { text: T('setup.err.network'), auto: true };
+  if (/fetch failed|net::ERR_|ENOTFOUND|EAI_AGAIN|ECONNRESET|ECONNREFUSED|ETIMEDOUT|network|socket|terminated|aborted|premature|stalled|UND_ERR/i.test(e)) return { text: T('setup.err.network'), auto: true };
   if (/\((4\d\d|5\d\d)\)/.test(e)) return { text: T('setup.err.server'), auto: /\(5\d\d\)/.test(e) };
   return { text: T('setup.err.other', { msg: e }), auto: false };
 }
+/** The same for an answer of the main process: {plain: true} means its error is already a sentence in the user's language. */
+const classifyRes = (r) => (r && r.plain ? { text: r.error, auto: false } : classify(r && r.error));
 
 // ---------------------------------------------------------------- views
 function setView(v) {
@@ -152,9 +160,11 @@ function refreshGo() {
   $('s-go').textContent = primaryLabel();
   $('s-go').disabled = installing;
   show($('s-go'), !installing);
-  // an update is offered: "Later" opens the installed version
+  // Yukti is already installed here: the installed version can always be opened — "Later" when an update is offered,
+  // "Open Yukti" when the download could not even be checked (no internet): nobody is locked out by a failed check
   const inst = planRes && planRes.installed && planRes.installed.version;
-  show($('s-later'), !installing && view === 'simple' && !!(p && inst && p.todoCount > 0));
+  show($('s-later'), !installing && view === 'simple' && !!inst && !(p && p.todoCount === 0));
+  $('s-later').textContent = p ? T('setup.update.later') : T('setup.openYukti');
 }
 function renderPlan() {
   const r = planRes;
@@ -185,7 +195,7 @@ function renderPlan() {
   const w = $('disk-warn');
   if (disk) { w.textContent = T('setup.err.diskShort', { need: fmtBytes(p.needBytes), free: fmtBytes(p.freeBytes) }); show(w, true); } else show(w, false);
   if (r && r.error && !installing) {
-    const c = classify(r.error);
+    const c = classifyRes(r);
     msg($('inst-msg'), c.text, 'warn');
     if (view === 'simple' && !retryTimer) showError(c, () => loadPlan(true));
   } else if (!installing) msg($('inst-msg'), '');
@@ -229,6 +239,7 @@ $('s-report').addEventListener('click', () => Y.report({ context: `${$('s-err-te
 // ---------------------------------------------------------------- install progress
 let speed = 0, last = null;
 Y.onInstallProgress((p) => {
+  if (p.phase === 'finished') { installDone(p); return; }   // also reaches a page that was reloaded during the download
   if (p.phase === 'artifact') {
     const r = rows.get(p.artifact);
     const patch = { state: p.state };
@@ -274,7 +285,9 @@ function setInstalling(on) {
   refreshGo();
 }
 
-async function runInstall() {
+let waiting = false;      // a download runs and its result has not been shown yet
+let attachTimer = null;
+function beginInstallUi() {
   hideError();
   show($('inst-err'), false);
   msg($('go-msg'), ''); msg($('s-msg'), '');
@@ -283,7 +296,37 @@ async function runInstall() {
   $('p-left').textContent = T('setup.preparing'); $('s-left').textContent = T('setup.preparing');
   $('p-right').textContent = ''; $('s-right').textContent = '';
   setInstalling(true);
-  const r = await Y.install({ manifestUrl: $('manifest').value, dest: $('dest').value });
+  waiting = true;
+}
+async function runInstall() {
+  beginInstallUi();
+  let r;
+  try { r = await Y.install({ manifestUrl: $('manifest').value, dest: $('dest').value }); } catch (e) { r = { ok: false, error: String((e && e.message) || e) }; }
+  // a download is already running (this page was reloaded meanwhile): show that one instead of an error
+  if (r && r.running) { attachRunning(); return; }
+  installDone(r);
+}
+/**
+ * The download keeps running in the main process when this page is reloaded (File → Reload, language change). The page
+ * then shows that download again instead of starting a second one. Its end arrives as a "finished" event; as a safety
+ * net the page also asks now and then whether it still runs.
+ */
+function attachRunning() {
+  if (!waiting) beginInstallUi();
+  clearInterval(attachTimer);
+  attachTimer = setInterval(async () => {
+    if (!waiting) { clearInterval(attachTimer); return; }
+    let c;
+    try { c = await Y.getConfig(); } catch { return; }
+    if (waiting && c && !c.installing) installDone(c.lastInstall || { ok: false, cancelled: true });
+  }, 3000);
+}
+/** The result of a download — from the call that started it or from the "finished" event, whichever comes first. */
+function installDone(r) {
+  if (!waiting) return;
+  waiting = false;
+  clearInterval(attachTimer);
+  r = r || {};
   if (r.ok) {
     msg($('inst-msg'), T('setup.done'), 'ok'); msg($('s-msg'), T('setup.done'), 'ok');
     show($('s-pause'), false); show($('pause'), false);
@@ -299,9 +342,9 @@ async function runInstall() {
   }
   lastError = r.error || '';
   for (const [n, row] of rows) if (row.state === 'downloading' || row.state === 'verifying') setRow(n, { state: 'error' });
-  const c = classify(r.error);
+  const c = classifyRes(r);
   if (view === 'simple') showError(c, runInstall);
-  else { $('inst-err-text').textContent = `${c.text}\n\n${r.error}`; show($('inst-err'), true); }
+  else { $('inst-err-text').textContent = r.plain ? c.text : `${c.text}\n\n${r.error}`; show($('inst-err'), true); }
 }
 
 for (const id of ['pause', 's-pause']) {
@@ -322,11 +365,17 @@ $('s-go').addEventListener('click', async () => {
   if (inst && p.todoCount === 0) return startInstalled();
   return runInstall();
 });
-$('s-later').addEventListener('click', () => { if (!installing) startInstalled(); });
-async function startInstalled() {
+$('s-later').addEventListener('click', () => {
+  if (installing) return;
+  const p = planRes && planRes.plan;
+  // "Later" on an offered update is remembered (it is not offered at every start); a failed check is not
+  startInstalled(!!(p && p.todoCount > 0));
+});
+async function startInstalled(later) {
+  hideError();   // no automatic "try again" while Yukti is being opened
   $('s-go').disabled = true; $('go').disabled = true;
   msg($('s-msg'), T('adv.starting')); msg($('go-msg'), T('adv.starting'));
-  const r = await Y.connect({ mode: 'local', installRoot: $('dest').value });
+  const r = await Y.connect({ mode: 'local', installRoot: $('dest').value, later: !!later });
   if (!r.ok) { $('s-go').disabled = false; $('go').disabled = false; msg($('s-msg'), r.error, 'err'); msg($('go-msg'), r.error, 'err'); }
 }
 
@@ -361,7 +410,10 @@ $('go').addEventListener('click', async () => {
   msg($('go-msg'), mode === 'local' ? T('adv.starting') : T('adv.connecting'));
   const r = await Y.connect({ mode, serverUrl: $('url').value, installRoot: $('root').value });
   if (!r.ok) { $('go').disabled = false; msg($('go-msg'), r.error, 'err'); }
+  else if (r.notice) msg($('go-msg'), r.notice, 'ok');   // e.g. "Yukti restarts once…" (new plant server)
 });
+// the language was changed in the menu: change the texts in place (a reload would lose the progress of a download)
+Y.onLang((l) => { lang = l; applyI18n(); renderPlan(); });
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Enter' || installing || e.target.tagName === 'BUTTON') return;
   const b = view === 'simple' ? $('s-go') : $('go');
@@ -385,6 +437,16 @@ document.addEventListener('keydown', (e) => {
   const simple = !cfg.bundled && !!cfg.manifestUrl && cfg.defaultMode !== 'remote';
   select(cfg.defaultMode || (simple ? 'install' : 'remote'));
   setView(simple ? 'simple' : 'advanced');
-  await loadPlan(simple);
+  if (cfg.installing) {
+    // this page was reloaded while Yukti downloads: show that download again (never start a second one)
+    attachRunning();
+    const r = await Y.plan({ manifestUrl: $('manifest').value, dest: $('dest').value });
+    if (installing) {   // still running: the list of parts and what is being downloaded
+      planRes = r;
+      const p = r.plan;
+      if (p) intro = r.installed && r.installed.version ? ['setup.update.body', { v: p.version, size: fmtBytes(p.totalBytes) }] : ['setup.intro', { size: fmtBytes(p.totalBytes) }];
+      renderPlan();
+    } else await loadPlan(false);
+  } else await loadPlan(simple);
   document.body.dataset.ready = '1';
 })();

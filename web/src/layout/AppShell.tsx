@@ -303,7 +303,7 @@ function StatusBar() {
         <Activity size={11} />
         {st?.status === 'ready' ? <>{ENGINE_LABEL[st.engine ?? ''] ?? st.engine} · <span className="text-text">{st.model_name}</span></> : st?.status === 'loading' ? t('shell.status.loading') : t('shell.status.noModel')}
       </Item>
-      {lastGen && <Item title={t('shell.status.lastSpeed')}><Zap size={11} className="text-amber" /> {lastGen.tok_per_s.toFixed(1)} tok/s</Item>}
+      {lastGen && typeof lastGen.tok_per_s === 'number' && <Item title={t('shell.status.lastSpeed')}><Zap size={11} className="text-amber" /> {lastGen.tok_per_s.toFixed(1)} tok/s</Item>}
       <div className="flex-1" />
       {s?.llama_build && <span className="hidden xl:contents"><Item title={t('shell.status.llamaBuild')}>llama.cpp {s.llama_build}</Item></span>}
       {s && <Item>Yukti v{s.version}</Item>}

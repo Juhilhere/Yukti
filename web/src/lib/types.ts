@@ -140,7 +140,7 @@ export type PublicProductionRow = { fy: string; product: string; production_kt: 
 export type SourcedValue = { value: number | null; label: string; period: string | null; source_url: string | null };
 export type ProductionOverview = {
   capacity_mmtpa: number | null; capacity_source?: string | null; nci: number | null; nci_sources?: SourcedValue[];
-  public: { production_by_fy: PublicProductionRow[]; financials: Record<string, unknown>[]; throughput?: Record<string, unknown>[] };
+  public: { production_by_fy: PublicProductionRow[]; /** only sent with 'company.view' */ financials?: Record<string, unknown>[]; throughput?: Record<string, unknown>[] };
   model_complete: boolean; note?: string;
 };
 export type ProdUnit = {

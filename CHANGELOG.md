@@ -5,7 +5,7 @@ All notable changes to Yukti are documented here. The format follows [Keep a Cha
 
 ## [Unreleased]
 
-## [0.5.0] — 2026-09-30
+## [0.5.0] — 2026-10-01
 
 ### Added
 - **Ask with a photo.** Add up to 4 photos to a question with the camera, the gallery, paste or drag-and-drop.
@@ -88,6 +88,38 @@ All notable changes to Yukti are documented here. The format follows [Keep a Cha
 - A PC clock that is off no longer signs people out right after signing in; a short server outage no longer throws
   signed-in users back to the sign-in page.
 - Lockout messages say how many minutes to wait, in the chosen language; the sessions list shows plain device names.
+
+### Security and reliability (review before release)
+- **First install:** a stray byte-order mark in the app's built-in download settings left fresh installations without the
+  download address and the release key. The file is now written without it, the app reads it either way, and an installed
+  app without the release key refuses to download anything instead of installing unchecked files.
+- **Need-to-know, at the data itself:** the company briefings (finances, shareholding, leadership) were public documents
+  that anyone could open and that chat could cite; Production → Overview showed the financial figures to everyone who could
+  open the page. Both are now for top management only (policy rule `R-COMPANY-LEVEL`).
+- **Company questions:** plant questions with a word that also has a money meaning ("loss of cooling water", "pressure
+  loss", "isolation strategy") are no longer declined; clearly financial questions are declined in Hindi and Kannada too,
+  also with an equipment tag or a photo in the question.
+- **The top-management sample account** exists only in demonstration builds. Giving an account top-management reach is
+  audited and announced to the existing top management.
+- **Answers:** "Regenerate" can no longer remove the answer to an earlier question; an answer interrupted by closing the
+  page is kept.
+- **Photos:** very large pictures are refused before they are decoded; a photo that was attached and never sent is removed
+  after a day (or at once when taken out of the question); at most 200 photos per person per day; backups include chat
+  photos; ratings and standards on a nameplate (IP65, DN100, ISO 9001) are not taken for equipment tags.
+- **Uploads** larger than their limit are refused before they are stored.
+- **Voice:** a failed or slow recognition no longer holds up the whole server; after a failed start on the graphics card
+  the processor is used for 10 minutes and the card is tried again.
+- **Logs:** what people ask is not kept in the router log (only its length and a fingerprint); the AI engine's access key
+  never reaches a log; reports from web pages cannot push the server's own problems out of the list.
+- **AI model:** if the model does not start with its image module, it is started once more without it, so questions can
+  still be asked.
+- **Downloads** use the Windows proxy settings and certificate store (office networks), give up on a connection that
+  delivers nothing for 45 s and continue, and reuse a complete, checked file left by an earlier run. Proxy and certificate
+  problems get their own plain messages.
+- **Desktop app:** a download or removal keeps running, and stays visible, when the page is reloaded or the language is
+  changed; add-ons and updates are refused while a Yukti server that this app did not start is running; a window closed to
+  the tray stays closed (with a one-time hint); every dialog is translated; the window fits 1366×768 screens.
+- **Uninstalling** stops only Yukti's own helper programs, not another program's `llama-server.exe`.
 
 ### Changed
 - **Updating:** running a newer `Yukti-Setup.exe` over an existing installation now offers the update once

@@ -129,7 +129,9 @@ def startup() -> None:
     ex("UPDATE jobs SET status='error', error='Interrupted by a server restart - upload the file again.', updated_at=? "
        "WHERE status IN ('queued','running')", (now_iso(),))
     seed.run(ingest=False)          # accounts, departments, example assets: fast
+    seed.ensure_top_management()    # upgrades: somebody must hold the Top management role (demo: sample account; else: tell the admin)
     mrpl.ensure_departments()
+    threading.Thread(target=_photo_sweeper, daemon=True, name="photo-sweeper").start()
     laya.get()
     install_guard()
     engine.cleanup_orphans()
@@ -155,7 +157,7 @@ def startup() -> None:
 
 def shutdown() -> None:
     engine.unload()
-    speech.stop()
+    speech.stop(wait=False)  # never waits for a recogniser that is still starting (it dies with the server anyway)
 
 
 from contextlib import asynccontextmanager  # noqa: E402
@@ -186,8 +188,17 @@ def _server_error(ref: str) -> JSONResponse:
     return JSONResponse(status_code=500, content={"detail": {"code": "internal", "message": f"{msg} {ref}", "ref": ref}})
 
 
+def _set_request_lang(request: Request) -> None:
+    from .i18n import set_lang
+    set_lang(request.headers.get("x-lang") or request.query_params.get("lang"))
+
+
 @app.exception_handler(Exception)
 async def unhandled_exc(request: Request, exc: Exception) -> JSONResponse:
+    """Last resort. Errors inside routes are caught (and translated) by `activity_journal`; this is only reached when one
+    of the outer layers itself fails (security headers, upload size limit). It runs outside the middlewares, so the
+    request language is read here."""
+    _set_request_lang(request)
     return _server_error(journal.error("api", f"{request.method} {request.url.path} failed", exc))
 
 
@@ -496,7 +507,8 @@ def patch_chat(cid: str, body: dict[str, Any], ctx: Ctx = Depends(current)) -> d
 @app.delete("/api/chats/{cid}")
 def delete_chat(cid: str, ctx: Ctx = Depends(current)) -> dict[str, Any]:
     if q1("SELECT 1 FROM chats WHERE id=? AND user_id=?", (cid, ctx.user["id"])):
-        attachments.delete(ctx.user["id"], chat.chat_images(cid))  # the chat's photos go with it
+        # the chat's photos go with it - except a photo that another chat of the same person still shows
+        attachments.delete(ctx.user["id"], chat.chat_images(cid), except_chat=cid)
     ex("DELETE FROM chats WHERE id=? AND user_id=?", (cid, ctx.user["id"]))
     return {"ok": True}
 
@@ -522,7 +534,31 @@ def get_photo(aid: str, thumb: int = 0, ctx: Ctx = Depends(current)) -> FileResp
     return FileResponse(p, media_type="image/jpeg", headers={"Cache-Control": "private, max-age=86400"})
 
 
+@app.delete("/api/attachments/{aid}")
+def delete_photo(aid: str, ctx: Ctx = Depends(current)) -> dict[str, Any]:
+    """The uploader removes a photo that was attached but not sent (a photo in a stored question goes with its chat)."""
+    try:
+        attachments.delete_one(ctx.user["id"], aid)
+    except attachments.PhotoError as e:
+        raise err(e.status, e.code, e.message)
+    audit.write(ctx.actor, "photo.deleted", f"photo:{aid}")
+    return {"ok": True}
+
+
+def _photo_sweeper() -> None:
+    """At start and every 6 hours: photos that were uploaded but never sent with a question are removed after 24 hours."""
+    while True:
+        try:
+            n = attachments.sweep_unreferenced()
+            if n:
+                journal.event("photos", "removed photos that were never sent with a question", count=n)
+        except Exception as e:  # noqa: BLE001 - the sweeper must survive (e.g. a busy database) and try again later
+            journal.swallowed("photos", "sweeping unused photos", e)
+        time.sleep(6 * 3600)
+
+
 _CLIENT_ERR: dict[str, list[float]] = {}
+CLIENT_ERR_MAX_BYTES = 4096
 
 
 @app.post("/api/diagnostics/client-error")
@@ -531,19 +567,32 @@ async def client_error(request: Request) -> dict[str, Any]:
     JSON only (other web sites cannot send it), small, and limited per computer so it cannot flood the log."""
     if "application/json" not in (request.headers.get("content-type") or ""):
         raise err(415, "invalid", "JSON expected")
+    declared = request.headers.get("content-length") or ""
+    if declared.isdigit() and int(declared) > CLIENT_ERR_MAX_BYTES:  # refused before a single byte is read
+        raise err(413, "too_large", "The request is too large.")
     ip = request.client.host if request.client else "?"
     now = time.time()
     hits = [t for t in _CLIENT_ERR.get(ip, []) if now - t < 60]
     if len(hits) >= 30:
         return {"ok": False}
     _CLIENT_ERR[ip] = hits + [now]
-    raw = (await request.body())[:4096]
+    if len(_CLIENT_ERR) > 2000:  # never grows without bound: drop computers that have been quiet for a minute
+        for k in [k for k, v in _CLIENT_ERR.items() if not v or now - v[-1] > 60]:
+            _CLIENT_ERR.pop(k, None)
+    raw = b""
+    async for chunk in request.stream():  # hard cap while reading (a sender may lie about, or omit, the length)
+        raw += chunk
+        if len(raw) > CLIENT_ERR_MAX_BYTES:
+            raise err(413, "too_large", "The request is too large.")
     try:
         body = json.loads(raw or b"{}")
     except Exception:  # noqa: BLE001
         body = {}
-    kind = str(body.get("kind") or "script")[:20]
-    journal.warn("web", f"{kind}: {str(body.get('text') or '')[:600]}", page=str(body.get("page") or "")[:120],
+    if not isinstance(body, dict):
+        body = {}
+    one_line = lambda v, n: " ".join(str(v or "").split())[:n]  # noqa: E731 - no line breaks: nobody can fake log lines
+    kind = one_line(body.get("kind") or "script", 20)
+    journal.warn("web", f"{kind}: {one_line(body.get('text'), 600)}", page=str(body.get("page") or "")[:120],
                  app=str(body.get("app") or "")[:40], ip=ip)
     return {"ok": True}
 
@@ -1033,6 +1082,8 @@ def finding_action(fid: str, body: dict[str, Any], ctx: Ctx = Depends(current)) 
 def prod_overview(ctx: Ctx = Depends(current)) -> dict[str, Any]:
     ctx.require("production.view")
     ov = production.overview()
+    if "company.view" not in ctx.perms:  # need-to-know: company financials are for top management only
+        ov = {**ov, "public": {k: v for k, v in (ov.get("public") or {}).items() if k != "financials"}}
     return {**ov, "note": tr(ov.get("note"))}
 
 
@@ -1300,19 +1351,23 @@ _CSP = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'
 
 @app.middleware("http")
 async def request_language(request: Request, call_next):  # type: ignore[no-untyped-def]
-    from .i18n import set_lang
-    set_lang(request.headers.get("x-lang") or request.query_params.get("lang"))
+    _set_request_lang(request)
     return await call_next(request)
 
 
 @app.middleware("http")
 async def activity_journal(request: Request, call_next):  # type: ignore[no-untyped-def]
     """What was done (every change request, with its result and duration) and every server error — into the local journal."""
+    # The language set by the inner `request_language` middleware is not visible here (each middleware runs the rest of
+    # the app in its own task), so it is set here too: the "server error" message below is then translated.
+    _set_request_lang(request)
     t0 = time.perf_counter()
     path = request.url.path
     try:
         resp = await call_next(request)
     except Exception as e:  # noqa: BLE001
+        if (request.scope.get(_BODY_STATE) or {}).get("too_large"):  # upload cut off by the size limit: not a server error
+            return _too_large_response()
         return _server_error(journal.error("api", f"{request.method} {path} failed", e))
     ms = round((time.perf_counter() - t0) * 1000)
     if resp.status_code >= 500:
@@ -1338,6 +1393,86 @@ async def security_headers(request: Request, call_next):  # type: ignore[no-unty
     if request.url.scheme == "https":
         h.setdefault("Strict-Transport-Security", "max-age=31536000")
     return resp
+
+
+# ------------------------------------------------------------------ upload size limits (before any body is parsed)
+# FastAPI reads a whole multipart upload to disk before the route runs, so the limits inside the routes come too late to
+# protect the server's disk and memory. These are enforced on the raw request: first on the declared Content-Length,
+# then on the bytes actually received (a sender may omit or understate the length).
+_BODY_STATE = "yukti.body"
+BODY_LIMITS: list[tuple[re.Pattern[str], int]] = [
+    (re.compile(r"^/api/attachments/?$"), 16 * 2**20),        # a photo is at most 15 MB (+ form overhead)
+    (re.compile(r"^/api/speech/transcribe/?$"), 5 * 2**20),   # 60 s of speech is about 1.9 MB
+    (re.compile(r"^/api/documents/?$"), 51 * 2**20),          # a document is at most 50 MB (+ form overhead)
+]
+
+
+def body_limit(method: str, path: str) -> int | None:
+    if method not in ("POST", "PUT", "PATCH"):
+        return None
+    return next((n for rx, n in BODY_LIMITS if rx.match(path)), None)
+
+
+def _too_large_response() -> JSONResponse:
+    return JSONResponse(status_code=413, content={"detail": {"code": "too_large", "message": tr("This file is too large to upload.")}},
+                        headers={"X-Content-Type-Options": "nosniff", "Cache-Control": "no-store"})
+
+
+class BodyLimit:
+    """ASGI layer (outermost): refuses an upload that is larger than its route allows, without parsing it."""
+
+    def __init__(self, app):  # type: ignore[no-untyped-def]
+        self.inner = app
+
+    async def __call__(self, scope, receive, send):  # type: ignore[no-untyped-def]
+        limit = body_limit(scope.get("method", ""), scope.get("path", "")) if scope.get("type") == "http" else None
+        if limit is None:
+            await self.inner(scope, receive, send)
+            return
+        headers = {k.lower(): v for k, v in (scope.get("headers") or [])}
+        from urllib.parse import parse_qs
+        from .i18n import set_lang
+        set_lang(headers.get(b"x-lang", b"").decode("latin-1")
+                 or (parse_qs((scope.get("query_string") or b"").decode("latin-1")).get("lang") or [""])[0])
+        declared = headers.get(b"content-length", b"")
+        if declared.isdigit() and int(declared) > limit:
+            journal.warn("api", f"{scope.get('method')} {scope.get('path')} refused: upload larger than allowed",
+                         declared_bytes=int(declared), limit_bytes=limit)
+            await _too_large_response()(scope, receive, send)
+            return
+        state = {"too_large": False, "seen": 0, "started": False}
+        scope[_BODY_STATE] = state
+
+        async def limited_receive():  # type: ignore[no-untyped-def]
+            if state["too_large"]:
+                return {"type": "http.disconnect"}
+            msg = await receive()
+            if msg.get("type") == "http.request":
+                state["seen"] += len(msg.get("body") or b"")
+                if state["seen"] > limit:  # stop feeding the parser: to the app this looks like a dropped connection
+                    state["too_large"] = True
+                    return {"type": "http.disconnect"}
+            return msg
+
+        async def limited_send(msg):  # type: ignore[no-untyped-def]
+            if state["too_large"] and not state["started"]:
+                return  # whatever the app answers to the cut-off upload is replaced by the clear message below
+            if msg.get("type") == "http.response.start":
+                state["started"] = True
+            await send(msg)
+
+        try:
+            await self.inner(scope, limited_receive, limited_send)
+        except Exception:  # noqa: BLE001
+            if not state["too_large"] or state["started"]:
+                raise
+        if state["too_large"] and not state["started"]:
+            journal.warn("api", f"{scope.get('method')} {scope.get('path')} refused: upload larger than allowed",
+                         received_bytes=state["seen"], limit_bytes=limit)
+            await _too_large_response()(scope, receive, send)
+
+
+app.add_middleware(BodyLimit)
 
 
 # fingerprint of this installation (the desktop app only re-attaches to a server started from its own folder)

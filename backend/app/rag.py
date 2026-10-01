@@ -349,12 +349,13 @@ def retrieve(subject: Subject, text: str, k: int = 8) -> dict[str, Any]:
         rows = q(sql, (fq,))
     except Exception as e:  # noqa: BLE001 - never silently answer without evidence: retry with plain quoted terms
         from .engine import log
-        log(f"[search] query {fq!r} failed ({e}); retrying with quoted terms")
+        # no question words in the log (the database's own message can quote them too): only how many terms there were
+        log(f"[search] query with {fq.count(' OR ') + 1} term(s) failed ({type(e).__name__}); retrying with plain terms")
         words = [w for w in re.findall(r"[A-Za-z0-9][A-Za-z0-9\-]{1,}", text)][:24]
         try:
             rows = q(sql, (" OR ".join(f'"{w}"' for w in words),)) if words else []
         except Exception as e2:  # noqa: BLE001
-            log(f"[search] fallback query failed too: {e2}")
+            log(f"[search] fallback query with {len(words)} term(s) failed too ({type(e2).__name__})")
             rows = []
     docs: dict[str, dict[str, Any]] = {}
     allowed: dict[str, bool] = {}
@@ -367,7 +368,9 @@ def retrieve(subject: Subject, text: str, k: int = 8) -> dict[str, Any]:
             allowed[did] = can_read(subject, docs[did], "cite")
         d = docs[did]
         if not allowed[did]:
-            denied_docs[did] = d
+            # company-level briefings are simply not for this person: no "withheld - request access" notice for them
+            if d["doc_type"] != "company_briefing":
+                denied_docs[did] = d
             continue
         s = -float(r["score"])
         if tags and any(t in (r["tags"] or "").split() for t in tags):

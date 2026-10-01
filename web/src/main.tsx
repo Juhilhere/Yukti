@@ -9,6 +9,7 @@ import './index.css';
 import App from './App';
 import { AuthProvider } from './lib/auth';
 import { Toaster } from './components/Toast';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { ApiError } from './lib/api';
 import { installDiagnostics } from './lib/diagnostics';
 
@@ -29,7 +30,8 @@ createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
-          <App />
+          {/* last line of defence: a crash outside a page (top bar, side rail, dialogs) shows "Reload" instead of a blank window */}
+          <ErrorBoundary root><App /></ErrorBoundary>
           <Toaster />
         </AuthProvider>
       </BrowserRouter>

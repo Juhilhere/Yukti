@@ -19,7 +19,7 @@ from fastapi import APIRouter, Depends, File, UploadFile
 from fastapi.responses import FileResponse, PlainTextResponse
 
 from . import audit, engine
-from .auth import ROLE_PERMS, Ctx, current, err, hash_password, strong_password_problem
+from .auth import ROLE_PERMS, Ctx, current, err, hash_password, notify, strong_password_problem
 from .config import BLOBS, CLEARANCE_LABELS, DB_PATH, ROOT, STORE, USER_MODELS
 from .db import db, ex, get_setting, j, new_id, now_iso, q, q1, set_setting, uj
 from .i18n import get_lang, tr
@@ -28,6 +28,7 @@ from .llm_params import DEFAULT_LOAD, DEFAULT_PREDICTION
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 BACKUPS = STORE / "backups"
 BACKUPS.mkdir(parents=True, exist_ok=True)
+ATTACHMENTS = STORE / "attachments"  # same folder as attachments.DIR (not imported: that module loads the image library)
 MODELS_DIR = USER_MODELS
 
 ROLE_DESC = {
@@ -102,6 +103,27 @@ def _validate(body: dict[str, Any], creating: bool) -> None:
             raise err(422, "invalid", f"Unknown role: {r}")
 
 
+PRIVILEGED_ROLES = {"executive", "plant_manager", "auditor"}
+
+
+def _is_privileged(roles: list[str] | None, clearance: Any) -> bool:
+    """Top-management reach: sees company information / reads across departments / the whole audit trail, or
+    CONFIDENTIAL clearance and above."""
+    return bool(PRIVILEGED_ROLES & set(roles or [])) or int(clearance or 0) >= 3
+
+
+def _announce_privileged(actor: str, username: str, roles: list[str], clearance: int, created: bool) -> None:
+    """An administrator gave an account top-management reach: recorded in the audit trail and announced to everyone who
+    already is top management or refinery management (so one administrator cannot do it unnoticed). No approval step."""
+    audit.write(actor, "admin.user.top_management_assigned", f"user:{username}",
+                {"roles": roles, "clearance": CLEARANCE_LABELS.get(int(clearance), "?"), "created": created})
+    title = f"A top-management account was {'created' if created else 'changed'} by {actor}"
+    body = f"Account {username}: roles {', '.join(roles) or 'none'}; clearance {CLEARANCE_LABELS.get(int(clearance), '?')}"
+    for u in q("SELECT id, username, roles_json FROM users WHERE status='active'"):
+        if u["username"] not in (username, actor) and {"executive", "plant_manager"} & set(uj(u["roles_json"], [])):
+            notify(u["id"], "security", title, body, "")
+
+
 def create_user_row(body: dict[str, Any], actor: str) -> tuple[dict[str, Any], str]:
     _validate(body, True)
     username = str(body["username"]).strip().lower()
@@ -114,7 +136,11 @@ def create_user_row(body: dict[str, Any], actor: str) -> tuple[dict[str, Any], s
        (uid, username, body.get("display_name") or username, body.get("post", ""), body.get("department", ""),
         int(body.get("clearance", 1)), j(body.get("roles") or ["engineer"]), j(body.get("asset_scopes") or []), hash_password(pw), now_iso()))
     _sync_hod(uid)
-    audit.write(actor, "admin.user.created", f"user:{username}", {"department": body.get("department"), "roles": body.get("roles")})
+    roles, clearance = list(body.get("roles") or ["engineer"]), int(body.get("clearance", 1))
+    audit.write(actor, "admin.user.created", f"user:{username}",
+                {"department": body.get("department"), "roles": roles, "clearance": clearance})
+    if _is_privileged(roles, clearance):
+        _announce_privileged(actor, username, roles, clearance, created=True)
     return _user_out(q1("SELECT * FROM users WHERE id=?", (uid,))), pw
 
 
@@ -151,6 +177,11 @@ def update_user(uid: str, body: dict[str, Any], ctx: Ctx = Depends(current)) -> 
     if fields["status"] == "disabled":
         ex("UPDATE sessions SET revoked_at=?, revoke_reason='disabled' WHERE user_id=? AND revoked_at IS NULL", (now_iso(), uid))
     audit.write(ctx.actor, "admin.user.updated", f"user:{u['username']}", {k: v for k, v in body.items()})
+    old_roles, new_roles = uj(u["roles_json"], []), uj(fields["roles_json"], [])
+    gained = (PRIVILEGED_ROLES & set(new_roles)) - set(old_roles)
+    raised = fields["clearance"] >= 3 and fields["clearance"] > int(u["clearance"])
+    if gained or raised:  # only when reach was widened (renaming a director does not announce anything)
+        _announce_privileged(ctx.actor, u["username"], new_roles, fields["clearance"], created=False)
     return _user_out(q1("SELECT * FROM users WHERE id=?", (uid,)))
 
 
@@ -387,6 +418,9 @@ def create_backup(ctx: Ctx = Depends(current)) -> dict[str, Any]:
         for f in BLOBS.rglob("*"):
             if f.is_file():
                 z.write(f, "blobs/" + f.relative_to(BLOBS).as_posix())
+        for f in ATTACHMENTS.glob("*.jpg"):  # photos attached to chat questions (the database only holds their ids)
+            if f.is_file():
+                z.write(f, "attachments/" + f.name)
     snap.unlink()
     sha = hashlib.sha256(path.read_bytes()).hexdigest()
     (BACKUPS / (name + ".sha256")).write_text(sha, encoding="utf-8")
@@ -505,6 +539,8 @@ def apply_pending_restore() -> bool:
         os.replace(tmp, DB_PATH)
         if (stage / "blobs").exists():
             shutil.copytree(stage / "blobs", BLOBS, dirs_exist_ok=True)
+        if (stage / "attachments").exists():  # chat photos (backups made before 0.5.0 have none)
+            shutil.copytree(stage / "attachments", ATTACHMENTS, dirs_exist_ok=True)
     except Exception:
         if old.exists():
             os.replace(old, DB_PATH)  # roll back to the data that was there before
@@ -553,6 +589,7 @@ def import_model(body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str,
     with dest.open("rb") as fh:
         for chunk in iter(lambda: fh.read(8 * 2**20), b""):
             h.update(chunk)
+    engine.invalidate_vision_cache()
     audit.write(ctx.actor, "admin.model.imported", f"model:{dest.name}", {"sha256": h.hexdigest(), "size": dest.stat().st_size, "from": str(src)})
     m = engine.model_by_id(str(dest)) or {}
     return {**m, "sha256": h.hexdigest()}
@@ -567,6 +604,7 @@ def delete_model(mid: str, ctx: Ctx = Depends(current)) -> dict[str, Any]:
     if engine.state.model_id and Path(engine.state.model_id).resolve() == p:
         raise err(409, "conflict", "Unload the model first.")
     p.unlink()
+    engine.invalidate_vision_cache()
     audit.write(ctx.actor, "admin.model.deleted", f"model:{p.name}")
     return {"ok": True}
 
@@ -577,9 +615,9 @@ async def laya_benchmark(body: dict[str, Any] | None = None, ctx: Ctx = Depends(
     ctx.require("models.manage")
     from . import laya
     n = int((body or {}).get("n", 10))
-    texts = [r["text"] for r in q("SELECT DISTINCT text FROM laya_log WHERE length(text)>3 ORDER BY id DESC LIMIT ?", (n,))]
-    if not texts:
-        raise err(409, "conflict", "No logged queries yet — ask a few questions in chat first.")
+    # questions people asked are not kept (the router log holds only their length and a fingerprint), so the comparison
+    # runs on Laya's built-in sample questions
+    texts = laya.sample_texts(max(1, min(n, 50)))
     if engine.state.status != "ready":
         raise err(409, "conflict", "Load a model first.")
     labels = laya.get().labels

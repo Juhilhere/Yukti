@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import collections
+import itertools
 import logging
 import secrets
 import sys
@@ -24,12 +25,18 @@ _log = logging.getLogger("yukti")
 _log.setLevel(logging.INFO)
 _log.propagate = False
 RECENT: collections.deque[dict[str, Any]] = collections.deque(maxlen=300)   # recent warnings/errors for Admin > Usage & health
+# what web pages report about themselves is kept apart (and smaller): a page that floods cannot push the server's own
+# problems out of the list
+RECENT_WEB: collections.deque[dict[str, Any]] = collections.deque(maxlen=60)
+_SEQ = itertools.count()
 
 
 class _Recent(logging.Handler):
     def emit(self, r: logging.LogRecord) -> None:
-        RECENT.append({"at": self.formatter.formatTime(r, "%Y-%m-%d %H:%M:%S") if self.formatter else "", "level": r.levelname,
-                       "area": getattr(r, "area", "yukti"), "message": r.getMessage()[:600], "ref": getattr(r, "ref", None)})
+        area = getattr(r, "area", "yukti")
+        (RECENT_WEB if area == "web" else RECENT).append({
+            "at": self.formatter.formatTime(r, "%Y-%m-%d %H:%M:%S") if self.formatter else "", "level": r.levelname,
+            "area": area, "message": r.getMessage()[:600], "ref": getattr(r, "ref", None), "_n": next(_SEQ)})
 
 
 def _setup() -> None:
@@ -107,4 +114,5 @@ def install_hooks() -> None:
 
 def recent(level: str = "WARNING", limit: int = 200) -> list[dict[str, Any]]:
     want = {"ERROR"} if level.upper() == "ERROR" else {"WARNING", "ERROR"}
-    return [r for r in list(RECENT)[::-1] if r["level"] in want][:limit]
+    rows = sorted([*list(RECENT), *list(RECENT_WEB)], key=lambda r: r.get("_n", 0), reverse=True)  # newest first
+    return [{k: v for k, v in r.items() if k != "_n"} for r in rows if r["level"] in want][:limit]

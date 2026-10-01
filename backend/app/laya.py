@@ -5,6 +5,7 @@ Also hosts the Company-Guardrail (CG) input classifier used before the domain mo
 """
 from __future__ import annotations
 
+import hashlib
 import pickle
 import random
 import re
@@ -115,6 +116,23 @@ ROUTE = {
 URGENT = re.compile(r"\b(trip|tripped|fire|leak|h2s|gas|emergency|asap|urgent|abhi|immediately|alarm|explosion|injur)", re.I)
 
 
+def log_ref(text: str) -> str:
+    """What the router log keeps instead of the question: its length and a short fingerprint (enough to count repeats)."""
+    return f"len={len(text)} sha={hashlib.sha256(text.encode('utf-8', 'replace')).hexdigest()[:12]}"
+
+
+def sample_texts(n: int = 10) -> list[str]:
+    """Built-in sample questions (Laya's own examples, spread over all intents) for the admin's speed comparison."""
+    rnd = random.Random(7)
+    per_intent = [[t.format(tag=rnd.choice(TAGS), unit=rnd.choice(UNITS)) for t in temps] for temps in T.values()]
+    out: list[str] = []
+    i = 0
+    while len(out) < n and any(i < len(p) for p in per_intent):
+        out += [p[i] for p in per_intent if i < len(p)]
+        i += 1
+    return out[:n]
+
+
 def _expand() -> tuple[list[str], list[str]]:
     rnd = random.Random(2026)
     X, y = [], []
@@ -212,7 +230,8 @@ class Laya:
         d = {"intent": intent, "department": dept, "urgency": round(urg, 2), "needs_review": needs_review, "sensitivity": sens,
              "route": route, "confidence": round(conf, 3), "abstain": abstain, "latency_ms": round(dt, 2),
              "model_version": f"{VERSION}+{self.runtime}"}
-        ex("INSERT INTO laya_log(text, decision_json, latency_ms, at) VALUES(?,?,?,?)", (text[:500], j(d), dt, now_iso()))
+        # what people ask (and what is read from their photos) is never stored: only its length and a short fingerprint
+        ex("INSERT INTO laya_log(text, decision_json, latency_ms, at) VALUES(?,?,?,?)", (log_ref(text), j(d), dt, now_iso()))
         return d
 
     def stats(self) -> dict[str, Any]:
@@ -260,8 +279,12 @@ PLANT_WORDS = re.compile(
     r"|ಕಂಪನ|ಡೇಟಾ|ಕೋಡ್|ಗ್ರಾಫ್|ಉತ್ಪಾದನೆ|ಉತ್ಪನ್ನ|ಆಡಿಟ್|ವರದಿ|ದಾಖಲೆ|ವಿಭಾಗ|ಪ್ರವೇಶ|ಅನುಮತಿ|ಸಂಪರ್ಕ|ಆನ್-ಕಾಲ್|ಪ್ರಮಾಣಪತ್ರ|ತಪಾಸಣೆ",
     re.I)
 # greetings are answered kindly, never "declined"
+# The greeting must end there: not followed by a letter, digit, or a Hindi/Kannada letter or vowel sign. (A plain \b does
+# not work here: a word that ends in an Indic vowel sign, like "नमस्ते" or "ಹೇಗಿದ್ದೀರಾ", has no \b after it.)
 SMALLTALK = re.compile(r"^\s*(hi|hello|hey|namaste|namaskar|thanks|thank you|ok|okay|good (morning|afternoon|evening)|"
-                       r"how are you|kaise ho|kya haal|kaisa hai|नमस्ते|धन्यवाद|कैसे हो|ನಮಸ್ಕಾರ|ಧನ್ಯವಾದ|ಹೇಗಿದ್ದೀರಾ)\b", re.I)
+                       r"how are you|kaise ho|kya haal|kaisa hai|नमस्ते|नमस्कार|धन्यवाद|शुक्रिया|कैसे हो|कैसे हैं|"
+                       r"ನಮಸ್ಕಾರ|ನಮಸ್ತೆ|ಧನ್ಯವಾದಗಳು|ಧನ್ಯವಾದ|ಹೇಗಿದ್ದೀರಾ|ಹೇಗಿದ್ದೀರಿ)"
+                       r"(?![\wऀ-ॿಀ-೿])", re.I)
 
 
 def plant_related(text: str) -> bool:

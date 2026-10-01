@@ -165,7 +165,7 @@ function RecentProblems() {
   return (
     <Card title={t('admin.problems.title')} icon={<ShieldAlert size={13} className="text-amber" />}
       actions={<label className="flex items-center gap-1.5 text-[11.5px] text-muted"><input type="checkbox" checked={onlyErrors} onChange={(e) => setOnlyErrors(e.target.checked)} />{t('admin.problems.onlyErrors')}</label>}>
-      {q.error ? <ErrorBox error={q.error} onRetry={() => q.refetch()} /> : items.length === 0 ? (
+      {q.error ? <ErrorBox error={q.error} onRetry={() => q.refetch()} /> : q.isLoading ? <Loading /> : items.length === 0 ? (
         <EmptyState title={t('admin.problems.none')} />
       ) : (
         <div className="max-h-[340px] overflow-auto font-mono text-[11.5px]">

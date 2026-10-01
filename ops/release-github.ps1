@@ -10,17 +10,29 @@ param(
   [string]$Repo = "Juhilhere/Yukti",
   [string]$Package = "E:\yukti-build\Yukti-Server-$Version",
   [string]$Out = "E:\yukti-build\github-release",
-  [switch]$UploadOnly                                # the files in $Out are already built and signed: only upload them
+  [switch]$UploadOnly,                               # the files in $Out are already built and signed: only upload them
+  [switch]$PreRelease,                               # publish as a pre-release: "latest" keeps pointing at the previous release,
+                                                     # so the real download can be tested first (then run again with -Promote)
+  [switch]$Promote                                   # nothing is built or uploaded: the tested pre-release becomes "latest"
 )
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 $tag = "v$Version"
 
+if ($Promote) {
+  gh release edit $tag --repo $Repo --draft=false --prerelease=false --latest
+  if ($LASTEXITCODE -ne 0) { throw "could not make $tag the latest release" }
+  Write-Host "`nDone. Users download: https://github.com/$Repo/releases/latest/download/Yukti-Setup.exe"
+  return
+}
+
 if (-not $UploadOnly) {
 # 1. the one-click installer, with the GitHub download address and the release public key built in
 $publicKey = (node "$root\ops\sign-manifest.js" keygen).Trim()
-@{ manifestUrl = "https://github.com/$Repo/releases/latest/download/manifest.json"; publicKey = $publicKey } |
-  ConvertTo-Json | Set-Content -Encoding utf8 "$root\desktop\distribution.json"
+$json = [ordered]@{ manifestUrl = "https://github.com/$Repo/releases/latest/download/manifest.json"; publicKey = $publicKey } | ConvertTo-Json
+# written WITHOUT a byte-order mark: Windows PowerShell's "Set-Content -Encoding utf8" adds one, and the app then could
+# not read the file (no download address, no release key)
+[IO.File]::WriteAllText("$root\desktop\distribution.json", $json, (New-Object Text.UTF8Encoding $false))
 Push-Location "$root\desktop"; npm run dist; Pop-Location
 
 # 2. components split into < 2 GB parts + manifest with URLs pinned to this tag
@@ -42,5 +54,12 @@ Get-ChildItem $Out -File | ForEach-Object {
   gh release upload $tag $_.FullName --repo $Repo --clobber
   if ($LASTEXITCODE -ne 0) { throw "upload of $($_.Name) failed - the release stays a draft; run this script again" }
 }
-gh release edit $tag --repo $Repo --draft=false --latest
+if ($PreRelease) {
+  gh release edit $tag --repo $Repo --draft=false --prerelease --latest=false
+  Write-Host "`nPre-release $tag is up; 'latest' is unchanged. Test it with the manifest address"
+  Write-Host "  https://github.com/$Repo/releases/download/$tag/manifest.json"
+  Write-Host "then run this script again with -Promote."
+  return
+}
+gh release edit $tag --repo $Repo --draft=false --prerelease=false --latest
 Write-Host "`nDone. Users download: https://github.com/$Repo/releases/latest/download/Yukti-Setup.exe"

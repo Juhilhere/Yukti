@@ -10,7 +10,7 @@ import asyncio
 from . import attachments, audit, engine, mrpl_facts, rag
 from . import laya as laya_mod
 from .auth import Ctx
-from .db import ex, j, new_id, now_iso, q, q1, uj
+from .db import ex, j, new_id, now_iso, q, q1, tx, uj
 from .i18n import tr, tr_facts
 from .policy import pdp
 
@@ -32,20 +32,44 @@ Rules you must follow:
 COMPANY_ONLY_REPLY = ("Company-level information such as finances, strategy and company-wide figures is available to top "
                       "management only. For your work, ask about your equipment, procedures, safety or documents.")
 
+# Clearly financial / corporate words only. Everyday plant words that also have a money meaning ("loss" of cooling water,
+# pressure "loss", isolation "strategy", "budget", the company name itself) are deliberately NOT here: refusing a plant
+# question is the worst mistake this gate can make. The real protection is at the data layer (company briefings and
+# company facts need `company.view`); this gate only gives a clear message instead of an empty answer.
 _COMPANY_LEVEL = re.compile(
-    r"\b(mrpl|mangalore refinery|the company|our company|company'?s|managing director|chairman|board of directors|revenue|profit|"
-    r"loss|grm|gross refining margin|turnover|shareholding|shareholders?|dividend|market cap|share price|financials?|finances|"
-    r"balance sheet|net worth|ebitda|capex|budget|credit rating|subsidiar\w*|strategy|expansion plans?|csr|esg|annual report)\b",
+    r"\b(revenues?|profits?|profitability|profit after tax|net income|net profit|turnover|grm|gross refining margins?|"
+    r"shareholding|shareholders?|dividends?|share price|stock price|market cap\w*|balance sheet|net worth|ebitda|"
+    r"financials?|finances|credit ratings?|annual reports?|quarterly results|board of directors|managing director|chairman|"
+    r"subsidiar\w*)\b"
+    # Hindi / Kannada (no \b: Indic vowel signs are not word characters; a leading letter check is enough)
+    # ("लाभ"/"ಲಾಭ" = benefit and "शेयर"/"ಷೇರು" = share are everyday words too, so they are deliberately not listed)
+    r"|(?<![ऀ-ॿ])(?:राजस्व|मुनाफ़?[ाे]|टर्नओवर|शेयरधारक|लाभांश)"
+    r"|(?<![ಀ-೿])(?:ಆದಾಯ|ವಹಿವಾಟು|ಷೇರುದಾರ|ಲಾಭಾಂಶ)",
     re.I)
+_PAT = re.compile(r"\bPAT\b")  # profit after tax: capitals only ("pat" inside ordinary words or names is not a financial term)
+# naming the company or the site says nothing about the question being plant work ("MRPL's profit", "the refinery's revenue")
+_COMPANY_NAMES = re.compile(r"\b(mrpl|ongc|hpcl|mangalore refinery|refinery|plant|company|unit|departments?|data|reports?)(?:'s)?\b"
+                            # (the Hindi/Kannada words for "company" also contain the plant word for "vibration")
+                            r"|कंपनी|कम्पनी|रिफाइनरी|प्लांट|ಕಂಪನಿ|ಕಂಪೆನಿ|ರಿಫೈನರಿ|ಸ್ಥಾವರ", re.I)
 
 
-def is_company_level(route: dict[str, Any], text: str) -> bool:
-    """Finances, strategy and company-wide figures (need-to-know: top management). A plant question with an equipment tag or
-    plant words is never treated as company-level just because Laya leaned that way."""
-    if rag.detect_tags(text):
+def _plant_work(text: str) -> bool:
+    """A plant word or a guarded plant topic is in the text. Equipment tags alone do not count here: a tag in the
+    sentence must not let a clearly financial question through ("A2 - what is MRPL's profit?")."""
+    return bool(laya_mod.PLANT_WORDS.search(text)) or laya_mod.guard_category(text) != "general"
+
+
+def is_company_level(route: dict[str, Any], text: str, photos: bool = False) -> bool:
+    """Finances and company-wide figures (need-to-know: top management). `text` is what the person typed.
+
+    1) A clearly financial/corporate term, and nothing else in the sentence is plant work -> company-level.
+    2) Otherwise only when Laya is confident AND nothing plant-related (word, guarded topic, equipment tag) is in the
+       text. With photos attached Laya's guess comes from the text read on the photo, not from the person, so it is ignored."""
+    if _COMPANY_LEVEL.search(text) or _PAT.search(text):
+        rest = _COMPANY_NAMES.sub(" ", _PAT.sub(" ", _COMPANY_LEVEL.sub(" ", text)))
+        return not _plant_work(rest)
+    if photos:
         return False
-    if _COMPANY_LEVEL.search(text):
-        return True
     return route.get("intent") == "company_info" and float(route.get("confidence") or 0) >= 0.6 and not laya_mod.plant_related(text)
 
 
@@ -119,6 +143,31 @@ def chat_images(chat_id: str) -> list[str]:
             for aid in (uj(r["meta_json"], {}).get("images") or [])]
 
 
+def save_answer(chat_id: str, regenerate: bool, mid: str, content: str, reasoning: str | None, meta: dict[str, Any]) -> None:
+    """Store an assistant message. On "regenerate" the earlier answer to the LAST question is replaced in the same
+    transaction: only assistant messages that come after the last user message are removed (an older answer, to an
+    earlier question, is never touched), and nothing is removed unless the new answer is stored."""
+    with tx() as c:
+        if regenerate:
+            lu = c.execute("SELECT rowid AS rid, created_at FROM messages WHERE chat_id=? AND role='user' "
+                           "ORDER BY created_at DESC, rowid DESC LIMIT 1", (chat_id,)).fetchone()
+            if lu:
+                c.execute("DELETE FROM messages WHERE chat_id=? AND role='assistant' AND "
+                          "(created_at > ? OR (created_at = ? AND rowid > ?))", (chat_id, lu["created_at"], lu["created_at"], lu["rid"]))
+        c.execute("INSERT INTO messages(id, chat_id, role, content, reasoning, meta_json, created_at) VALUES(?,?,?,?,?,?,?)",
+                  (mid, chat_id, "assistant", content, reasoning, j(meta), now_iso()))
+
+
+def known_photo_tags(photo: dict[str, Any] | None) -> set[str]:
+    """Tags read on the photos that the plant knows: in the asset register (and visible to this person) or in its tag
+    list. Codes that only look like a tag (a rating, a standard, a part number) decide nothing."""
+    tags = [t for x in (photo or {}).get("images", []) for t in x.get("tags", [])]
+    if not tags:
+        return set()
+    amap = rag._alias_map()
+    return {t["tag"] for t in tags if t.get("asset_name") or str(t["tag"]).upper() in amap}
+
+
 def _facts_block(facts: list[dict[str, Any]]) -> str:
     lines = []
     for i, f in enumerate(facts, 1):
@@ -140,9 +189,14 @@ def _mtok(m: dict[str, Any]) -> int:
     return _tok(m["content"]) + 600 * len(m.get("images") or [])  # an image takes ~256-600 tokens depending on the model
 
 
+_DOC_RX = re.compile(r"<doc id=.*?</doc>\n?", re.S)
+_OMITTED = "(… further documents omitted to fit the model's context window)\n"
+
+
 def fit_to_context(msgs: list[dict[str, Any]], budget: int) -> tuple[list[dict[str, Any]], bool]:
-    """Keep the prompt inside the model's context: drop the oldest history turns first, then shorten the retrieved
-    document context. The system prompt and the question are always kept."""
+    """Keep the prompt inside the model's context: drop the oldest history turns first, then whole retrieved documents
+    (the least relevant, i.e. the last, first). The system prompt, the question, the text read from photos, the FACTS and
+    the "documents withheld" note are kept: they stand after the documents and are only shortened as a last resort."""
     trimmed = False
     msgs = [dict(m) for m in msgs]
     while sum(_mtok(m) for m in msgs) > budget and len(msgs) > 2:
@@ -153,10 +207,20 @@ def fit_to_context(msgs: list[dict[str, Any]], budget: int) -> tuple[list[dict[s
         last = msgs[-1]["content"]
         q_at = last.rfind("\n\nQUESTION: ")
         if q_at > 0:
-            keep = max(0, q_at - over * 3 - 64)
-            cut = last.rfind("</doc>", 0, keep)
-            head = last[: cut + 6] if cut > 0 else last[:keep]
-            msgs[-1]["content"] = head + "\n(… further context omitted to fit the model's context window)" + last[q_at:]
+            body, tail = last[:q_at], last[q_at:]
+            need = over * 3 + len(_OMITTED) + 32  # characters to remove (same ~3 characters per token as _tok)
+            spans = [(m.start(), m.end()) for m in _DOC_RX.finditer(body)]
+            at = None
+            while spans and need > 0:
+                a, b = spans.pop()  # removing from the end keeps the earlier positions valid
+                body = body[:a] + body[b:]
+                need -= b - a
+                at = a
+            if at is not None:
+                body = body[:at] + _OMITTED + body[at:]
+            if need > 0:  # still too long with no document left (very long photo text / facts): shorten the rest from its end
+                body = body[: max(0, len(body) - need)] + "\n(… shortened to fit the model's context window)"
+            msgs[-1]["content"] = body + tail
             trimmed = True
     return msgs, trimmed
 
@@ -164,14 +228,20 @@ def fit_to_context(msgs: list[dict[str, Any]], budget: int) -> tuple[list[dict[s
 async def run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | None, prediction: dict[str, Any],
                    use_knowledge: bool, regenerate: bool = False, images: list[str] | None = None) -> AsyncIterator[str]:
     """Wrapper: any unexpected failure ends the stream with an explicit error event (never a silent cut-off)."""
+    turn = _run_turn(ctx, chat_id, content, system_prompt, prediction, use_knowledge, regenerate, images or [])
     try:
-        async for chunk in _run_turn(ctx, chat_id, content, system_prompt, prediction, use_knowledge, regenerate, images or []):
+        async for chunk in turn:
             yield chunk
     except Exception as e:  # noqa: BLE001
         from . import journal
         ref = journal.error("chat", "answer failed", e)
         yield _sse("error", {"code": "internal", "ref": ref,
                              "message": tr("The answer was interrupted by a server error. Please try again.") + f" ({ref})"})
+    finally:
+        # When the page is closed mid-answer this generator is closed while the turn is still waiting at a `yield`:
+        # close the turn now (it then stores what was written so far) instead of leaving it to the garbage collector.
+        # Closing a generator that is waiting at a yield does not wait for anything.
+        await turn.aclose()
 
 
 async def _run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | None, prediction: dict[str, Any],
@@ -204,8 +274,12 @@ async def _run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | N
     photo_b64: list[str] = []
     if images:
         shots = []
-        for aid in images:
-            shots.append(await asyncio.to_thread(attachments.analyse, ctx.subject, ctx.user["id"], aid))
+        try:
+            for aid in images:
+                shots.append(await asyncio.to_thread(attachments.analyse, ctx.subject, ctx.user["id"], aid))
+        except (attachments.PhotoError, OSError):  # the photo was removed in the meantime (deleted, swept, disk problem)
+            yield _sse("error", {"code": "not_found", "message": tr("Photo not found")})
+            return
         vision = engine.vision_ready()
         note = "" if vision else photo_note((await engine.vision_status())["installed"])
         photo = {"images": shots, "vision": vision, "note": note}
@@ -220,7 +294,11 @@ async def _run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | N
             blocks.append(f"PHOTO {i} TEXT (OCR):\n{x['text'][:1200] or '(no readable text)'}\nEquipment tags read on photo {i}: {tags}")
         photo_block = "\n\n".join(blocks)
         if vision:
-            photo_b64 = [attachments.b64(ctx.user["id"], aid) for aid in images]
+            try:
+                photo_b64 = [attachments.b64(ctx.user["id"], aid) for aid in images]
+            except (attachments.PhotoError, OSError):
+                yield _sse("error", {"code": "not_found", "message": tr("Photo not found")})
+                return
     question = content.strip() or PHOTO_QUESTION
     # what the photo says also steers routing and document search (a tag on a stencil finds that line's documents)
     search_text = question + ("\n" + " ".join(t["tag"] for x in meta["photo"]["images"] for t in x["tags"]) + "\n" +
@@ -231,8 +309,10 @@ async def _run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | N
     meta["route"] = route
     yield _sse("route", route)
 
-    # 1a) Company-level questions (finances, strategy, company-wide figures) are for top management only
-    if not images and "company.view" not in ctx.perms and is_company_level(route, question):
+    # 1a) Company-level questions (finances, company-wide figures) are for top management only. The gate looks at what
+    #     the person typed (photos or an equipment tag in the sentence do not switch it off); the data itself is
+    #     protected separately (company briefings and company facts need `company.view`).
+    if "company.view" not in ctx.perms and is_company_level(route, content.strip(), photos=bool(images)):
         guard = {"category": "company_restricted", "decision": "deny", "rule_ids": ["G-NEED-TO-KNOW"],
                  "reason": "Company-level information is for top management only.", "model": "policy"}
         meta["guard"] = guard
@@ -241,12 +321,7 @@ async def _run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | N
         for w in re.findall(r"\S+\s*", msg):
             yield _sse("token", {"t": w})
         mid = new_id()
-        if regenerate:
-            last = q1("SELECT id FROM messages WHERE chat_id=? AND role='assistant' ORDER BY created_at DESC, rowid DESC LIMIT 1", (chat_id,))
-            if last:
-                ex("DELETE FROM messages WHERE id=?", (last["id"],))
-        ex("INSERT INTO messages(id, chat_id, role, content, meta_json, created_at) VALUES(?,?,?,?,?,?)",
-           (mid, chat_id, "assistant", msg, j({**meta, "stats": {"model_name": "policy", "engine": "policy"}}), now_iso()))
+        save_answer(chat_id, regenerate, mid, msg, None, {**meta, "stats": {"model_name": "policy", "engine": "policy"}})
         audit.write(ctx.actor, "chat.need_to_know", f"chat:{chat_id}", {"intent": route.get("intent")})
         yield _sse("done", {"message_id": mid, "stats": {"tokens_in": 0, "tokens_out": 0, "tok_per_s": 0, "ttft_ms": 0, "total_ms": 0,
                                                           "stop_reason": "need_to_know", "model_name": "policy", "engine": "policy"}})
@@ -262,12 +337,7 @@ async def _run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | N
         for w in re.findall(r"\S+\s*", msg):
             yield _sse("token", {"t": w})
         mid = new_id()
-        if regenerate:
-            last = q1("SELECT id FROM messages WHERE chat_id=? AND role='assistant' ORDER BY created_at DESC, rowid DESC LIMIT 1", (chat_id,))
-            if last:
-                ex("DELETE FROM messages WHERE id=?", (last["id"],))
-        ex("INSERT INTO messages(id, chat_id, role, content, meta_json, created_at) VALUES(?,?,?,?,?,?)",
-           (mid, chat_id, "assistant", msg, j({**meta, "stats": {"model_name": "Laya", "engine": "policy"}}), now_iso()))
+        save_answer(chat_id, regenerate, mid, msg, None, {**meta, "stats": {"model_name": "Laya", "engine": "policy"}})
         audit.write(ctx.actor, "chat.off_topic", f"chat:{chat_id}", {"intent": route.get("intent"), "confidence": route.get("confidence")})
         yield _sse("done", {"message_id": mid, "stats": {"tokens_in": 0, "tokens_out": 0, "tok_per_s": 0, "ttft_ms": 0, "total_ms": 0,
                                                           "stop_reason": "off_topic", "model_name": "Laya", "engine": "policy"}})
@@ -289,8 +359,7 @@ async def _run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | N
         for w in re.findall(r"\S+\s*", msg):
             yield _sse("token", {"t": w})
         mid = new_id()
-        ex("INSERT INTO messages(id, chat_id, role, content, meta_json, created_at) VALUES(?,?,?,?,?,?)",
-           (mid, chat_id, "assistant", msg, j({**meta, "stats": {"model_name": "guardrail", "engine": "policy"}}), now_iso()))
+        save_answer(chat_id, regenerate, mid, msg, None, {**meta, "stats": {"model_name": "guardrail", "engine": "policy"}})
         yield _sse("done", {"message_id": mid, "stats": {"tokens_in": 0, "tokens_out": 0, "tok_per_s": 0, "ttft_ms": 0,
                                                           "total_ms": 0, "stop_reason": "guardrail", "model_name": "policy", "engine": "policy"}})
         return
@@ -299,15 +368,15 @@ async def _run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | N
     sources: list[dict[str, Any]] = []
     facts: list[dict[str, Any]] = []
     ctx_block = ""
-    photo_tags = {t["tag"] for x in (meta.get("photo") or {}).get("images", []) for t in x["tags"]}
+    # only tags the plant knows count as "a readable tag": "IP65" or "DN100" on a nameplate identifies nothing
+    photo_tags = known_photo_tags(meta.get("photo"))
     if images and not content.strip() and not photo_tags:
         use_knowledge = False  # an unlabelled photo and no question: documents found by generic words would only mislead
     if use_knowledge:
         ret = rag.retrieve(ctx.subject, search_text)
         sources = ret["sources"]
-        ptags = {t["tag"] for x in (meta.get("photo") or {}).get("images", []) for t in x["tags"] if t["asset_name"]}
-        if ptags:  # a photo of V-501: documents about other equipment would only mislead the answer
-            own = [s_ for s_ in sources if any(t.upper() in s_["_text"].upper() for t in ptags)]
+        if photo_tags:  # a photo of V-501: documents about other equipment would only mislead the answer
+            own = [s_ for s_ in sources if any(t.upper() in s_["_text"].upper() for t in photo_tags)]
             if own:
                 sources = [{**s_, "id": f"S{i}"} for i, s_ in enumerate(own, 1)]
                 ret = {**ret, "sources": sources}
@@ -360,7 +429,7 @@ async def _run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | N
             ctx_block += (f"\n\nNOTE: {ret['denied']['count']} relevant document(s) exist but are withheld by access policy"
                           f"{held}. Tell the user they can request access; do not guess their content.")
         if images and not photo_tags and sources:
-            ctx_block += ("\n\nNOTE: no equipment tag is readable in the photo, so none of these documents is known to be about "
+            ctx_block += ("\n\nNOTE: no known equipment tag is readable in the photo, so none of these documents is known to be about "
                           "the photographed item. Do not link the photo to equipment named in them.")
         if facts:
             ctx_block += "\n\nFACTS (structured, verified plant/public records — quote values verbatim and cite their [F#] id):\n" + _facts_block(facts)
@@ -394,37 +463,47 @@ async def _run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | N
     text_parts: list[str] = []
     reasoning_parts: list[str] = []
     stats: dict[str, Any] = {}
-    async for ev in engine.stream_chat(msgs, prediction or {}):
-        if chat_id in _STOP:
-            stats = {"tokens_out": len(text_parts), "stop_reason": "user_stopped", "model_name": engine.state.model_name,
-                     "engine": engine.state.engine}
-            break
-        if ev["type"] == "reset":  # the engine restarted mid-answer: the answer is regenerated from the start
-            text_parts.clear()
-            reasoning_parts.clear()
-            yield _sse("reset", {})
-        elif ev["type"] == "token":
-            text_parts.append(ev["t"])
-            yield _sse("token", {"t": ev["t"]})
-        elif ev["type"] == "reasoning":
-            reasoning_parts.append(ev["t"])
-            yield _sse("reasoning", {"t": ev["t"]})
-        elif ev["type"] == "error":
-            yield _sse("error", {"code": ev["code"], "message": tr(ev["message"])})
-            audit.write(ctx.actor, "chat.error", f"chat:{chat_id}", {"code": ev["code"]})
-            _record(ctx, route, None, ev["code"])
-            # keep the turn (route, guard, sources, withheld documents, the error) so it survives refresh and reload,
-            # and the "request access" card stays reachable even when no model is loaded
-            meta["error"] = {"code": ev["code"], "message": ev["message"]}
-            if regenerate:
-                last = q1("SELECT id FROM messages WHERE chat_id=? AND role='assistant' ORDER BY created_at DESC, rowid DESC LIMIT 1", (chat_id,))
-                if last:
-                    ex("DELETE FROM messages WHERE id=?", (last["id"],))
-            ex("INSERT INTO messages(id, chat_id, role, content, reasoning, meta_json, created_at) VALUES(?,?,?,?,?,?,?)",
-               (new_id(), chat_id, "assistant", "".join(text_parts), "".join(reasoning_parts) or None, j(meta), now_iso()))
-            return
-        elif ev["type"] == "done":
-            stats = ev["stats"]
+    try:
+        async for ev in engine.stream_chat(msgs, prediction or {}):
+            if chat_id in _STOP:
+                stats = {"tokens_out": len(text_parts), "stop_reason": "user_stopped", "model_name": engine.state.model_name,
+                         "engine": engine.state.engine}
+                break
+            if ev["type"] == "reset":  # the engine restarted mid-answer: the answer is regenerated from the start
+                text_parts.clear()
+                reasoning_parts.clear()
+                yield _sse("reset", {})
+            elif ev["type"] == "token":
+                text_parts.append(ev["t"])
+                yield _sse("token", {"t": ev["t"]})
+            elif ev["type"] == "reasoning":
+                reasoning_parts.append(ev["t"])
+                yield _sse("reasoning", {"t": ev["t"]})
+            elif ev["type"] == "error":
+                # keep the turn (route, guard, sources, withheld documents, the error) so it survives refresh and reload,
+                # and the "request access" card stays reachable even when no model is loaded. Stored before the event is
+                # sent, so a page that closes at this very moment cannot lose it.
+                meta["error"] = {"code": ev["code"], "message": ev["message"]}
+                save_answer(chat_id, regenerate, new_id(), "".join(text_parts), "".join(reasoning_parts) or None, meta)
+                audit.write(ctx.actor, "chat.error", f"chat:{chat_id}", {"code": ev["code"]})
+                _record(ctx, route, None, ev["code"])
+                text_parts, reasoning_parts = [], []  # stored: nothing left to rescue if the page closes now
+                yield _sse("error", {"code": ev["code"], "message": tr(ev["message"])})
+                return
+            elif ev["type"] == "done":
+                stats = ev["stats"]
+    except (GeneratorExit, asyncio.CancelledError):
+        # The page was closed or the connection dropped in the middle of the answer: keep what was written so far, so
+        # the person finds it when they come back. Only synchronous work here (no awaits while being cancelled).
+        if text_parts or reasoning_parts:
+            try:
+                save_answer(chat_id, regenerate, new_id(), "".join(text_parts), "".join(reasoning_parts) or None,
+                            {**meta, "stats": {"tokens_out": len(text_parts), "stop_reason": "interrupted",
+                                               "model_name": engine.state.model_name, "engine": engine.state.engine}})
+            except Exception as e:  # noqa: BLE001
+                from . import journal
+                journal.swallowed("chat", "saving an interrupted answer", e)
+        raise
     answer = "".join(text_parts)
     # 6) citation check: which cited ids exist
     cited = sorted(set(re.findall(r"\[(S\d+|F\d+)\]", answer)))
@@ -433,12 +512,7 @@ async def _run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | N
     meta["stats"] = stats
     _record(ctx, route, stats, None, int((meta.get("denied") or {}).get("count", 0)))
     mid = new_id()
-    if regenerate:
-        last = q1("SELECT id FROM messages WHERE chat_id=? AND role='assistant' ORDER BY created_at DESC, rowid DESC LIMIT 1", (chat_id,))
-        if last:
-            ex("DELETE FROM messages WHERE id=?", (last["id"],))
-    ex("INSERT INTO messages(id, chat_id, role, content, reasoning, meta_json, created_at) VALUES(?,?,?,?,?,?,?)",
-       (mid, chat_id, "assistant", answer, "".join(reasoning_parts) or None, j(meta), now_iso()))
+    save_answer(chat_id, regenerate, mid, answer, "".join(reasoning_parts) or None, meta)
     audit.write(ctx.actor, "chat.answer", f"chat:{chat_id}",
                 {"message_id": mid, "model": stats.get("model_name"), "engine": stats.get("engine"), "intent": route["intent"],
                  "tokens_out": stats.get("tokens_out"), "citations": cited})
