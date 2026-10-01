@@ -13,7 +13,8 @@ param(
   [switch]$UploadOnly,                               # the files in $Out are already built and signed: only upload them
   [switch]$PreRelease,                               # publish as a pre-release: "latest" keeps pointing at the previous release,
                                                      # so the real download can be tested first (then run again with -Promote)
-  [switch]$Promote                                   # nothing is built or uploaded: the tested pre-release becomes "latest"
+  [switch]$Promote,                                  # nothing is built or uploaded: the tested pre-release becomes "latest"
+  [switch]$NotesOnly                                 # nothing is built or uploaded: only the text of the release page is renewed
 )
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
@@ -26,7 +27,7 @@ if ($Promote) {
   return
 }
 
-if (-not $UploadOnly) {
+if (-not $UploadOnly -and -not $NotesOnly) {
 # 1. the one-click installer, with the GitHub download address and the release public key built in
 $publicKey = (node "$root\ops\sign-manifest.js" keygen).Trim()
 $json = [ordered]@{ manifestUrl = "https://github.com/$Repo/releases/latest/download/manifest.json"; publicKey = $publicKey } | ConvertTo-Json
@@ -41,8 +42,17 @@ node "$root\ops\sign-manifest.js" sign "$Out\manifest.json"
 }
 
 # 3. create (or update) the release and upload every file
-$notes = (Get-Content "$root\ops\release-notes.md" -Raw).Replace("{VERSION}", $Version).Replace("{REPO}", $Repo)
-$notesFile = Join-Path $env:TEMP "yukti-release-notes.md"; Set-Content -Encoding utf8 $notesFile $notes
+# Read and written as UTF-8 explicitly: Windows PowerShell reads a file without a byte-order mark in the system code page,
+# which turned the Hindi and Kannada text of the release page into unreadable characters.
+$utf8 = New-Object Text.UTF8Encoding $false
+$notes = [IO.File]::ReadAllText("$root\ops\release-notes.md", $utf8).Replace("{VERSION}", $Version).Replace("{REPO}", $Repo)
+$notesFile = Join-Path $env:TEMP "yukti-release-notes.md"; [IO.File]::WriteAllText($notesFile, $notes, $utf8)
+if ($NotesOnly) {
+  gh release edit $tag --repo $Repo --title "Yukti $Version" --notes-file $notesFile
+  if ($LASTEXITCODE -ne 0) { throw "could not update the release page of $tag" }
+  Write-Host "Release page of $tag renewed."
+  return
+}
 # uploaded as a draft first: "latest" keeps pointing at the previous, complete release until every file is up
 $ErrorActionPreference = "Continue"   # "release not found" on stderr is an answer here, not a failure
 gh release view $tag --repo $Repo 2>&1 | Out-Null

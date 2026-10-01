@@ -15,6 +15,8 @@ One file. Double-click it — Yukti installs, downloads its AI once and opens. E
 
 Smart India Hackathon 2026 · Problem statement **SIH26117** (Mangalore Refinery and Petrochemicals Ltd) · **Team UniMinds**
 
+[What it does](#what-it-does) · [Screenshots](#screenshots) · [Get started](#get-started) · [Roles](#roles) · [Architecture](#architecture) · [Security](#security) · [User Guide](docs/USER_GUIDE.md) · [Changelog](CHANGELOG.md)
+
 </div>
 
 > Team UniMinds is **not affiliated with MRPL**. MRPL facts in Yukti are public information with source links.
@@ -113,6 +115,9 @@ The full design is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 3. Yukti sets itself up: it downloads what it needs to answer questions, once (2.7 GB, or 3.4 GB on a PC with an
    NVIDIA graphics card: the server, the AI engine for your computer and the AI model). It checks every piece and
    continues by itself if the internet drops. Then it starts and shows the sign-in page.
+   If the computer already has an AI model that Yukti can run (for example one downloaded with LM Studio), Yukti uses
+   it and skips its own model (2.4 GB less); *Other options* on the setup screen adds Yukti's own model anyway.
+   A computer with no model at all needs nothing else: Yukti brings everything it needs.
 4. Sign in. From now on Yukti works **without internet**. Choose English, हिंदी or ಕನ್ನಡ at any time.
 5. Optional, whenever you like: on the home screen, the administrator clicks **Add** under **📷 Ask with photos**
    (about 800 MB) or **🎙️ Speak instead of typing** (0.3 GB, or 1 GB with an NVIDIA card). They are also under
@@ -237,7 +242,7 @@ Laya routes in about 1 ms. The usage dashboard reports only values measured on y
 | Suite | Command | Needs |
 |---|---|---|
 | Unit / API tests | `cd backend; uv run pytest` | nothing (no GPU, no model) |
-| Live end-to-end (74 checks) | `cd backend; uv run python tests/live/e2e_live.py` | a running server with a model loaded |
+| Live end-to-end (86 checks) | `cd backend; uv run python tests/live/e2e_live.py` | a running server with a model loaded |
 | Stress / fault injection | `cd backend; uv run python tests/live/stress_live.py` | a running server (it kills and reloads the engine) |
 | Web type-check + build | `cd web; npm run build` | Node 22 |
 | Desktop installer self-test | `cd desktop; npm test` | Node 22 |
