@@ -4,7 +4,7 @@
 
 **Sovereign Industrial AI Workbench. Governed, cited, audited answers for the refinery floor, fully on-premise.**
 
-[![Version](https://img.shields.io/badge/version-0.5.0-f5a524)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.5.1-f5a524)](CHANGELOG.md)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078d4)](docs/DEPLOYMENT.md)
 [![Deployment](https://img.shields.io/badge/deployment-offline%20%2F%20on--prem-2ea44f)](docs/SECURITY_MODEL.md)
 [![SIH 2026](https://img.shields.io/badge/SIH%202026-SIH26117-6f42c1)](#team)

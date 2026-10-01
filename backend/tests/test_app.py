@@ -561,7 +561,7 @@ def test_microphone_allowed_for_the_app_only(app_client):
 
 def test_features_status_for_home_screen(login):
     a = login("admin").get("/api/features").json()
-    assert set(a) == {"vision", "voice", "gpu", "downloadable", "can_manage"} and a["can_manage"] is True
+    assert set(a) == {"vision", "voice", "gpu", "downloadable", "vision_with_model", "can_manage"} and a["can_manage"] is True
     assert a["downloadable"] is False  # a developer copy has no installed.json: nothing can be downloaded into it
     assert isinstance(a["vision"]["installed"], bool) and isinstance(a["voice"]["installed"], bool)
     e = login("ravi.e").get("/api/features").json()

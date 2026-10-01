@@ -141,7 +141,9 @@ def main() -> None:
     ] + [{"name": "voice-" + m.stem.lower(), "kind": "file", "dest": m.relative_to(pkg).as_posix(), "check": m.relative_to(pkg).as_posix(),
           "label": f"Voice model {m.name}", "src": m, "feature": "voice", **({"requires": "nvidia"} if "turbo" in m.name else {})}
          for m in sorted((pkg / "speech" / "models").glob("*.bin"))] + [{"name": "model-" + m.stem.lower(), "kind": "file", "dest": m.relative_to(pkg).as_posix(), "check": m.relative_to(pkg).as_posix(),
-          "label": f"Model {m.name}", "src": m, **({"feature": "vision"} if "mmproj" in m.name.lower() else {})} for m in models]
+          # the image module is the photo add-on; the model itself is left out on a computer that already has a model
+          # (the desktop app decides: "optional": "local-model")
+          "label": f"Model {m.name}", "src": m, **({"feature": "vision"} if "mmproj" in m.name.lower() else {"optional": "local-model"})} for m in models]
     artifacts = []
     for s in specs:
         if s["kind"] == "zip":

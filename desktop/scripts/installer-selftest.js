@@ -142,6 +142,51 @@ const assert = (c, m) => { if (!c) { console.error('FAIL:', m); process.exit(1);
   await installer.install({ manifestUrl: url, dest: dest3, forceGpu: false, fetch: countingFetch });
   assert(seen.some((u) => /model\.part00$/.test(u)) && sha(fs.readFileSync(path.join(dest3, 'models', 'm.gguf'))) === sha(model),
     'damaged whole file in .download discarded and downloaded again');
+  // Yukti's own AI model is downloaded only when this computer has no model yet (LM Studio's folder, Yukti's models folder)
+  const manifest2 = JSON.parse(JSON.stringify(manifest));
+  manifest2.artifacts.find((x) => x.name === 'model').optional = 'local-model';
+  manifest2.artifacts.push({ name: 'model-mmproj', kind: 'file', feature: 'vision', dest: 'models/mmproj.gguf', check: 'models/mmproj.gguf', size: voice.length,
+    sha256: sha(voice), parts: [{ url: 'files/voice.part00', size: voice.length, sha256: sha(voice) }] });
+  fs.writeFileSync(path.join(site, 'manifest2.json'), JSON.stringify(manifest2));
+  const url2 = url.replace('manifest.json', 'manifest2.json');
+  const lm = path.join(tmp, 'lmstudio', 'publisher', 'repo'); fs.mkdirSync(lm, { recursive: true });
+  const none = path.join(tmp, 'no-models'); fs.mkdirSync(none);
+  fs.writeFileSync(path.join(lm, 'gemma-2-2b-it-Q8_0.gguf'), crypto.randomBytes(4096));
+  fs.writeFileSync(path.join(lm, 'mmproj-gemma-f16.gguf'), crypto.randomBytes(4096));          // an image module is not a model
+  fs.writeFileSync(path.join(lm, 'nomic-embed-text-v1.5.Q8_0.gguf'), crypto.randomBytes(4096)); // a search model is not a chat model
+  fs.writeFileSync(path.join(lm, 'tiny-helper.gguf'), crypto.randomBytes(10));                 // too small to be a chat model
+  fs.writeFileSync(path.join(lm, 'big-model-00002-of-00003.gguf'), crypto.randomBytes(4096));  // a later piece of a split model
+  fs.writeFileSync(path.join(lm, 'notes.txt'), 'x');
+  const found = await installer.findLocalModels([path.join(tmp, 'lmstudio'), path.join(tmp, 'does-not-exist')], { minBytes: 1000 });
+  assert(found.length === 1 && found[0].name === 'gemma-2-2b-it-Q8_0', 'models on this computer: only real chat models count');
+  const has = { manifestUrl: url2, forceGpu: false, modelDirs: [path.join(tmp, 'lmstudio')], minModelBytes: 1000 };
+  const dest4 = path.join(tmp, 'install4');
+  const p4 = await installer.plan({ ...has, dest: dest4 });
+  const m4 = p4.artifacts.find((x) => x.name === 'model');
+  assert(!m4.needed && m4.skipped === 'local-model' && p4.totalBytes === zipBuf.length && p4.localModel.name === 'gemma-2-2b-it-Q8_0' && p4.localModel.savedBytes === model.length,
+    'a model is already on this computer: Yukti\'s own model is left out of the download');
+  assert(p4.features.vision.withModel && p4.features.vision.sizeTodo === voice.length + model.length, 'the photo add-on then includes the model it needs (size shown says so)');
+  const p4n = await installer.plan({ ...has, dest: dest4, modelDirs: [none] });
+  assert(p4n.artifacts.find((x) => x.name === 'model').needed && !p4n.localModel && p4n.totalBytes === zipBuf.length + model.length, 'no model on this computer: Yukti\'s own model is downloaded');
+  const p4o = await installer.plan({ ...has, dest: dest4, ownModel: true });
+  assert(p4o.artifacts.find((x) => x.name === 'model').needed && !p4o.localModel, 'own model on request, even when another model is there');
+  seen.length = 0;
+  await installer.install({ ...has, dest: dest4, fetch: countingFetch });
+  assert(!seen.some((u) => /model\.part/.test(u)) && !fs.existsSync(path.join(dest4, 'models', 'm.gguf')) && fs.existsSync(path.join(dest4, 'yukti-server.exe')),
+    'install without the own model: nothing of it is downloaded');
+  assert((await installer.plan({ ...has, dest: dest4 })).todoCount === 0, 'such an install is complete (no update offered for the left-out model)');
+  await installer.install({ ...has, dest: dest4, features: ['vision'], fetch: countingFetch });
+  assert(sha(fs.readFileSync(path.join(dest4, 'models', 'm.gguf'))) === sha(model) && fs.existsSync(path.join(dest4, 'models', 'mmproj.gguf')),
+    'adding photos brings Yukti\'s own model along');
+  const p4v = await installer.plan({ ...has, dest: dest4 });
+  assert(p4v.todoCount === 0 && p4v.artifacts.find((x) => x.name === 'model').installed && !p4v.features.vision.withModel, 'the own model then stays part of the installation');
+  const dest5 = path.join(tmp, 'install5');
+  await installer.install({ ...has, dest: dest5, ownModel: true });
+  const p5 = await installer.plan({ ...has, dest: dest5 });
+  assert(p5.artifacts.find((x) => x.name === 'model').installed && p5.todoCount === 0 && JSON.parse(fs.readFileSync(path.join(dest5, 'installed.json'), 'utf8')).ownModel === true,
+    'the choice "own model" is remembered for later updates');
+  const pkeep = await installer.plan({ ...has, dest: dest2 });
+  assert(pkeep.artifacts.find((x) => x.name === 'model').needed && !pkeep.localModel, 'an installation that already has Yukti\'s own model keeps it (updates)');
   fs.writeFileSync(path.join(files, 'model.part02'), Buffer.from('tampered'));
   fs.rmSync(path.join(dest, 'models', 'm.gguf'));
   let failed = false;

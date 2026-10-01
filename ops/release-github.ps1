@@ -3,10 +3,10 @@
 # Double-clicking it installs Yukti; Yukti then downloads its AI components from the same release (signed manifest,
 # every part SHA-256 checked, resumable) and starts. Each release file stays below GitHub's 2 GB limit.
 #
-#   .\ops\release-github.ps1 [-Version 0.5.0] [-Repo Juhilhere/Yukti] [-Package E:\yukti-build\Yukti-Server-0.5.0]
+#   .\ops\release-github.ps1 [-Version 0.5.1] [-Repo Juhilhere/Yukti] [-Package E:\yukti-build\Yukti-Server-0.5.1]
 # Requires: gh (logged in), node, python, the server package from ops\build-release.ps1, the signing key.
 param(
-  [string]$Version = "0.5.0",
+  [string]$Version = "0.5.1",
   [string]$Repo = "Juhilhere/Yukti",
   [string]$Package = "E:\yukti-build\Yukti-Server-$Version",
   [string]$Out = "E:\yukti-build\github-release",

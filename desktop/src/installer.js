@@ -4,6 +4,7 @@
 'use strict';
 const fs = require('fs');
 const fsp = fs.promises;
+const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const { execFile } = require('child_process');
@@ -168,6 +169,48 @@ function localFeatures(dest, state) {
   return out;
 }
 
+// ---------------------------------------------------------------- AI models that are already on this computer
+// Yukti's own AI model (marked `optional: "local-model"` in the manifest) is downloaded only when this computer has no
+// model yet. "A model" means a GGUF file Yukti's engine can run: in LM Studio's folder or in Yukti's own models folders
+// (the same places the server looks in). Models kept by Ollama do not count: its storage format is its own, and the
+// engine cannot load it.
+const MIN_MODEL_BYTES = 300 * 2 ** 20;                               // smaller files are helpers, not chat models
+const NOT_A_CHAT_MODEL = /mmproj|embed|bge-|nomic|rerank|whisper|clip/i;   // image modules, search and speech models
+const LATER_SHARD = /-(?!00001-)\d{5}-of-\d{5}/;                     // a model split into files counts once
+
+function defaultModelDirs(dest) {
+  const dirs = [path.join(os.homedir(), '.lmstudio', 'models'), path.join(dest, 'models')];
+  if (process.env.LOCALAPPDATA) dirs.push(path.join(process.env.LOCALAPPDATA, 'Yukti', 'models'));
+  return dirs;
+}
+
+/** Chat models found in `dirs`, smallest first: [{name, path, size}]. `exclude`: files that are not "already there". */
+async function findLocalModels(dirs, { minBytes = MIN_MODEL_BYTES, exclude = [] } = {}) {
+  const skip = new Set(exclude.map((p) => path.resolve(p).toLowerCase()));
+  const seen = new Set();
+  const out = [];
+  const walk = async (dir, depth) => {
+    let entries;
+    try { entries = await fsp.readdir(dir, { withFileTypes: true }); } catch { return; /* no such folder */ }
+    for (const e of entries) {
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) { if (depth < 5) await walk(p, depth + 1); continue; }
+      const key = path.resolve(p).toLowerCase();
+      if (!/\.gguf$/i.test(e.name) || NOT_A_CHAT_MODEL.test(e.name) || LATER_SHARD.test(e.name) || skip.has(key) || seen.has(key)) continue;
+      seen.add(key);
+      try {
+        const st = await fsp.stat(p);
+        if (st.size >= minBytes) out.push({ name: e.name.replace(/\.gguf$/i, ''), path: p, size: st.size });
+      } catch { /* vanished meanwhile */ }
+    }
+  };
+  for (const d of dirs) await walk(d, 0);
+  return out.sort((a, b) => a.size - b.size);
+}
+
+/** The model Yukti will start with (same rule as the server): a Gemma model when there is one, else the smallest. */
+const preferredModel = (models) => models.find((x) => /gemma/i.test(x.name)) || models[0] || null;
+
 // name of an artifact's complete (joined) file inside the .download folder
 const wholeName = (a) => a.name + (a.kind === 'zip' ? '.zip' : '');
 
@@ -191,9 +234,30 @@ async function plan(o) {
   state.artifacts = state.artifacts || {};
   // optional add-ons (photos, voice) are downloaded only when switched on; the ones already on stay on across updates
   const features = new Set(o.features || state.features || []);
+  // Yukti's own AI model: wanted when asked for (o.ownModel, remembered in installed.json), when the photo add-on is on
+  // (its image module belongs to this model), or when this model is already here / its download has begun (updates).
+  // Otherwise it is left out when another model is already on this computer.
+  const isOwnModel = (a) => a.optional === 'local-model' && !a.feature;
+  const exists = (p) => fsp.stat(p).then(() => true, () => false);
+  const begun = async (a) => state.artifacts[a.name] !== undefined || await exists(path.join(dest, a.check || a.dest)) ||
+    await exists(path.join(tmp, `${a.name}.part0`)) || await exists(path.join(tmp, wholeName(a)));
+  const wantOwn = o.ownModel === true || state.ownModel === true || features.has('vision');
+  let others = null;     // looked up once, and only when it matters
+  const otherModels = async () => others || (others = await findLocalModels(o.modelDirs || defaultModelDirs(dest), {
+    minBytes: o.minModelBytes, exclude: m.artifacts.filter((x) => x.kind === 'file' && x.dest).map((x) => path.join(dest, x.dest)) }));
+  let localModel = null;   // the model that is used instead of Yukti's own: {name, count, savedBytes}
   const artifacts = [];
   for (const a of m.artifacts) {
-    const needed = !(a.requires === 'nvidia' && !nvidia) && (!a.feature || features.has(a.feature));
+    let needed = !(a.requires === 'nvidia' && !nvidia) && (!a.feature || features.has(a.feature));
+    let skipped = null;
+    if (needed && isOwnModel(a) && !wantOwn && !(await begun(a))) {
+      const found = await otherModels();
+      if (found.length) {
+        needed = false; skipped = 'local-model';
+        localModel = localModel || { name: preferredModel(found).name, count: found.length, savedBytes: 0 };
+        localModel.savedBytes += a.size;
+      }
+    }
     const installed = needed && state.artifacts[a.name] === a.sha256 && fs.existsSync(path.join(dest, a.check || a.dest));
     let partialBytes = 0;
     if (needed && !installed) {
@@ -206,7 +270,7 @@ async function plan(o) {
       }
     }
     artifacts.push({ name: a.name, label: a.label || a.name, size: a.size, requires: a.requires || null, feature: a.feature || null,
-      needed, installed, partialBytes });
+      needed, installed, partialBytes, skipped });
   }
   // per add-on: what it costs on THIS computer (GPU-only parts are left out without an NVIDIA GPU)
   // installed: every part is there in THIS release's version; present: it was added and its files are still there (it
@@ -221,6 +285,15 @@ async function plan(o) {
     if (!(state.artifacts[a.name] === a.sha256 && fs.existsSync(path.join(dest, a.check || a.dest)))) { f.installed = false; f.sizeTodo += a.size; }
   }
   for (const f of Object.values(featureInfo)) if (f.installed && f.on) f.present = true;
+  // the photo add-on works with Yukti's own model only: where that model was left out, adding photos brings it along,
+  // and the size shown for the add-on says so
+  if (featureInfo.vision && !featureInfo.vision.on) {
+    for (const a of m.artifacts) {
+      if (isOwnModel(a) && artifacts.find((x) => x.name === a.name).skipped) {
+        featureInfo.vision.size += a.size; featureInfo.vision.sizeTodo += a.size; featureInfo.vision.withModel = true;
+      }
+    }
+  }
   const todo = artifacts.filter((a) => a.needed && !a.installed);
   const totalBytes = todo.reduce((s, a) => s + a.size, 0);
   const partialBytes = todo.reduce((s, a) => s + a.partialBytes, 0);
@@ -229,7 +302,7 @@ async function plan(o) {
   return {
     manifest: m, version: m.version, dest, nvidia, installed: state.version ? state : null, artifacts, features: featureInfo,
     todoCount: todo.length, wantedCount: artifacts.filter((a) => a.needed).length,
-    totalBytes, partialBytes,
+    totalBytes, partialBytes, localModel,
     freeBytes: await freeBytes(probe), needBytes: neededBytes(totalBytes, partialBytes),
   };
 }
@@ -255,7 +328,8 @@ async function install(o) {
   const dest = path.resolve(o.dest);
   const tmp = path.join(dest, '.download');
   await fsp.mkdir(tmp, { recursive: true });
-  const pl = await plan({ manifest: m, dest, forceGpu: o.forceGpu, features: o.features });
+  const pl = await plan({ manifest: m, dest, forceGpu: o.forceGpu, features: o.features, ownModel: o.ownModel, modelDirs: o.modelDirs,
+    minModelBytes: o.minModelBytes });
   const nvidia = pl.nvidia;
   const stateFile = path.join(dest, 'installed.json');
   const state = await readState(dest);
@@ -268,7 +342,10 @@ async function install(o) {
   const todo = m.artifacts.filter((a) => todoNames.has(a.name));
   const total = pl.totalBytes;
   report({ phase: 'plan', dest, message: `Yukti ${m.version} → ${dest}: ${todo.length} of ${wanted.length} components to download (${(total / 2 ** 30).toFixed(2)} GB)` +
-    (nvidia ? ' · NVIDIA GPU detected (CUDA build)' : ' · no NVIDIA GPU (Vulkan/CPU build)'), totalBytes: total });
+    (nvidia ? ' · NVIDIA GPU detected (CUDA build)' : ' · no NVIDIA GPU (Vulkan/CPU build)') +
+    (pl.localModel ? ` · Yukti's own AI model not downloaded: this computer already has ${pl.localModel.count} model(s), e.g. ${pl.localModel.name}` : ''), totalBytes: total });
+  // the choice is remembered, so a paused download or a later update asks for the same parts
+  if (o.ownModel === true && !state.ownModel) { state.ownModel = true; await fsp.writeFile(stateFile, JSON.stringify(state, null, 2)); }
   const free = pl.freeBytes;
   // what was downloaded earlier is already on the disk: only the rest (plus room to unpack) must still fit
   if (free !== null && free < pl.needBytes) throw new Error(`Not enough disk space on ${path.parse(dest).root}: need ~${(pl.needBytes / 2 ** 30).toFixed(1)} GB, have ${(free / 2 ** 30).toFixed(1)} GB`);
@@ -412,4 +489,4 @@ async function installedVersion(dest) {
 async function localFeaturesAt(dest) { return localFeatures(path.resolve(dest), await readState(path.resolve(dest))); }
 
 module.exports = { install, plan, removeFeature, fetchManifest, installedVersion, localFeatures: localFeaturesAt, hasNvidiaGpu, detectNvidiaGpu,
-  freeBytes, neededBytes, sha256File };
+  freeBytes, neededBytes, sha256File, findLocalModels };

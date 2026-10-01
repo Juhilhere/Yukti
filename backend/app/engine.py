@@ -896,14 +896,30 @@ def autoload(engine_id: str, model_id: str, cfg: dict[str, Any]) -> None:
         autoload_default()
 
 
+# files that are not chat models (search, re-ranking, speech models); image modules are left out by scan_models already
+_NOT_A_CHAT_MODEL = re.compile(r"embed|bge-|nomic|rerank|whisper|clip", re.I)
+
+
+def startable_models() -> list[dict[str, Any]]:
+    """Models Yukti can start with by itself, smallest first: GGUF files in Yukti's models folders and in LM Studio's
+    folder. Models kept by Ollama are not among them (llama.cpp cannot load Ollama's own storage format for newer
+    models such as gemma3); an administrator can still choose them. The desktop installer uses the same rule to decide
+    whether Yukti's own model has to be downloaded."""
+    return [m for m in scan_models() if m.get("source") != "ollama-library" and not _NOT_A_CHAT_MODEL.search(m["name"])
+            and m["size_bytes"] >= 300 * 2**20]
+
+
 def autoload_default() -> None:
-    """Load the smallest local GGUF on startup so the demo is ready."""
-    ms = [m for m in scan_models() if m.get("source") != "ollama-library"]
+    """Load a local GGUF on startup so Yukti is ready: Yukti's own model when it is there, else one already on this computer."""
+    ms = startable_models()
     if not ms:
         log("No local GGUF models found.")
         return
-    # prefer a model that can also see photos (Gemma 3 with its image module), then any Gemma
-    pick = next((m for m in ms if m.get("vision") and "gemma" in m["name"].lower()), None) or         next((m for m in ms if "gemma" in m["name"].lower()), ms[0])
+    # Yukti's own model with its image module (sees photos) first, then Yukti's own model, then any Gemma that is
+    # already on this computer, then the smallest model there is
+    gemma = [m for m in ms if "gemma" in m["name"].lower()]
+    pick = (next((m for m in gemma if m.get("vision")), None) or next((m for m in gemma if m.get("source") == "yukti"), None)
+            or next(iter(gemma), None) or ms[0])
     log(f"Auto-loading default model {pick['name']}")
     load("llamacpp", pick["id"], {"backend": "auto", "ctx_size": 16384, "gpu_layers": 99, "flash_attn": "on",
                                   "cache_type_k": "q8_0", "cache_type_v": "q8_0", "parallel": 2})

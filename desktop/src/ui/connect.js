@@ -88,7 +88,7 @@ $('a-less').addEventListener('click', () => { if (!installing) setView('simple')
 function stateText(r) {
   switch (r.state) {
     case 'installed': return T('setup.state.installed');
-    case 'skipped': return T('setup.state.skipped');
+    case 'skipped': return r.skipped === 'local-model' ? T('setup.state.localModel') : T('setup.state.skipped');
     case 'optional': return T('setup.state.optional');
     case 'downloading': return T('setup.state.downloading', { pct: r.pct || 0 });
     case 'verifying': return T('setup.state.verifying');
@@ -126,7 +126,7 @@ function renderChecklists(p) {
   for (const a of p.artifacts) {
     const old = keep.get(a.name);
     const r = {
-      size: a.size, partial: a.partialBytes, views: [],
+      size: a.size, partial: a.partialBytes, skipped: a.skipped || null, views: [],
       pct: old && installing ? old.pct : a.partialBytes ? Math.floor((100 * a.partialBytes) / a.size) : 0,
       state: old && installing ? old.state : !a.needed ? (a.feature ? 'optional' : 'skipped') : a.installed ? 'installed' : 'waiting',
     };
@@ -180,6 +180,14 @@ function renderPlan() {
     else intro = ['setup.introChecking', null];
   }
   renderIntro();
+  // Yukti's own AI model is left out because this computer already has a model: say so (simple view), and offer it
+  // under "Other options" for anyone who wants it anyway
+  const lm = p && p.localModel;
+  const own = p && p.artifacts.filter((a) => a.name.startsWith('model') && !a.feature).reduce((s, a) => s + a.size, 0);
+  $('s-local-model').textContent = lm ? T('setup.localModel', { name: lm.name, size: fmtBytes(lm.savedBytes) }) : '';
+  show($('s-local-model'), !!lm);
+  $('own-model-text').textContent = T('adv.ownModel', { size: fmtBytes(lm ? lm.savedBytes : own) });
+  show($('own-model-row'), !installing && (!!lm || $('own-model').checked));
   const disk = lowDisk(p);
   const sd = $('s-disk');
   if (disk) { sd.textContent = T('setup.err.disk', { need: fmtBytes(p.needBytes), free: fmtBytes(p.freeBytes) }); show(sd, true); } else show(sd, false);
@@ -205,7 +213,7 @@ async function loadPlan(autoStart) {
   if (installing) return;
   const seq = ++planSeq;
   $('s-go').disabled = true; $('go').disabled = true;
-  const r = await Y.plan({ manifestUrl: $('manifest').value, dest: $('dest').value });
+  const r = await Y.plan({ manifestUrl: $('manifest').value, dest: $('dest').value, ownModel: $('own-model').checked });
   if (seq !== planSeq || installing) return;
   planRes = r;
   if (!r.error) hideError();
@@ -217,6 +225,7 @@ async function loadPlan(autoStart) {
 let planTimer = null;
 const replanSoon = () => { clearTimeout(planTimer); planTimer = setTimeout(() => loadPlan(false), 600); };
 $('dest').addEventListener('input', replanSoon);
+$('own-model').addEventListener('change', () => { if (!installing) loadPlan(false); });
 $('manifest').addEventListener('input', replanSoon);
 
 // ---------------------------------------------------------------- errors (simple view)
@@ -301,7 +310,7 @@ function beginInstallUi() {
 async function runInstall() {
   beginInstallUi();
   let r;
-  try { r = await Y.install({ manifestUrl: $('manifest').value, dest: $('dest').value }); } catch (e) { r = { ok: false, error: String((e && e.message) || e) }; }
+  try { r = await Y.install({ manifestUrl: $('manifest').value, dest: $('dest').value, ownModel: $('own-model').checked }); } catch (e) { r = { ok: false, error: String((e && e.message) || e) }; }
   // a download is already running (this page was reloaded meanwhile): show that one instead of an error
   if (r && r.running) { attachRunning(); return; }
   installDone(r);

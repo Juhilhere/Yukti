@@ -1,10 +1,10 @@
 # Build the website release: ONE zip with everything (the Yukti app + the complete Yukti Server + engines + model)
 # and a download page.
-#   .\ops\release-site.ps1 [-Version 0.5.0] [-Package E:\yukti-build\Yukti-Server-0.5.0] [-Out E:\yukti-build\publish]
+#   .\ops\release-site.ps1 [-Version 0.5.1] [-Package E:\yukti-build\Yukti-Server-0.5.1] [-Out E:\yukti-build\publish]
 # Upload the contents of <Out> (index.html, Yukti-<ver>-Windows.zip, .sha256) to your website.
 # Users download the zip, Extract All, and double-click Yukti.exe - nothing else to install.
 param(
-  [string]$Version = "0.5.0",
+  [string]$Version = "0.5.1",
   [string]$Package = "E:\yukti-build\Yukti-Server-$Version",  # built by ops\build-release.ps1
   [string]$Out = "E:\yukti-build\publish"
 )

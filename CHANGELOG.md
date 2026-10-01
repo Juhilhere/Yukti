@@ -5,6 +5,21 @@ All notable changes to Yukti are documented here. The format follows [Keep a Cha
 
 ## [Unreleased]
 
+## [0.5.1] — 2026-10-01
+
+### Changed
+- **Yukti's own AI model is downloaded only when the computer has no model yet.** If a model that Yukti's engine can run
+  is already there (a GGUF file in LM Studio's folder or in Yukti's models folder), Yukti uses it and the first download
+  shrinks by 2.4 GB. The setup screen says which model is used.
+  - *Other options* on the setup screen has **Also download Yukti's own AI model** for anyone who wants it anyway (it
+    answers better in Hindi and Kannada and is the one that sees photos).
+  - Adding the photo add-on brings Yukti's own model along, and the size shown says so (about 3.1 GB instead of 800 MB).
+  - An installation that already has Yukti's own model keeps and updates it as before.
+  - Models kept by Ollama do not count: Yukti's engine cannot load Ollama's storage format for newer models (measured
+    with `gemma3:4b`). An administrator can still use them through the Ollama engine.
+- **Which model starts by itself:** Yukti's own model first, then a Gemma model already on the computer, then the
+  smallest model. Search, re-ranking and speech models are never started as the assistant.
+
 ## [0.5.0] — 2026-10-01
 
 ### Added

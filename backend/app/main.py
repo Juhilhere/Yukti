@@ -617,8 +617,20 @@ async def features(ctx: Ctx = Depends(current)) -> dict[str, Any]:
         # installed by Yukti-Setup (installed.json): the desktop app on this computer can download add-ons. A complete
         # package (single zip) or a developer copy cannot - the home screen must not offer an "Add" that leads nowhere
         "downloadable": (ROOT / "installed.json").exists(),
+        # Yukti's own AI model was left out at installation (another model was already on this computer): the photo
+        # add-on brings it along, so its download is larger
+        "vision_with_model": _own_model_left_out(),
         "can_manage": "models.manage" in ctx.perms,
     }
+
+
+def _own_model_left_out() -> bool:
+    """Installed with Yukti-Setup, and no AI model of Yukti's own is recorded in installed.json."""
+    try:
+        arts = json.loads((ROOT / "installed.json").read_text(encoding="utf-8")).get("artifacts") or {}
+    except (OSError, ValueError):
+        return False
+    return not any(k.startswith("model-") and "mmproj" not in k for k in arts)
 
 
 @app.get("/api/speech/status")

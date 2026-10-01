@@ -16,6 +16,8 @@ Problems? In Yukti: **Help → Report a problem**, or email **juhilprogramming@g
 
 Both are optional: after installing, click **Add** on Yukti's home screen (photos about 800 MB, voice 0.3–1 GB). This keeps the first download small.
 
+If the computer already has an AI model (for example from LM Studio), Yukti uses it and does not download its own (2.4 GB less). Yukti's own model can still be added: *Other options* on the setup screen, or by adding photos.
+
 Already using Yukti? Download and run the new **Yukti-Setup.exe**, then click **Update now**. Your documents, chats and settings are kept.
 
 ---

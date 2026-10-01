@@ -956,7 +956,8 @@ handle('yukti:plan', async (_e, req = {}) => {
     return { ok: false, dest, installed, error: T('main.unsigned'), plain: true };
   }
   try {
-    const p = await installer.plan(await installerOpts(url, dest));
+    // ownModel: "also download Yukti's own AI model" (otherwise it is left out when this computer already has a model)
+    const p = await installer.plan({ ...(await installerOpts(url, dest)), ownModel: req.ownModel === true ? true : undefined });
     delete p.manifest;
     return { ok: true, dest, installed, plan: p, updateAvailable: !!(installed && installed.version && installed.version !== p.version) };
   } catch (e) { return { ok: false, dest, installed, error: e.message }; }
@@ -1115,7 +1116,8 @@ handle('yukti:install', async (_e, req = {}) => {
       result = { ok: false, error: T('main.outside'), plain: true };
     } else {
       if (serverAlive()) await stopLocalServer();   // updating a running install
-      const r = await installer.install({ ...(await installerOpts(url, dest)), signal: ctl.signal, onProgress: send });
+      const r = await installer.install({ ...(await installerOpts(url, dest)), ownModel: req.ownModel === true ? true : undefined,
+        signal: ctl.signal, onProgress: send });
       // the update is in: do not offer it again (also remembered when the user chose "Later", see yukti:connect)
       config.mode = 'local'; config.installRoot = r.dest; config.manifestUrl = url; config.startedOnce = false; config.updateOffered = app.getVersion(); saveConfig();
       featureRestart = false;

@@ -3,7 +3,7 @@
 #   desktop\dist\Yukti-Setup-<ver>.exe   (employee desktop client)
 # Requirements on the BUILD machine only: uv, Node 22, the llama.cpp release folders and a GGUF model.
 param(
-  [string]$Version = "0.5.0",
+  [string]$Version = "0.5.1",
   [string]$Out = "E:\yukti-build",
   [string]$LlamaCuda = "E:\tools\llama-cuda",      # llama-bXXXX-bin-win-cuda-12.4-x64.zip + cudart zip, extracted
   [string]$LlamaVulkan = "E:\tools\llama-vulkan",  # llama-bXXXX-bin-win-vulkan-x64.zip, extracted

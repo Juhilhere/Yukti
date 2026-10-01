@@ -14,6 +14,8 @@ export type Features = {
   gpu?: boolean;
   /** installed with Yukti-Setup: the desktop app on the server computer can download add-ons (not a complete zip package) */
   downloadable?: boolean;
+  /** Yukti's own AI model was not downloaded (another model was already on the computer): the photo add-on brings it along */
+  vision_with_model?: boolean;
   can_manage: boolean;
 };
 
@@ -62,7 +64,8 @@ export default function FeatureOffers({ variant }: { variant: 'home' | 'panel' }
   if (variant === 'home' && missing.length === 0) return null;
   const here = canAddHere() && f.downloadable !== false;
   const list = variant === 'home' ? missing : ITEMS;
-  const size = (key: 'vision' | 'voice') => t(key === 'vision' ? 'feat.vision.size' : f.gpu ? 'feat.voice.sizeGpu' : 'feat.voice.size');
+  const size = (key: 'vision' | 'voice') => t(key === 'vision' ? (f.vision_with_model ? 'feat.vision.sizeWithModel' : 'feat.vision.size')
+    : f.gpu ? 'feat.voice.sizeGpu' : 'feat.voice.size');
   return (
     <div className={cx('w-full', variant === 'home' ? 'mt-6 max-w-[760px]' : 'max-w-[820px]')}>
       <div className="mb-2 flex items-center gap-2 text-[12.5px] font-semibold text-cyan">
