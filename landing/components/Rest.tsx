@@ -165,7 +165,7 @@ export function Security() {
 const STEPS = [
   { i: Download, t: "One file", s: "Yukti-Setup.exe · Yukti-macOS-arm64.dmg" },
   { i: MousePointerClick, t: "Open it", s: "Windows: double-click · Mac: drag to Applications" },
-  { i: Package, t: "Downloads its AI once", s: "Windows 2.7–3.4 GB · Mac 3.8 GB with photos + voice · verified" },
+  { i: Package, t: "Downloads its AI once", s: "3.9 GB · 5.3 GB NVIDIA · photos + voice included · verified" },
   { i: KeyRound, t: "Sign in", s: "works offline" },
 ];
 export function Start() {
@@ -185,9 +185,9 @@ export function Start() {
         ))}
       </div>
       <Reveal delay={0.2} className="mt-12 grid gap-3 sm:grid-cols-3">
-        <div className="flex items-center gap-3 rounded-2xl border border-line p-4"><Camera size={17} /><span className="text-[13px]">Photos</span><Chip className="ml-auto">~800 MB · Mac: included</Chip></div>
-        <div className="flex items-center gap-3 rounded-2xl border border-line p-4"><Mic size={17} /><span className="text-[13px]">Voice</span><Chip className="ml-auto">0.3–1 GB · Mac: included</Chip></div>
-        <div className="flex items-center gap-3 rounded-2xl border border-line p-4"><CheckCircle2 size={17} className="text-ok" /><span className="text-[13px]">Have LM Studio?</span><Chip tone="ok" className="ml-auto">−2.4 GB</Chip></div>
+        <div className="flex items-center gap-3 rounded-2xl border border-line p-4"><Camera size={17} /><span className="text-[13px]">Photos</span><Chip className="ml-auto">~800 MB · included</Chip></div>
+        <div className="flex items-center gap-3 rounded-2xl border border-line p-4"><Mic size={17} /><span className="text-[13px]">Voice</span><Chip className="ml-auto">0.3–1 GB · included</Chip></div>
+        <div className="flex items-center gap-3 rounded-2xl border border-line p-4"><CheckCircle2 size={17} className="text-ok" /><span className="text-[13px]">After that</span><Chip tone="ok" className="ml-auto">0 bytes online</Chip></div>
       </Reveal>
     </Section>
   );

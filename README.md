@@ -284,19 +284,18 @@ RTX 4050 laptop GPU, 6 GB:
 
 ```mermaid
 flowchart LR
-  A["⬇️ Yukti-Setup.exe"] --> B["🖱️ Double-click<br/>no admin rights"] --> C["📦 Downloads its AI once<br/>2.7 GB · 3.4 GB with NVIDIA<br/>resumable · verified"] --> D(["🔑 Sign in<br/>works offline"])
+  A["⬇️ Yukti-Setup.exe"] --> B["🖱️ Double-click<br/>no admin rights"] --> C["📦 Downloads its AI once<br/>+ 📷 photos + 🎙️ voice<br/>3.9 GB · 5.3 GB with NVIDIA<br/>resumable · verified"] --> D(["🔑 Sign in<br/>works offline"])
 ```
 
 - Windows SmartScreen? **More info → Run anyway** (installers are not code-signed yet).
-- Already have a model (e.g. LM Studio)? Yukti uses it and skips its own (**2.4 GB less**).
-- Optional add-ons from the home screen: **📷 photos** (~800 MB) · **🎙️ voice** (0.3–1 GB).
+- **📷 Photos** and **🎙️ voice** come with the first install; an admin can remove either from the home screen.
 - No internet? Copy the offline package (`ops\release-site.ps1`) by USB.
 
 **🍎 Mac (Apple silicon, macOS 13.3+)**
 
 ```mermaid
 flowchart LR
-  A["⬇️ Yukti-macOS-arm64.dmg"] --> B["📂 Drag to Applications<br/>first open: Privacy & Security<br/>→ Open Anyway"] --> C["📦 First start downloads<br/>AI model + 📷 photos + 🎙️ voice<br/>3.8 GB · 1.4 GB with a model"] --> D(["🔑 Sign in<br/>works offline"])
+  A["⬇️ Yukti-macOS-arm64.dmg"] --> B["📂 Drag to Applications<br/>first open: Privacy & Security<br/>→ Open Anyway"] --> C["📦 First start downloads<br/>AI model + 📷 photos + 🎙️ voice<br/>3.9 GB · resumable · verified"] --> D(["🔑 Sign in<br/>works offline"])
 ```
 
 - Runs on the Mac's own graphics chip (Metal): llama.cpp for answers, whisper.cpp for voice, both inside the app.
