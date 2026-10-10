@@ -332,9 +332,9 @@ M("Company guardrail: proprietary formulations need CONFIDENTIAL clearance or a 
   "ಕಂಪನಿ ಸುರಕ್ಷತಾ ನಿಯಮ: ಕಂಪನಿಯ ಗೋಪ್ಯ ಸೂತ್ರಗಳಿಗೆ CONFIDENTIAL ಅನುಮತಿ ಮಟ್ಟ ಅಥವಾ ಸಮಯ-ಮಿತಿಯ ಅನುಮತಿ ಬೇಕು.")
 M("allowed", "अनुमति है", "ಅನುಮತಿ ಇದೆ")
 M("no rule allows this", "कोई नियम इसकी अनुमति नहीं देता", "ಯಾವುದೇ ನಿಯಮ ಇದಕ್ಕೆ ಅನುಮತಿ ನೀಡುವುದಿಲ್ಲ")
-M("base model + Company Guardrails (Heretic domain model: planned)",
-  "मूल मॉडल + कंपनी सुरक्षा नियम (Heretic डोमेन मॉडल: योजना में)",
-  "ಮೂಲ ಮಾದರಿ + ಕಂಪನಿ ಸುರಕ್ಷತಾ ನಿಯಮಗಳು (Heretic ಡೊಮೇನ್ ಮಾದರಿ: ಯೋಜನೆಯಲ್ಲಿ)")
+M("base model + Company Guardrails (experimental Heretic model: isolated research layer only)",
+  "मूल मॉडल + कंपनी सुरक्षा नियम (प्रायोगिक Heretic मॉडल: केवल अलग रखी गई अनुसंधान परत में)",
+  "ಮೂಲ ಮಾದರಿ + ಕಂಪನಿ ಸುರಕ್ಷತಾ ನಿಯಮಗಳು (ಪ್ರಾಯೋಗಿಕ Heretic ಮಾದರಿ: ಪ್ರತ್ಯೇಕಿಸಿದ ಸಂಶೋಧನಾ ಪದರದಲ್ಲಿ ಮಾತ್ರ)")
 # fact notes (dossier and public facts)
 M("Public sources disagree — values differ by source/basis; cite the source when quoting.",
   "सार्वजनिक स्रोतों में अंतर है — स्रोत/आधार के अनुसार मान अलग हैं; बताते समय स्रोत का नाम दें।",
@@ -654,3 +654,99 @@ P(r"A top-management account was changed by (?P<a>.+)",
   "{a} ने शीर्ष प्रबंधन स्तर के एक खाते में बदलाव किया है", "{a} ಅವರು ಉನ್ನತ ಆಡಳಿತ ಮಟ್ಟದ ಖಾತೆಯನ್ನು ಬದಲಾಯಿಸಿದ್ದಾರೆ")
 P(r"Account (?P<u>.+): roles (?P<r>.*); clearance (?P<c>.+)",
   "खाता {u}: भूमिकाएँ {r}; गोपनीयता स्तर {c}", "ಖಾತೆ {u}: ಪಾತ್ರಗಳು {r}; ಗೌಪ್ಯತಾ ಮಟ್ಟ {c}")
+
+# ============================================================== workbench, queue, ledger, lanes, scans, research, planning
+# workers of the durable queue
+M("Policy engine (no model)", "नीति इंजन (कोई मॉडल नहीं)", "ನೀತಿ ಎಂಜಿನ್ (ಮಾದರಿ ಇಲ್ಲ)")
+M("Small quantized LLM", "छोटा क्वांटाइज़्ड LLM", "ಸಣ್ಣ ಕ್ವಾಂಟೈಸ್ಡ್ LLM")
+M("OCR + vision-language model", "OCR + दृष्टि-भाषा मॉडल", "OCR + ದೃಷ್ಟಿ-ಭಾಷಾ ಮಾದರಿ")
+M("Deterministic analytics engine", "निर्धारक विश्लेषण इंजन", "ನಿರ್ಣಾಯಕ ವಿಶ್ಲೇಷಣಾ ಎಂಜಿನ್")
+M("Reasoning model (27B class)", "तर्क मॉडल (27B श्रेणी)", "ತಾರ್ಕಿಕ ಮಾದರಿ (27B ವರ್ಗ)")
+M("Sandboxed coding model", "सैंडबॉक्स में चलने वाला कोडिंग मॉडल", "ಸ್ಯಾಂಡ್‌ಬಾಕ್ಸ್‌ನಲ್ಲಿ ಚಲಿಸುವ ಕೋಡಿಂಗ್ ಮಾದರಿ")
+M("Workflow engine", "वर्कफ़्लो इंजन", "ವರ್ಕ್‌ಫ್ಲೋ ಎಂಜಿನ್")
+# deliverables
+M("Word document", "Word दस्तावेज़", "Word ದಾಖಲೆ")
+M("PowerPoint deck", "PowerPoint प्रस्तुति", "PowerPoint ಪ್ರಸ್ತುತಿ")
+M("Excel workbook", "Excel वर्कबुक", "Excel ವರ್ಕ್‌ಬುಕ್")
+M("Approval note (.docx)", "स्वीकृति नोट (.docx)", "ಅನುಮೋದನಾ ಟಿಪ್ಪಣಿ (.docx)")
+M("Calculation with steps", "चरणों सहित गणना", "ಹಂತಗಳೊಂದಿಗೆ ಲೆಕ್ಕಾಚಾರ")
+M("Code (sandbox)", "कोड (सैंडबॉक्स)", "ಕೋಡ್ (ಸ್ಯಾಂಡ್‌ಬಾಕ್ಸ್)")
+M("Cited answer", "स्रोत सहित उत्तर", "ಮೂಲಗಳೊಂದಿಗೆ ಉತ್ತರ")
+# ledger categories
+M("Fire extinguisher", "अग्निशामक यंत्र", "ಅಗ್ನಿಶಾಮಕ")
+M("Calibration record", "कैलिब्रेशन रिकॉर्ड", "ಕ್ಯಾಲಿಬ್ರೇಶನ್ ದಾಖಲೆ")
+M("Pressure-vessel inspection", "दाब पात्र निरीक्षण", "ಒತ್ತಡ ಪಾತ್ರೆ ತಪಾಸಣೆ")
+M("Safety device (PSV, gas detector, SCBA)", "सुरक्षा उपकरण (PSV, गैस डिटेक्टर, SCBA)", "ಸುರಕ್ಷತಾ ಸಾಧನ (PSV, ಅನಿಲ ಪತ್ತೆಕಾರಕ, SCBA)")
+M("Spare part (shelf life)", "स्पेयर पार्ट (शेल्फ़ लाइफ़)", "ಬಿಡಿ ಭಾಗ (ಶೆಲ್ಫ್ ಲೈಫ್)")
+M("Licence or statutory permit", "लाइसेंस या वैधानिक अनुमति", "ಪರವಾನಗಿ ಅಥವಾ ಶಾಸನಬದ್ಧ ಅನುಮತಿ")
+M("Certificate", "प्रमाणपत्र", "ಪ್ರಮಾಣಪತ್ರ")
+M("Warranty", "वारंटी", "ವಾರಂಟಿ")
+# approver lanes
+M("Electrical", "विद्युत", "ವಿದ್ಯುತ್")
+M("Mechanical", "यांत्रिक", "ಯಾಂತ್ರಿಕ")
+M("HSE", "HSE", "HSE")
+M("Procurement", "खरीद", "ಖರೀದಿ")
+M("Finance", "वित्त", "ಹಣಕಾಸು")
+M("Management", "प्रबंधन", "ಆಡಳಿತ")
+# roles
+M("Approves HSE findings", "HSE निष्कर्षों को स्वीकृत करते हैं", "HSE ಸಂಶೋಧನೆಗಳನ್ನು ಅನುಮೋದಿಸುತ್ತಾರೆ")
+M("Approves procurement findings", "खरीद से जुड़े निष्कर्षों को स्वीकृत करते हैं", "ಖರೀದಿ ಸಂಬಂಧಿತ ಸಂಶೋಧನೆಗಳನ್ನು ಅನುಮೋದಿಸುತ್ತಾರೆ")
+M("Approves management decisions", "प्रबंधन के निर्णयों को स्वीकृत करते हैं", "ಆಡಳಿತದ ನಿರ್ಧಾರಗಳನ್ನು ಅನುಮೋದಿಸುತ್ತಾರೆ")
+M("Stores / asset team — registers purchased and installed items in the asset ledger",
+  "स्टोर्स / एसेट टीम — खरीदी और लगाई गई वस्तुओं को एसेट लेजर में दर्ज करती है",
+  "ಸ್ಟೋರ್ಸ್ / ಆಸ್ತಿ ತಂಡ — ಖರೀದಿಸಿದ ಮತ್ತು ಅಳವಡಿಸಿದ ವಸ್ತುಗಳನ್ನು ಆಸ್ತಿ ಲೆಡ್ಜರ್‌ನಲ್ಲಿ ದಾಖಲಿಸುತ್ತದೆ")
+M("Research layer — experimental models only, isolated from plant documents and tools",
+  "अनुसंधान परत — केवल प्रायोगिक मॉडल, प्लांट के दस्तावेज़ों और टूल्स से अलग",
+  "ಸಂಶೋಧನಾ ಪದರ — ಪ್ರಾಯೋಗಿಕ ಮಾದರಿಗಳು ಮಾತ್ರ, ಸ್ಥಾವರದ ದಾಖಲೆಗಳು ಮತ್ತು ಉಪಕರಣಗಳಿಂದ ಪ್ರತ್ಯೇಕ")
+# errors and notices
+M("Inspectors, engineers, HSE and heads of department can process scanned reports.",
+  "स्कैन की गई रिपोर्ट को निरीक्षक, इंजीनियर, HSE और विभागाध्यक्ष ही प्रोसेस कर सकते हैं।",
+  "ಸ್ಕ್ಯಾನ್ ಮಾಡಿದ ವರದಿಗಳನ್ನು ತಪಾಸಕರು, ಎಂಜಿನಿಯರ್‌ಗಳು, HSE ಮತ್ತು ವಿಭಾಗದ ಮುಖ್ಯಸ್ಥರು ಮಾತ್ರ ಸಂಸ್ಕರಿಸಬಹುದು.")
+M("Only the owning department, stores or refinery management can change this ledger.",
+  "इस लेजर को केवल स्वामी विभाग, स्टोर्स या रिफाइनरी प्रबंधन बदल सकता है।",
+  "ಈ ಲೆಡ್ಜರ್ ಅನ್ನು ಮಾಲೀಕ ವಿಭಾಗ, ಸ್ಟೋರ್ಸ್ ಅಥವಾ ರಿಫೈನರಿ ಆಡಳಿತ ಮಾತ್ರ ಬದಲಾಯಿಸಬಹುದು.")
+M("You can register assets only for your own department.", "आप केवल अपने विभाग के एसेट दर्ज कर सकते हैं।",
+  "ನೀವು ನಿಮ್ಮ ಸ್ವಂತ ವಿಭಾಗದ ಆಸ್ತಿಗಳನ್ನು ಮಾತ್ರ ನೋಂದಾಯಿಸಬಹುದು.")
+M("Review item not found", "समीक्षा का मद नहीं मिला", "ಪರಿಶೀಲನಾ ಅಂಶ ಸಿಗಲಿಲ್ಲ")
+M("Review item not found or already decided.", "समीक्षा का मद नहीं मिला या उस पर पहले ही निर्णय हो चुका है।",
+  "ಪರಿಶೀಲನಾ ಅಂಶ ಸಿಗಲಿಲ್ಲ ಅಥವಾ ಅದರ ಬಗ್ಗೆ ಈಗಾಗಲೇ ನಿರ್ಧಾರವಾಗಿದೆ.")
+M("Task not found", "कार्य नहीं मिला", "ಕಾರ್ಯ ಸಿಗಲಿಲ್ಲ")
+M("Ledger entry not found.", "लेजर प्रविष्टि नहीं मिली।", "ಲೆಡ್ಜರ್ ನಮೂದು ಸಿಗಲಿಲ್ಲ.")
+M("Unknown performance profile.", "अज्ञात परफ़ॉर्मेंस प्रोफ़ाइल।", "ಅಜ್ಞಾತ ಕಾರ್ಯಕ್ಷಮತೆ ಪ್ರೊಫೈಲ್.")
+M("Load a model with this profile first.", "पहले इस प्रोफ़ाइल के साथ एक मॉडल लोड करें।", "ಮೊದಲು ಈ ಪ್ರೊಫೈಲ್‌ನೊಂದಿಗೆ ಮಾದರಿಯನ್ನು ಲೋಡ್ ಮಾಡಿ.")
+M("Write a question.", "एक प्रश्न लिखें।", "ಒಂದು ಪ್ರಶ್ನೆಯನ್ನು ಬರೆಯಿರಿ.")
+M("Asset name is required.", "एसेट का नाम आवश्यक है।", "ಆಸ್ತಿಯ ಹೆಸರು ಅಗತ್ಯವಿದೆ.")
+M("Asset tag is required (at most 40 characters).", "एसेट टैग आवश्यक है (अधिकतम 40 अक्षर)।", "ಆಸ್ತಿ ಟ್ಯಾಗ್ ಅಗತ್ಯವಿದೆ (ಗರಿಷ್ಠ 40 ಅಕ್ಷರಗಳು).")
+M("Describe the work in a sentence.", "काम को एक वाक्य में बताइए।", "ಕೆಲಸವನ್ನು ಒಂದು ವಾಕ್ಯದಲ್ಲಿ ವಿವರಿಸಿ.")
+M("Enter the corrected value.", "सुधारा हुआ मान लिखें।", "ಸರಿಪಡಿಸಿದ ಮೌಲ್ಯವನ್ನು ನಮೂದಿಸಿ.")
+M("Resolution must be confirm, correct or dismiss.", "निर्णय 'पुष्टि', 'सुधार' या 'खारिज' में से एक होना चाहिए।",
+  "ನಿರ್ಧಾರವು 'ದೃಢೀಕರಿಸು', 'ಸರಿಪಡಿಸು' ಅಥವಾ 'ತಳ್ಳಿಹಾಕು' ಇವುಗಳಲ್ಲಿ ಒಂದಾಗಿರಬೇಕು.")
+M("Give an expiry date, an issue date with an inspection interval, or a warranty end date.",
+  "समाप्ति तिथि, निरीक्षण अंतराल के साथ जारी करने की तिथि, या वारंटी समाप्ति तिथि दें।",
+  "ಮುಕ್ತಾಯ ದಿನಾಂಕ, ತಪಾಸಣಾ ಅಂತರದೊಂದಿಗೆ ನೀಡಿದ ದಿನಾಂಕ ಅಥವಾ ವಾರಂಟಿ ಮುಕ್ತಾಯ ದಿನಾಂಕವನ್ನು ನೀಡಿ.")
+M("Write at least one calculation, e.g. I = P / (sqrt(3) * V * pf) [A].",
+  "कम से कम एक गणना लिखें, जैसे I = P / (sqrt(3) * V * pf) [A]।",
+  "ಕನಿಷ್ಠ ಒಂದು ಲೆಕ್ಕಾಚಾರವನ್ನು ಬರೆಯಿರಿ, ಉದಾ. I = P / (sqrt(3) * V * pf) [A].")
+M("The research layer is switched off.", "अनुसंधान परत बंद है।", "ಸಂಶೋಧನಾ ಪದರ ಆಫ್ ಆಗಿದೆ.")
+M("The research layer must run on this server (a 127.0.0.1 / localhost address).",
+  "अनुसंधान परत इसी सर्वर पर चलनी चाहिए (127.0.0.1 / localhost पता)।",
+  "ಸಂಶೋಧನಾ ಪದರ ಇದೇ ಸರ್ವರ್‌ನಲ್ಲಿ ಚಲಿಸಬೇಕು (127.0.0.1 / localhost ವಿಳಾಸ).")
+M("The research model is not running. An administrator starts it under Administration → Research layer.",
+  "अनुसंधान मॉडल नहीं चल रहा है। प्रशासक इसे प्रशासन → अनुसंधान परत में शुरू करते हैं।",
+  "ಸಂಶೋಧನಾ ಮಾದರಿ ಚಾಲನೆಯಲ್ಲಿಲ್ಲ. ನಿರ್ವಾಹಕರು ಇದನ್ನು ಆಡಳಿತ → ಸಂಶೋಧನಾ ಪದರದಲ್ಲಿ ಪ್ರಾರಂಭಿಸುತ್ತಾರೆ.")
+M("EXPERIMENTAL — research layer, isolated from plant documents, tools and approvals. Not for operational use.",
+  "प्रायोगिक — अनुसंधान परत, प्लांट के दस्तावेज़ों, टूल्स और स्वीकृतियों से अलग। संचालन में उपयोग के लिए नहीं।",
+  "ಪ್ರಾಯೋಗಿಕ — ಸಂಶೋಧನಾ ಪದರ, ಸ್ಥಾವರದ ದಾಖಲೆಗಳು, ಉಪಕರಣಗಳು ಮತ್ತು ಅನುಮೋದನೆಗಳಿಂದ ಪ್ರತ್ಯೇಕ. ಕಾರ್ಯಾಚರಣೆಯ ಬಳಕೆಗೆ ಅಲ್ಲ.")
+M("No feasible plan with these limits.", "इन सीमाओं के साथ कोई व्यवहार्य योजना नहीं है।", "ಈ ಮಿತಿಗಳೊಂದಿಗೆ ಯಾವುದೇ ಸಾಧ್ಯವಾದ ಯೋಜನೆ ಇಲ್ಲ.")
+M("Advisory: the optimizer calculates, the LLM explains, planners decide. Yukti never changes DCS or SCADA setpoints.",
+  "सलाह मात्र: ऑप्टिमाइज़र गणना करता है, LLM समझाता है, निर्णय प्लानर लेते हैं। Yukti कभी DCS या SCADA सेटपॉइंट नहीं बदलता।",
+  "ಸಲಹೆ ಮಾತ್ರ: ಆಪ್ಟಿಮೈಸರ್ ಲೆಕ್ಕ ಹಾಕುತ್ತದೆ, LLM ವಿವರಿಸುತ್ತದೆ, ಯೋಜಕರು ನಿರ್ಧರಿಸುತ್ತಾರೆ. Yukti ಎಂದಿಗೂ DCS ಅಥವಾ SCADA ಸೆಟ್‌ಪಾಯಿಂಟ್‌ಗಳನ್ನು ಬದಲಾಯಿಸುವುದಿಲ್ಲ.")
+P(r"Scan needs review: (?P<t>.+)", "स्कैन की समीक्षा आवश्यक: {t}", "ಸ್ಕ್ಯಾನ್ ಪರಿಶೀಲನೆ ಅಗತ್ಯ: {t}")
+P(r"Finding for approval: (?P<t>.+)", "स्वीकृति हेतु निष्कर्ष: {t}", "ಅನುಮೋದನೆಗಾಗಿ ಸಂಶೋಧನೆ: {t}")
+P(r"Overdue finding: (?P<t>.+)", "समय-सीमा पार निष्कर्ष: {t}", "ಗಡುವು ಮೀರಿದ ಸಂಶೋಧನೆ: {t}")
+P(r"(?P<n>\d+) field\(s\) to check before the finding is raised\.",
+  "निष्कर्ष दर्ज होने से पहले {n} फ़ील्ड की जाँच करनी है।", "ಸಂಶೋಧನೆ ದಾಖಲಿಸುವ ಮೊದಲು {n} ಕ್ಷೇತ್ರ(ಗಳನ್ನು) ಪರಿಶೀಲಿಸಬೇಕು.")
+P(r"Due (?P<d>\d{4}-\d{2}-\d{2})\. Decide or escalate\.", "देय तिथि {d}। निर्णय लें या आगे भेजें।",
+  "ಗಡುವು {d}. ನಿರ್ಧರಿಸಿ ಅಥವಾ ಮೇಲಕ್ಕೆ ಕಳುಹಿಸಿ.")
+M("Not acknowledged in time by the lane approver.", "लेन के अनुमोदक ने समय पर पावती नहीं दी।",
+  "ಲೇನ್ ಅನುಮೋದಕರು ಸಮಯಕ್ಕೆ ಸರಿಯಾಗಿ ಸ್ವೀಕೃತಿ ನೀಡಲಿಲ್ಲ.")

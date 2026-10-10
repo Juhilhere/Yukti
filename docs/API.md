@@ -1,4 +1,5 @@
 > **Legacy design document** (v0.1/v0.2 contract). The live, authoritative API is served by the running server at `/api/docs` (OpenAPI).
+> Later additions: [API_v2.md](API_v2.md) (v0.2) and its **v3 additions** section (workbench, work queue, scans, ledger, research layer).
 
 # Yukti API contract (v0.1 — demo build)
 

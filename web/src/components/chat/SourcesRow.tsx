@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FileText, ShieldAlert } from 'lucide-react';
 import type { Denied, Source } from '../../lib/types';
-import { Badge, ProvenanceBadges, StatusChip } from '../ui';
+import { Badge, ProvenanceBadges, StatusChip, Tip } from '../ui';
+import { fmtDate } from '../../lib/format';
+import { pct } from '../../lib/work';
 import { useT } from '../../lib/i18n';
 import { sourceElId } from './types';
 import { AccessRequestDialog } from './AccessRequestDialog';
@@ -32,14 +34,35 @@ export function SourcesRow({ msgId, sources, showScore = true }: { msgId: string
             <div className="mt-1 flex flex-wrap items-center gap-1">
               <Badge mono tone="muted">{t('sources.rev', { rev: s.revision || '—' })}</Badge>
               <StatusChip status={s.status} />
-              <Badge mono tone="muted">{t('sources.page', { n: s.page })}</Badge>
+              <Badge mono tone="muted" title={s.record_id ?? undefined}>{s.locator || t('sources.page', { n: s.page })}</Badge>
               {s.classification && <StatusChip status={s.classification} />}
               <ProvenanceBadges isExample={s.is_example} isPublic={s.is_public} />
             </div>
+            <SourceMeta s={s} />
             <div className="mt-1.5 line-clamp-3 text-[11.5px] leading-snug text-muted">{s.snippet}</div>
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+/** Provenance of one cited passage: date, confidence and the retrieval channels that found it. */
+function SourceMeta({ s }: { s: Source }) {
+  const t = useT();
+  const c = pct(s.confidence);
+  const ocr = pct(s.ocr_confidence);
+  const ch = s.channels ?? [];
+  if (!s.timestamp && c === null && !ch.length) return null;
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-1 text-[10.5px]">
+      {s.timestamp && <span className="font-mono text-faint" title={s.ingested_at ? t('wb.src.ingested', { at: fmtDate(s.ingested_at) }) : undefined}>{fmtDate(s.timestamp)}</span>}
+      {c !== null && <Badge mono tone={c >= 75 ? 'ok' : c >= 50 ? 'amber' : 'muted'} title={t('wb.src.confTip')}>{t('wb.src.conf', { n: c })}</Badge>}
+      {ocr !== null && <Badge mono tone={ocr >= 85 ? 'muted' : 'amber'}>{t('wb.src.ocr', { n: ocr })}</Badge>}
+      {ch.map((x) => {
+        const chip = <Badge key={x} mono tone={x === 'graph' ? 'violet' : x === 'vector' ? 'cyan' : 'muted'}>{t(`wb.ch.${x}`, x)}</Badge>;
+        return x === 'graph' && s.graph_reason ? <Tip key={x} side="top" text={s.graph_reason}>{chip}</Tip> : chip;
+      })}
     </div>
   );
 }

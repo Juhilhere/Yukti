@@ -1,4 +1,5 @@
-"""Chat orchestration: Laya → Company Guardrails → ABAC retrieval → dossier facts → LLM stream → citations → audit."""
+"""Chat orchestration: Laya → work queue (worker) → Company Guardrails → ABAC retrieval → dossier facts → LLM stream →
+citations → checkpoint → audit."""
 from __future__ import annotations
 
 import json
@@ -7,7 +8,7 @@ from typing import Any, AsyncIterator
 
 import asyncio
 
-from . import attachments, audit, engine, mrpl_facts, rag
+from . import attachments, audit, engine, kvcache, ledger, mrpl_facts, rag, workqueue
 from . import laya as laya_mod
 from .auth import Ctx
 from .db import ex, j, new_id, now_iso, q, q1, tx, uj
@@ -91,6 +92,13 @@ PHOTO_RULES = """PHOTOS: the user attached photo(s) taken in the plant.
 
 PHOTO_QUESTION = "What does this photo show? Identify any equipment or line from its tags, and point out anything that needs attention."
 
+CODER_RULES = """CODE: you are the coding worker. Write one complete Python script in a ```python block, using only math,
+statistics, numpy, pandas or openpyxl. Code is never run automatically: the person runs it in the Yukti sandbox (no
+network, no system access) from Workbench. Never write code that changes control systems, setpoints or plant equipment."""
+
+PLANNING_NOTE = ("NOTE: product-mix and production scenarios are calculated by the optimizer (Production → Plan), from the "
+                 "forecast and the planner's plant model. Explain that; do not estimate production numbers yourself.")
+
 GUARD_REFUSAL = {
     "off_domain_harm": "I can't help with that. It is outside plant operations and is blocked by the company guardrail (G-OFF-DOMAIN-HARM).",
     "control_system_change": "Yukti is advisory only and never changes setpoints, interlocks or control logic (company guardrail G-CONTROL-CHANGE). "
@@ -107,6 +115,12 @@ _STOP: set[str] = set()
 
 def request_stop(chat_id: str) -> None:
     _STOP.add(chat_id)
+
+
+def _policy_task(task_id: str, reason: str, mid: str) -> None:
+    """The policy engine answered: no model was used, the task is recorded on the policy worker."""
+    ex("UPDATE tasks SET worker='policy', served_by='policy' WHERE id=?", (task_id,))
+    workqueue.finish(task_id, {"message_id": mid, "stop_reason": reason})
 
 
 def _record(ctx: Ctx, route: dict[str, Any], stats: dict[str, Any] | None, error: str | None = None, denied: int = 0) -> None:
@@ -309,6 +323,13 @@ async def _run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | N
     meta["route"] = route
     yield _sse("route", route)
 
+    # 1') the decision layer chose the path; the durable queue records the task for the worker that will do it
+    worker = workqueue.select_worker(route, bool(images), question)
+    task_id = workqueue.create("chat", worker, ctx.user["id"], chat_id=chat_id, title=question[:120], route=route, status="running")
+    meta["task"] = {"id": task_id, "worker": worker}
+    yield _sse("task", {"id": task_id, "worker": worker, "label": tr(workqueue.WORKERS[worker]["label"]),
+                        "served_by": workqueue.served_by(worker)})
+
     # 1a) Company-level questions (finances, company-wide figures) are for top management only. The gate looks at what
     #     the person typed (photos or an equipment tag in the sentence do not switch it off); the data itself is
     #     protected separately (company briefings and company facts need `company.view`).
@@ -322,6 +343,7 @@ async def _run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | N
             yield _sse("token", {"t": w})
         mid = new_id()
         save_answer(chat_id, regenerate, mid, msg, None, {**meta, "stats": {"model_name": "policy", "engine": "policy"}})
+        _policy_task(task_id, "need_to_know", mid)
         audit.write(ctx.actor, "chat.need_to_know", f"chat:{chat_id}", {"intent": route.get("intent")})
         yield _sse("done", {"message_id": mid, "stats": {"tokens_in": 0, "tokens_out": 0, "tok_per_s": 0, "ttft_ms": 0, "total_ms": 0,
                                                           "stop_reason": "need_to_know", "model_name": "policy", "engine": "policy"}})
@@ -338,6 +360,7 @@ async def _run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | N
             yield _sse("token", {"t": w})
         mid = new_id()
         save_answer(chat_id, regenerate, mid, msg, None, {**meta, "stats": {"model_name": "Laya", "engine": "policy"}})
+        _policy_task(task_id, "off_topic", mid)
         audit.write(ctx.actor, "chat.off_topic", f"chat:{chat_id}", {"intent": route.get("intent"), "confidence": route.get("confidence")})
         yield _sse("done", {"message_id": mid, "stats": {"tokens_in": 0, "tokens_out": 0, "tok_per_s": 0, "ttft_ms": 0, "total_ms": 0,
                                                           "stop_reason": "off_topic", "model_name": "Laya", "engine": "policy"}})
@@ -350,7 +373,7 @@ async def _run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | N
     if gd.allowed and cat in ("process_chemistry", "hazmat_handling", "formulation_confidential"):
         decision = "review" if route["urgency"] >= 0.8 else "allow"
     guard = {"category": cat, "decision": decision, "rule_ids": gd.matched, "reason": gd.reason,
-             "model": "base model + Company Guardrails (Heretic domain model: planned)" if cat in ("process_chemistry", "hazmat_handling", "formulation_confidential") else "base"}
+             "model": "base model + Company Guardrails (experimental Heretic model: isolated research layer only)" if cat in ("process_chemistry", "hazmat_handling", "formulation_confidential") else "base"}
     meta["guard"] = guard
     yield _sse("guard", _guard_out(guard))
     audit.write(ctx.actor, "chat.guard", f"chat:{chat_id}", {"category": cat, "decision": decision, "rules": gd.matched})
@@ -360,6 +383,7 @@ async def _run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | N
             yield _sse("token", {"t": w})
         mid = new_id()
         save_answer(chat_id, regenerate, mid, msg, None, {**meta, "stats": {"model_name": "guardrail", "engine": "policy"}})
+        _policy_task(task_id, "guardrail", mid)
         yield _sse("done", {"message_id": mid, "stats": {"tokens_in": 0, "tokens_out": 0, "tok_per_s": 0, "ttft_ms": 0,
                                                           "total_ms": 0, "stop_reason": "guardrail", "model_name": "policy", "engine": "policy"}})
         return
@@ -373,7 +397,7 @@ async def _run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | N
     if images and not content.strip() and not photo_tags:
         use_knowledge = False  # an unlabelled photo and no question: documents found by generic words would only mislead
     if use_knowledge:
-        ret = rag.retrieve(ctx.subject, search_text)
+        ret = rag.retrieve(ctx.subject, search_text, intent=route.get("intent"))
         sources = ret["sources"]
         if photo_tags:  # a photo of V-501: documents about other equipment would only mislead the answer
             own = [s_ for s_ in sources if any(t.upper() in s_["_text"].upper() for t in photo_tags)]
@@ -419,9 +443,23 @@ async def _run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | N
                 facts = facts + pf
                 meta["facts"] = facts
                 yield _sse("facts", {"facts": tr_facts(facts), "tag": "MRPL"})
+        # analytics worker: "what expires soon?" is answered from the asset ledger itself, deterministically
+        if worker == "analytics" and route.get("intent") == "asset_expiry":
+            due = ledger.expiring_for(ctx.subject, 60)
+            lf = [{"slot": "ledger", "attribute": f"{d['tag']} {d['type'] if d['what'] == 'expiry' else 'warranty'}",
+                   "value": (f"{d['expires_on']} ({'expired ' + str(-d['days_left']) + ' d ago' if d['days_left'] < 0 else 'in ' + str(d['days_left']) + ' d'})"
+                             if d["what"] == "expiry" else f"warranty ends {d['warranty_until']}") + (f", ref {d['ref_no']}" if d.get("ref_no") else ""),
+                   "status": "KNOWN", "candidates": [], "note": "Asset ledger"} for d in due[:20]]
+            if not lf:
+                lf = [{"slot": "ledger", "attribute": "due_in_60_days", "value": "none", "status": "KNOWN", "candidates": [],
+                       "note": "Asset ledger: nothing you can see expires in the next 60 days"}]
+            facts = facts + lf
+            meta["facts"] = facts
+            yield _sse("facts", {"facts": tr_facts(facts), "tag": "ledger"})
+            workqueue.step(task_id, "Asset ledger query", "done", f"{len(due)} entr(ies) due within 60 days")
         parts = []
         for s in sources:
-            parts.append(f"<doc id=\"{s['id']}\" ref=\"{s['doc_number']} rev {s['revision']} ({s['status']}) p.{s['page']} — {s['title']}\">\n"
+            parts.append(f"<doc id=\"{s['id']}\" ref=\"{s['doc_number']} rev {s['revision']} ({s['status']}) {s.get('locator') or 'p.' + str(s['page'])} — {s['title']}\">\n"
                          f"{s['_text'][:1400]}\n</doc>")
         ctx_block = "CONTEXT:\n" + ("\n".join(parts) if parts else "(no authorised documents matched)")
         if ret["denied"]["count"]:
@@ -431,6 +469,8 @@ async def _run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | N
         if images and not photo_tags and sources:
             ctx_block += ("\n\nNOTE: no known equipment tag is readable in the photo, so none of these documents is known to be about "
                           "the photographed item. Do not link the photo to equipment named in them.")
+        if route.get("intent") == "production_scenario":
+            ctx_block += "\n\n" + PLANNING_NOTE
         if facts:
             ctx_block += "\n\nFACTS (structured, verified plant/public records — quote values verbatim and cite their [F#] id):\n" + _facts_block(facts)
 
@@ -442,6 +482,8 @@ async def _run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | N
         sys_parts.append(lang_line)
     if images:
         sys_parts.append(PHOTO_RULES)
+    if worker == "coder":
+        sys_parts.append(CODER_RULES)
     if system_prompt:
         sys_parts.append("Additional instructions from the user:\n" + system_prompt)
     msgs: list[dict[str, Any]] = [{"role": "system", "content": "\n\n".join(sys_parts)}]
@@ -458,13 +500,32 @@ async def _run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | N
     msgs, trimmed = fit_to_context(msgs, engine.context_tokens() - (max_out if max_out > 0 else 1024) - 128)
     if trimmed:
         meta["context_trimmed"] = True
+    pred = workqueue.prediction_for(worker, prediction)
+
+    # 4') hot KV: the chat keeps its llama.cpp slot while it is in use (TTL + LRU), so its cached prefix is reused
+    kv: dict[str, Any] = {"slot": None, "state": "n/a"}
+    if engine.state.engine == "llamacpp" and engine.state.status == "ready":
+        kvs = kvcache.settings()
+        got = kvcache.hot.acquire(chat_id, float(kvs["kv_ttl_s"]))
+        kv = {"slot": got["slot"], "state": got["state"]}
+        if got["slot"] is not None:
+            pred["_slot"] = got["slot"]
+            if kvs["kv_spill"] and got["state"] == "cold":
+                if got["evicted"]:  # keep the evicted chat's cache on disk, to restore it if that chat returns
+                    await engine.slot_action(got["slot"], "save", kvcache.spill_name(got["evicted"]))
+                if (kvcache.SLOT_DIR / kvcache.spill_name(chat_id)).exists() and \
+                        await engine.slot_action(got["slot"], "restore", kvcache.spill_name(chat_id)):
+                    kv["state"] = "restored"
+                    kvcache.hot.restores += 1
+                kvcache.sweep_spilled(float(kvs["kv_ttl_s"]), float(kvs["kv_spill_max_mb"]))
+    workqueue.step(task_id, "Generate answer", "running", f"{workqueue.WORKERS[worker]['label']} · KV {kv['state']}")
 
     # 5) Stream from engine
     text_parts: list[str] = []
     reasoning_parts: list[str] = []
     stats: dict[str, Any] = {}
     try:
-        async for ev in engine.stream_chat(msgs, prediction or {}):
+        async for ev in engine.stream_chat(msgs, pred):
             if chat_id in _STOP:
                 stats = {"tokens_out": len(text_parts), "stop_reason": "user_stopped", "model_name": engine.state.model_name,
                          "engine": engine.state.engine}
@@ -485,6 +546,7 @@ async def _run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | N
                 # sent, so a page that closes at this very moment cannot lose it.
                 meta["error"] = {"code": ev["code"], "message": ev["message"]}
                 save_answer(chat_id, regenerate, new_id(), "".join(text_parts), "".join(reasoning_parts) or None, meta)
+                workqueue.finish(task_id, error=ev["code"], served=engine.state.model_name)
                 audit.write(ctx.actor, "chat.error", f"chat:{chat_id}", {"code": ev["code"]})
                 _record(ctx, route, None, ev["code"])
                 text_parts, reasoning_parts = [], []  # stored: nothing left to rescue if the page closes now
@@ -503,7 +565,13 @@ async def _run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | N
             except Exception as e:  # noqa: BLE001
                 from . import journal
                 journal.swallowed("chat", "saving an interrupted answer", e)
+        try:
+            workqueue.finish(task_id, {"stop_reason": "interrupted"}, status="interrupted")
+        except Exception:  # noqa: BLE001
+            pass
         raise
+    finally:
+        kvcache.hot.release(kv.get("slot"))
     answer = "".join(text_parts)
     # 6) citation check: which cited ids exist
     cited = sorted(set(re.findall(r"\[(S\d+|F\d+)\]", answer)))
@@ -513,10 +581,88 @@ async def _run_turn(ctx: Ctx, chat_id: str, content: str, system_prompt: str | N
     _record(ctx, route, stats, None, int((meta.get("denied") or {}).get("count", 0)))
     mid = new_id()
     save_answer(chat_id, regenerate, mid, answer, "".join(reasoning_parts) or None, meta)
+    kv.update(cached_tokens=stats.get("cached_tokens"), prompt_tokens=stats.get("tokens_in"),
+              kv_type=(engine.state.load_config or {}).get("cache_type_k"), ctx=engine.context_tokens())
+    tools = [{"tool": "laya.classify", "result": route.get("intent"), "ms": route.get("latency_ms")},
+             {"tool": "policy.guard", "result": (meta.get("guard") or {}).get("decision")}]
+    if "sources" in meta:
+        tools.append({"tool": "search_documents", "result": f"{len(meta['sources'])} sources, {(meta.get('denied') or {}).get('count', 0)} withheld"})
+    if meta.get("facts"):
+        tools.append({"tool": "read_facts", "result": f"{len(meta['facts'])} facts"})
+    kvcache.checkpoint(chat_id, mid, task_id, worker, stats.get("model_name"), kv, tools,
+                       [{"rule": r, "decision": (meta.get("guard") or {}).get("decision")} for r in (meta.get("guard") or {}).get("rule_ids") or []],
+                       cited)
+    workqueue.step(task_id, "Generate answer", "done", f"{stats.get('tokens_out')} tokens, {len(cited)} citation(s)")
+    workqueue.finish(task_id, {"message_id": mid, "tokens_out": stats.get("tokens_out"), "citations": cited, "kv": kv},
+                     served=stats.get("model_name"))
     audit.write(ctx.actor, "chat.answer", f"chat:{chat_id}",
                 {"message_id": mid, "model": stats.get("model_name"), "engine": stats.get("engine"), "intent": route["intent"],
-                 "tokens_out": stats.get("tokens_out"), "citations": cited})
+                 "tokens_out": stats.get("tokens_out"), "citations": cited, "task": task_id, "worker": worker})
     yield _sse("done", {"message_id": mid, "stats": stats})
+
+
+# ------------------------------------------------------------------ follow-up questions (shown under the latest answer)
+_FOLLOWUP_BUSY: set[str] = set()
+_NO_FOLLOWUPS = {"policy", "guardrail", "Laya"}  # refusals and fixed policy answers: nothing to follow up on
+
+
+def _clean_followups(text: str, question: str) -> list[str]:
+    out: list[str] = []
+    seen = {question.strip().lower()}
+    for line in text.splitlines():
+        s = re.sub(r"^\s*(?:[-*\u2022]|\d+[.)])\s*", "", line).strip().strip('"\u201c\u201d').strip()
+        if not (8 <= len(s) <= 120) or not s.endswith(("?", "\uff1f", "\u0964")) or s.lower() in seen:
+            continue
+        seen.add(s.lower())
+        out.append(s)
+        if len(out) == 3:
+            break
+    return out
+
+
+async def followups(chat_id: str, mid: str) -> list[str]:
+    """Up to three short questions the person might ask next, written by the loaded model from the question and the answer
+    they have already seen (no other documents are given to it). Stored on the answer, so they are made only once. Asking
+    one runs the normal pipeline, so the access rules apply to it like to any typed question."""
+    m = q1("SELECT * FROM messages WHERE id=? AND chat_id=? AND role='assistant'", (mid, chat_id))
+    if not m:
+        return []
+    meta = uj(m["meta_json"], {})
+    if isinstance(meta.get("followups"), list):
+        return meta["followups"]
+    stats = meta.get("stats") or {}
+    if (meta.get("error") or not (m["content"] or "").strip() or stats.get("engine") == "policy"
+            or stats.get("model_name") in _NO_FOLLOWUPS or stats.get("stop_reason") in ("user_stopped", "interrupted")
+            or engine.state.status != "ready" or mid in _FOLLOWUP_BUSY):
+        return []
+    user = q1("SELECT content FROM messages WHERE chat_id=? AND role='user' AND (created_at < ? OR (created_at = ? AND rowid < ?)) "
+              "ORDER BY created_at DESC, rowid DESC LIMIT 1",
+              (chat_id, m["created_at"], m["created_at"], q1("SELECT rowid r FROM messages WHERE id=?", (mid,))["r"]))
+    question = (user or {}).get("content") or ""
+    from .i18n import answer_language_instruction
+    lang = answer_language_instruction()
+    system = ("You suggest follow-up questions for a plant engineer chatting with an industrial assistant. Reply with exactly 3 "
+              "short questions (at most 12 words each) that the engineer would naturally ask next about the same equipment or "
+              "topic, one per line, each ending with a question mark. No numbering, no introduction, nothing else."
+              + (" Write the questions in the same language as the answer." if lang else ""))
+    answer = re.sub(r"\[(?:S|F)\d+\]", "", m["content"])[:2000]
+    _FOLLOWUP_BUSY.add(mid)
+    try:
+        txt = await asyncio.wait_for(engine.complete_once(
+            [{"role": "system", "content": system},
+             {"role": "user", "content": f"QUESTION:\n{question[:600]}\n\nANSWER:\n{answer}"}],
+            {"temperature": 0.5, "max_tokens": 160}), timeout=30)
+        out = _clean_followups(txt, question)
+    except Exception as e:  # noqa: BLE001 - suggestions are optional: the answer stands without them
+        from . import journal
+        journal.swallowed("chat", "suggesting follow-up questions", e)
+        return []
+    finally:
+        _FOLLOWUP_BUSY.discard(mid)
+    cur = q1("SELECT meta_json FROM messages WHERE id=?", (mid,))
+    if cur:  # re-read: feedback or other fields may have changed while the model was writing
+        ex("UPDATE messages SET meta_json=? WHERE id=?", (j({**uj(cur["meta_json"], {}), "followups": out}), mid))
+    return out
 
 
 def message_out(m: dict[str, Any]) -> dict[str, Any]:
@@ -524,7 +670,7 @@ def message_out(m: dict[str, Any]) -> dict[str, Any]:
     return {"id": m["id"], "role": m["role"], "content": m["content"], "created_at": m["created_at"],
             "reasoning": m.get("reasoning"), "route": meta.get("route"), "guard": _guard_out(meta.get("guard")),
             "sources": meta.get("sources"), "denied": meta.get("denied"), "facts": tr_facts(meta.get("facts")), "stats": meta.get("stats"),
-            "images": meta.get("images") or [],
+            "images": meta.get("images") or [], "task": meta.get("task"), "followups": meta.get("followups"),
             "photo": {**meta["photo"], "note": tr(meta["photo"].get("note")) if meta["photo"].get("note") else ""} if meta.get("photo") else None,
             "error": {**meta["error"], "message": tr(meta["error"].get("message"))} if isinstance(meta.get("error"), dict) else meta.get("error")}
 

@@ -100,9 +100,18 @@ def _check_numbers(m: dict[str, Any]) -> list[str]:
         for prod, y in (u.get("yields") or {}).items():
             check(f"{code}: yield of {prod}", y, 1.0)
     for pr in m.get("products", []) or []:
-        for k in ("price_usd_t", "min_demand_kt", "max_demand_kt"):
-            if k in pr:
+        for k in ("price_usd_t", "min_demand_kt", "max_demand_kt", "inventory_kt", "storage_max_kt", "dispatch_max_kt",
+                  "contract_min_kt", "crack_usd_t"):
+            if k in pr and k != "crack_usd_t":
                 check(f"{pr.get('name', 'product')}: {k}", pr.get(k))
+        for h in pr.get("demand_history") or []:
+            if not isinstance(h, dict) or not re.fullmatch(r"\d{4}-\d{2}", str(h.get("month") or "")):
+                bad.append(f"{pr.get('name', 'product')}: demand history needs months as YYYY-MM.")
+                break
+            check(f"{pr.get('name', 'product')}: demand {h.get('month')}", h.get("kt"))
+    check("Crude available (kt/month)", m.get("crude_max_kt"))
+    for u in m.get("units", []) or []:
+        check(f"{u.get('code') or 'unit'}: planned downtime (days)", u.get("planned_down_days"), 31)
     return bad
 
 
@@ -112,7 +121,7 @@ def save_model(m: dict[str, Any], by: str) -> dict[str, Any]:
         from .i18n import tr
         raise ValueError(" ".join(tr(b) for b in bad[:6]))
     clean = {"units": m.get("units", []), "products": m.get("products", []), "crude_cost_usd_t": m.get("crude_cost_usd_t"),
-             "notes": m.get("notes", "")}
+             "crude_max_kt": m.get("crude_max_kt"), "notes": m.get("notes", "")}
     set_setting("production_model", clean, by)
     return get_model()
 
@@ -140,13 +149,20 @@ def validate(m: dict[str, Any]) -> list[str]:
                 missing.append(f"{u['code']}: yield product '{p}' is not in the product list.")
     produced = {p for u in active for p, v in (u.get("yields") or {}).items() if v not in (None, "")}
     for p in m.get("products", []):
-        if p["name"] in produced and p.get("price_usd_t") in (None, ""):
+        if p["name"] in produced and p.get("price_usd_t") in (None, "") and p.get("crack_usd_t") in (None, ""):
             missing.append(f"{p['name']}: net-back price (US$/t).")
     return missing
 
 
 # ------------------------------------------------------------------ optimizer
-def solve(body: dict[str, Any]) -> dict[str, Any]:
+def _f(v: Any) -> float | None:
+    return None if v in (None, "") else float(v)
+
+
+def solve(body: dict[str, Any], demand_cap: dict[str, float] | None = None) -> dict[str, Any]:
+    """Baseline vs scenario. Constraints: unit capacity x availability (planned maintenance + scenario downtime), product
+    balances with opening inventory and storage limits, dispatch limits, contract minimums, crude availability, and
+    (scenario only) the demand cap from the forecast."""
     import highspy
 
     m = get_model()
@@ -178,18 +194,24 @@ def solve(body: dict[str, Any]) -> dict[str, Any]:
         crude_cost = float(m["crude_cost_usd_t"]) + (crude_delta if apply else 0)
         for u in units:
             i = idx[f"U:{u['code']}"]
-            avail = max(0.0, 1 - (down.get(u["code"], 0) / 30.0 if apply else 0))
+            planned = float(u.get("planned_down_days") or 0)  # maintenance schedule applies to both cases
+            avail = max(0.0, 1 - (planned + (down.get(u["code"], 0) if apply else 0)) / 30.0)
             ub[i] = float(u["capacity_kt_month"]) * avail
             if u["feed"] == "crude":
                 cost[i] = -crude_cost
         for p in m["products"]:
             i = idx[f"S:{p['name']}"]
             price = p.get("price_usd_t")
+            if price in (None, "") and p.get("crack_usd_t") not in (None, ""):  # crack spread over the crude cost
+                price = crude_cost + float(p["crack_usd_t"])
             cost[i] = (float(price) + (price_delta.get(p["name"], 0) if apply else 0)) if price not in (None, "") else 0.0
-            if p.get("max_kt") not in (None, ""):
-                ub[i] = float(p["max_kt"])
-            if p.get("min_kt") not in (None, ""):
-                lb[i] = float(p["min_kt"])
+            caps = [x for x in (_f(p.get("max_kt")), _f(p.get("dispatch_max_kt")),
+                                (demand_cap or {}).get(p["name"]) if apply else None) if x is not None]
+            if caps:
+                ub[i] = min(caps)
+            floors = [x for x in (_f(p.get("min_kt")), _f(p.get("contract_min_kt"))) if x is not None]
+            if floors:
+                lb[i] = min(max(floors), ub[i])  # a contract above what can be dispatched is reported, not forced
         h.addVars(n, lb, ub)
         h.changeColsCost(n, np.arange(n, dtype=np.int32), cost)
         h.changeObjectiveSense(highspy.ObjSense.kMaximize)
@@ -203,8 +225,15 @@ def solve(body: dict[str, Any]) -> dict[str, Any]:
                 if u["feed"] == p:
                     coefs[idx[f"U:{u['code']}"]] = coefs.get(idx[f"U:{u['code']}"], 0) + 1.0
             ii = np.array(list(coefs), dtype=np.int32)
-            h.addRow(-inf, 0, len(ii), ii, np.array(list(coefs.values())))
+            pm = next((x for x in m["products"] if x["name"] == p), {})
+            inv = _f(pm.get("inventory_kt")) or 0.0          # opening stock adds to what can be sold
+            store = _f(pm.get("storage_max_kt"))             # closing stock (opening + made - sold) must fit the tanks
+            h.addRow(inv - store if store is not None else -inf, inv, len(ii), ii, np.array(list(coefs.values())))
             rows.append(f"{p} balance")
+        crude_units = [idx[f"U:{u['code']}"] for u in units if u["feed"] == "crude"]
+        if crude_units and _f(m.get("crude_max_kt")) is not None:  # feedstock availability
+            h.addRow(0, float(m["crude_max_kt"]), len(crude_units), np.array(crude_units, dtype=np.int32), np.ones(len(crude_units)))
+            rows.append("crude availability")
         st = h.run()
         status = h.modelStatusToString(h.getModelStatus())
         if status != "Optimal":
@@ -231,3 +260,46 @@ def solve(body: dict[str, Any]) -> dict[str, Any]:
             "assumptions": ["Linear model of the plant as entered by the planner in Yukti (capacities, yields, prices, limits).",
                             f"Scenario: unit downtime {down or 'none'}, price changes {price_delta or 'none'}, crude cost change {crude_delta:+g} US$/t.",
                             "Advisory only — planners decide; Yukti never writes to DCS/SCADA."]}
+
+
+# ------------------------------------------------------------------ plan: forecast + optimizer -> scenario card
+def plan(body: dict[str, Any]) -> dict[str, Any]:
+    """Scenario card for next month: the forecast estimates demand and its uncertainty, the optimizer compares the feasible
+    mixes (expected, low and high demand), and the card shows the proposed change, the expected value, the assumptions
+    and the alternatives. Planners decide."""
+    from .forecast import forecast_model
+    m = get_model()
+    if not m["complete"]:
+        return {"error": "model_incomplete", "missing": m["missing"]}
+    fc = forecast_model(m, int(body.get("horizon") or 1))
+    cases: dict[str, Any] = {}
+    for case in ("expected", "low", "high"):
+        cap = {p: f[case] for p, f in fc.items()} if fc else None
+        r = solve(body, cap)
+        if r.get("error"):
+            if case == "expected":
+                return r
+            continue
+        cases[case] = r
+    exp = cases["expected"]
+    base_margin, exp_margin = exp["margin_usd"]["baseline"], exp["margin_usd"]["scenario"]
+    proposals = sorted(({"product": p, "baseline_kt": exp["baseline"][p], "proposed_kt": exp["scenario"][p], "change_pct": d}
+                        for p, d in exp["delta_pct"].items() if abs(d) >= 0.1), key=lambda x: -abs(x["change_pct"]))
+    alternatives = [{"case": c, "label": {"low": "Demand at the low end of the forecast (80 % interval)",
+                                          "high": "Demand at the high end of the forecast (80 % interval)"}[c],
+                     "margin_usd": cases[c]["margin_usd"]["scenario"], "mix_kt": cases[c]["scenario"],
+                     "binding": cases[c]["binding"]} for c in ("low", "high") if c in cases]
+    no_hist = [p["name"] for p in m["products"] if p["name"] not in fc]
+    assumptions = list(exp.get("assumptions") or [])
+    if fc:
+        assumptions.insert(0, "Demand forecast (" + ", ".join(sorted({f['method'] for f in fc.values()})) + ") from the planner's monthly history; "
+                              "80 % interval used for the low and high cases.")
+    if no_hist:
+        assumptions.append("No demand history for: " + ", ".join(no_hist[:10]) + " (only the planner's limits apply).")
+    specs = [f"{p['name']}: {p['spec_note']}" for p in m["products"] if p.get("spec_note")]
+    if specs:
+        assumptions.append("Product specifications to respect in blending (checked by planners): " + "; ".join(specs[:8]) + ".")
+    return {"forecast": fc, "proposal": proposals, "expected_value": {"margin_usd": exp_margin, "baseline_margin_usd": base_margin,
+            "delta_usd": round(exp_margin - base_margin, 0)}, "alternatives": alternatives, "binding": exp["binding"],
+            "shadow_prices": exp["shadow_prices"], "assumptions": assumptions, "scenario": exp,
+            "decision": "Advisory: the optimizer calculates, the LLM explains, planners decide. Yukti never changes DCS or SCADA setpoints."}

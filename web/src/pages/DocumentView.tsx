@@ -10,6 +10,7 @@ import type { DocPage, DocumentDetail } from '../lib/types';
 import { Badge, EmptyState, ErrorBox, Loading, PageHeader, ProvenanceBadges, Spinner, StatusChip } from '../components/ui';
 import { useT } from '../lib/i18n';
 import { cx, docTypeLabel, fmtBytes, fmtDate } from '../lib/format';
+import { ScanToFindingButton } from '../components/work/ScanToFinding';
 
 function confTone(c?: number) {
   if (c === undefined || c === null) return 'muted' as const;
@@ -66,6 +67,10 @@ export default function DocumentView() {
   const canDelete = !!me?.permissions?.includes('documents.upload') && !!d.department && d.department === me?.user.department;
   const digital = pages.filter((p) => p.mode === 'digital').length;
   const scanned = pages.length - digital;
+  // inspection reports, calibration certificates and scanned documents can become findings (scan.review or documents.upload)
+  const perms = me?.permissions ?? [];
+  const canScan = (perms.includes('scan.review') || perms.includes('documents.upload'))
+    && (['inspection_report', 'calibration_certificate'].includes(d.doc_type) || scanned > 0);
   const avgConf = (() => {
     const cs = pages.map((p) => confPct(p.ocr_conf)).filter((x): x is number => x !== null);
     return cs.length ? Math.round(cs.reduce((a, b) => a + b, 0) / cs.length) : null;
@@ -79,6 +84,7 @@ export default function DocumentView() {
         actions={<>
           <Link to="/knowledge" className="btn btn-sm"><ArrowLeft size={13} /> {t('btn.back')}</Link>
           <a className="btn btn-sm btn-cyan" href={`/api/documents/${encodeURIComponent(d.id)}/file`} target="_blank" rel="noreferrer"><ExternalLink size={13} /> {t('doc.openOriginal')}</a>
+          {canScan && <ScanToFindingButton documentId={d.id} />}
           {canDelete && <button className="btn btn-sm btn-danger" onClick={() => setConfirmDel(true)}><Trash2 size={13} /> {t('btn.delete')}</button>}
         </>} />
       <Modal open={confirmDel} onClose={() => setConfirmDel(false)} width={440} title={t('doc.deleteQ')} icon={<Trash2 size={14} className="text-danger" />}

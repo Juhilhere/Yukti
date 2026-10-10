@@ -1,5 +1,5 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState, type ChangeEvent } from 'react';
-import { AlertTriangle, ArrowUp, BookOpen, BookX, Camera, ImagePlus, Info, Square, X } from 'lucide-react';
+import { AlertTriangle, ArrowUp, BookOpen, BookX, Camera, ImagePlus, Info, Plus, Square, X } from 'lucide-react';
 import { cx, estimateTokens } from '../../lib/format';
 import { Kbd, Spinner, Tip } from '../ui';
 import { useT } from '../../lib/i18n';
@@ -182,8 +182,8 @@ export const Composer = forwardRef<ComposerHandle, {
   const closeNotice = () => { voice.clearError(); setNotice(null); };
 
   return (
-    <div className="border-t border-border bg-bg px-4 pb-3 pt-2.5">
-      <div className={cx('mx-auto', fullWidth ? 'max-w-none' : 'max-w-[860px]')}>
+    <div className="px-4 pb-4 pt-2">
+      <div className={cx('mx-auto', fullWidth ? 'max-w-none' : 'max-w-[800px]')}>
         {!modelReady && (canLoadModel ? (
           <div className="mb-1.5 flex items-center gap-2 text-[11.5px] text-muted">
             <span className="h-1.5 w-1.5 rounded-full bg-amber" /> {t('chat.noModel.admin')}
@@ -207,12 +207,13 @@ export const Composer = forwardRef<ComposerHandle, {
           </div>
         )}
 
-        <div className={cx('overflow-hidden rounded-lg border bg-surface transition-colors focus-within:border-cyan/60',
-          voice.state === 'recording' ? 'border-danger/60' : 'border-border')}>
+        {/* one large rounded box, like Grok: the question on top, the tools in a quiet row underneath */}
+        <div className={cx('overflow-hidden rounded-[26px] border bg-surface-2 shadow-[0_8px_40px_-12px_rgba(0,0,0,.8)] transition-colors focus-within:border-white/20',
+          voice.state === 'recording' ? 'border-danger/60' : 'border-white/10')}>
           <VoiceBar state={voice.state} elapsed={voice.elapsed} level={voice.level} onStop={() => void voice.stop()} onCancel={voice.cancel} />
 
           {atts.length > 0 && (
-            <div className="border-b border-border/60 px-3 pb-2 pt-2.5">
+            <div className="border-b border-white/[0.06] px-5 pb-2 pt-3.5">
               <div className="flex flex-wrap gap-2.5">
                 {atts.map((a, i) => <Thumb key={a.key} a={a} index={i + 1} onRemove={() => remove(a.key)} />)}
               </div>
@@ -232,7 +233,7 @@ export const Composer = forwardRef<ComposerHandle, {
           <textarea ref={ref} rows={1} value={text} onChange={(e) => setText(e.target.value)}
             placeholder={atts.length ? t('photo.placeholder') : t('chat.placeholder')}
             aria-label={t('chat.placeholder')}
-            className="block max-h-[240px] w-full resize-none bg-transparent px-3 pt-2.5 pb-1 text-[13.5px] outline-none placeholder:text-faint"
+            className="block max-h-[240px] w-full resize-none bg-transparent px-5 pt-4 pb-2 text-[15px] leading-relaxed outline-none placeholder:text-faint composer-input"
             onPaste={(e) => {
               const files = Array.from(e.clipboardData?.files ?? []).filter(isImageFile);
               if (files.length) { e.preventDefault(); addFiles(files); }
@@ -242,14 +243,15 @@ export const Composer = forwardRef<ComposerHandle, {
               const wantsSend = sendWithEnter ? !e.shiftKey : (e.ctrlKey || e.metaKey);
               if (wantsSend) { e.preventDefault(); void submit(); }
             }} />
-          <div className="flex flex-wrap items-center gap-1.5 px-2 pb-2">
+          <div className="flex flex-wrap items-center gap-1.5 px-3 pb-3">
             <input ref={cameraInput} type="file" accept="image/*" capture="environment" multiple hidden onChange={pickFiles} />
             <input ref={galleryInput} type="file" accept="image/*" multiple hidden onChange={pickFiles} />
             <Tip side="top" text={photoTip}>
-              <button type="button" className={cx('btn btn-ghost btn-sm', noVision ? 'text-muted' : 'text-muted hover:text-text')}
+              <button type="button" className={cx('relative flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-white/[0.07] disabled:opacity-40',
+                noVision ? 'text-muted' : 'text-muted hover:text-text')}
                 disabled={full} onClick={() => cameraInput.current?.click()} aria-label={t('photo.add')}>
-                <Camera size={15} /><span className="hidden md:inline">{t('photo.add')}</span>
-                {noVision && <Info size={11} className="text-amber" />}
+                <Plus size={19} strokeWidth={1.75} />
+                {noVision && <Info size={10} className="absolute right-1 top-1 text-amber" />}
               </button>
             </Tip>
             {touch && (
@@ -269,22 +271,21 @@ export const Composer = forwardRef<ComposerHandle, {
                 }} />
             )}
             <button onClick={onToggleKnowledge} title={t('composer.knowledgeTip')}
-              className={cx('ml-1 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium',
-                useKnowledge ? 'border-cyan/40 bg-cyan/10 text-cyan' : 'border-border text-muted hover:text-text')}>
-              {useKnowledge ? <BookOpen size={11} /> : <BookX size={11} />}
+              className={cx('ml-0.5 inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[12.5px] font-medium transition-colors',
+                useKnowledge ? 'border-white/15 bg-white/[0.06] text-text' : 'border-white/10 text-muted hover:text-text')}>
+              {useKnowledge ? <BookOpen size={13} /> : <BookX size={13} />}
               {useKnowledge ? t('chat.knowledgeOn') : t('chat.knowledgeOff')}
             </button>
             <span className="ml-auto" />
             {showTokens && <span className="font-mono text-[10.5px] text-faint">{t('composer.tokens', { n: estimateTokens(text) })}</span>}
-            <span className="hidden text-[10.5px] text-faint xl:inline">
-              {sendWithEnter ? <><Kbd>Enter</Kbd> {t('composer.send')} · <Kbd>Shift+Enter</Kbd> {t('composer.newline')}</> : <><Kbd>Ctrl+Enter</Kbd> {t('composer.send')}</>}
-            </span>
             {busy ? (
-              <button className="btn btn-danger btn-sm" onClick={onStop} title={t('composer.stopTip')}><Square size={11} fill="currentColor" />{t('composer.stop')}</button>
+              <button className="flex h-9 w-9 items-center justify-center rounded-full bg-text text-black transition-opacity hover:opacity-85"
+                onClick={onStop} title={t('composer.stopTip')} aria-label={t('composer.stop')}><Square size={12} fill="currentColor" /></button>
             ) : (
-              <button className="btn btn-primary btn-icon !rounded-md !px-1.5" disabled={!canSend} onClick={() => void submit()}
-                title={uploading ? t('photo.waitUpload') : t('composer.sendTip')} aria-label={t('composer.sendTip')}>
-                {uploading ? <Spinner size={15} className="!text-[#1a1204]" /> : <ArrowUp size={15} />}
+              <button className="flex h-9 w-9 items-center justify-center rounded-full bg-text text-black transition-[opacity,background-color] hover:opacity-85 disabled:cursor-not-allowed disabled:bg-white/[0.08] disabled:text-faint"
+                disabled={!canSend} onClick={() => void submit()}
+                title={uploading ? t('photo.waitUpload') : `${t('composer.sendTip')} (${sendWithEnter ? 'Enter' : 'Ctrl+Enter'})`} aria-label={t('composer.sendTip')}>
+                {uploading ? <Spinner size={15} className="!text-black" /> : <ArrowUp size={17} strokeWidth={2.25} />}
               </button>
             )}
           </div>

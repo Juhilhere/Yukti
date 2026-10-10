@@ -7,7 +7,8 @@ import { cx } from '../../lib/format';
 import { PageHeader } from '../../components/ui';
 
 /** Any of these permissions opens the admin area. */
-export const ADMIN_PERMS = ['admin', 'users.manage', 'ai.settings', 'usage.view', 'backup.manage', 'models.manage', 'developer', 'audit.export'];
+export const ADMIN_PERMS = ['admin', 'users.manage', 'ai.settings', 'usage.view', 'backup.manage', 'models.manage', 'developer', 'audit.export',
+  'queue.view', 'research.manage'];
 
 export const ADMIN_TABS: { to: string; label: string; perm: string | string[] }[] = [
   { to: 'users', label: 'Users', perm: 'users.manage' },
@@ -17,6 +18,8 @@ export const ADMIN_TABS: { to: string; label: string; perm: string | string[] }[
   { to: 'backup', label: 'Backup & export', perm: ['backup.manage', 'audit.export'] },
   { to: 'policies', label: 'Policies & Laya', perm: 'admin' },
   { to: 'models', label: 'Models', perm: 'models.manage' },
+  { to: 'queue', label: 'Work queue', perm: 'queue.view' },
+  { to: 'research', label: 'Research layer', perm: 'research.manage' },
   { to: 'features', label: 'New abilities', perm: 'models.manage' },
   { to: 'developer', label: 'Developer', perm: 'developer' },
 ];
@@ -54,6 +57,8 @@ export default function AdminLayout() {
     models: t('admin.tab.models'),
     features: t('admin.tab.features'),
     developer: t('admin.tab.developer'),
+    queue: t('admin.tab.queue'),
+    research: t('admin.tab.research'),
   };
   return (
     <div className="flex h-full flex-col">

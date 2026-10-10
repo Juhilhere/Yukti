@@ -230,6 +230,8 @@ class Laya:
         d = {"intent": intent, "department": dept, "urgency": round(urg, 2), "needs_review": needs_review, "sensitivity": sens,
              "route": route, "confidence": round(conf, 3), "abstain": abstain, "latency_ms": round(dt, 2),
              "model_version": f"{VERSION}+{self.runtime}"}
+        from .workqueue import select_worker  # queue selection is part of the typed decision
+        d["worker"] = select_worker(d, has_attachment, text)
         # what people ask (and what is read from their photos) is never stored: only its length and a short fingerprint
         ex("INSERT INTO laya_log(text, decision_json, latency_ms, at) VALUES(?,?,?,?)", (log_ref(text), j(d), dt, now_iso()))
         return d

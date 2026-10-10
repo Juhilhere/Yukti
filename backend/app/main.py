@@ -20,6 +20,7 @@ from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import admin, attachments, audit, chat, engine, journal, laya, mrpl, production, rag, seed, speech
+from . import graph, kvcache, lanes, ledger, perf_profiles, research, sandbox, scan_findings, vectors, workbench, workqueue
 from .auth import Ctx, current, err, notify, router as auth_router, user_by_id
 from .config import CLEARANCE_LABELS, CLEARANCE_BY_LABEL, DEMO_MODE, REPORTS, ROOT, VERSION, WEB_DIST, has_nvidia_gpu
 from . import scope
@@ -31,6 +32,8 @@ from .i18n import answer_language_instruction, get_lang, tr, tr_list
 app = FastAPI(title="Yukti — Sovereign Industrial AI Workbench", version=VERSION, docs_url="/api/docs", openapi_url="/api/openapi.json")
 app.include_router(auth_router)
 app.include_router(admin.router)
+from .routes_work import router as _work_router  # noqa: E402
+app.include_router(_work_router)
 
 # ------------------------------------------------------------------ offline guard (egress block)
 _ALLOWED_HOSTS = {"127.0.0.1", "localhost", "::1", "0.0.0.0"}
@@ -79,7 +82,8 @@ def install_guard() -> None:
     bind = os.environ.get("YUKTI_HOST", "")
     if bind:
         _ALLOWED_HOSTS.add(bind)
-    for u in (engine.DEFAULT_URLS.get("bionic"), engine.DEFAULT_URLS.get("vllm"), engine.DEFAULT_URLS.get("ollama")):
+    for u in (engine.DEFAULT_URLS.get("bionic"), engine.DEFAULT_URLS.get("vllm"), engine.DEFAULT_URLS.get("ollama"),
+              os.environ.get("YUKTI_EMBED_URL")):
         h = urlparse(u or "").hostname  # engine addresses configured through environment variables
         if h:
             _ALLOWED_HOSTS.add(h)
@@ -110,6 +114,7 @@ def _prepare_knowledge() -> None:
             STARTUP.update(stage=f"Preparing knowledge base ({done + 1}/{total + 4})", done=done, total=total + 4)
         seed.ingest_examples(prog)
         seed.seed_workflows()
+        graph.rebuild()  # links between assets, documents, procedures and records (graph-aware retrieval)
         STARTUP.update(stage="Loading MRPL public information", done=STARTUP["total"] - 4)
         mrpl.ensure_public_docs()
         seed.refresh_alert_notifications()
@@ -128,12 +133,20 @@ def startup() -> None:
     # ingestion jobs that were running when the server stopped will never finish: say so instead of spinning forever
     ex("UPDATE jobs SET status='error', error='Interrupted by a server restart - upload the file again.', updated_at=? "
        "WHERE status IN ('queued','running')", (now_iso(),))
+    rec = workqueue.recover()  # durable queue: background work that was running is queued again
+    if any(rec.values()):
+        engine.log(f"[queue] after restart: {rec}")
     seed.run(ingest=False)          # accounts, departments, example assets: fast
+    seed.seed_example_assets()      # upgrades: example assets added in later versions (asset register ledger)
     seed.ensure_top_management()    # upgrades: somebody must hold the Top management role (demo: sample account; else: tell the admin)
     mrpl.ensure_departments()
     threading.Thread(target=_photo_sweeper, daemon=True, name="photo-sweeper").start()
     laya.get()
     install_guard()
+    sandbox.cleanup()
+    if os.environ.get("YUKTI_SYNC_STARTUP") != "1":
+        lanes.start_sweeper()   # approver lanes: escalation when not acknowledged, follow-up when overdue
+        vectors.start()         # dense retrieval, only when a BGE-M3 model is installed
     engine.cleanup_orphans()
     if os.environ.get("YUKTI_SYNC_STARTUP") == "1":
         _prepare_knowledge()        # tests: deterministic
@@ -157,6 +170,8 @@ def startup() -> None:
 
 def shutdown() -> None:
     engine.unload()
+    vectors.stop()
+    research.stop()
     speech.stop(wait=False)  # never waits for a recogniser that is still starting (it dies with the server anyway)
 
 
@@ -333,8 +348,15 @@ def load_model(body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str, A
         raise err(422, "invalid", f"'{local['name']}' is a model file; it runs on the built-in llama.cpp engine, not {engine.ENGINE_META[eid][0]}.")
     if not local and eid == "llamacpp":
         raise err(422, "invalid", "That model file was not found. Choose a model listed under the Yukti models folder, LM Studio or the Ollama library.")
-    res = engine.load(eid, body["model_id"], body.get("load_config") or {})
-    set_setting("last_loaded_model", {"engine": eid, "model_id": body["model_id"], "load_config": body.get("load_config") or {}}, ctx.actor)
+    cfg = body.get("load_config") or {}
+    if body.get("profile") and eid == "llamacpp":  # a validated Performance Engine profile; explicit settings still win
+        from . import perf_profiles
+        pid = perf_profiles.select(local, perf_profiles.free_vram_mb()) if body["profile"] == "auto" else body["profile"]
+        if pid not in perf_profiles.PROFILES:
+            raise err(422, "invalid", "Unknown performance profile.")
+        cfg = perf_profiles.apply(pid, cfg)
+    res = engine.load(eid, body["model_id"], cfg)
+    set_setting("last_loaded_model", {"engine": eid, "model_id": body["model_id"], "load_config": cfg}, ctx.actor)
     audit.write(ctx.actor, "model.load", f"model:{body['model_id']}", {"engine": body.get("engine"), "config": body.get("load_config")})
     return _engine_out(res)
 
@@ -695,6 +717,13 @@ async def regenerate(cid: str, body: dict[str, Any], ctx: Ctx = Depends(current)
                                        images=last_user["images"]))
 
 
+@app.post("/api/chats/{cid}/messages/{mid}/followups")
+async def message_followups(cid: str, mid: str, ctx: Ctx = Depends(current)) -> dict[str, Any]:
+    if not q1("SELECT 1 FROM chats WHERE id=? AND user_id=?", (cid, ctx.user["id"])):
+        raise err(404, "not_found", "Chat not found")
+    return {"followups": await chat.followups(cid, mid)}
+
+
 @app.post("/api/chats/{cid}/stop")
 def stop(cid: str, ctx: Ctx = Depends(current)) -> dict[str, Any]:
     if not q1("SELECT 1 FROM chats WHERE id=? AND user_id=?", (cid, ctx.user["id"])):
@@ -952,13 +981,7 @@ def grants(ctx: Ctx = Depends(current)) -> list[dict[str, Any]]:
 
 # ------------------------------------------------------------------ assets, alerts, notifications
 def _items(tag: str) -> list[dict[str, Any]]:
-    today = date.today()
-    out = []
-    for it in q("SELECT * FROM ledger_items WHERE tag=? ORDER BY expires_on", (tag,)):
-        dl = (date.fromisoformat(it["expires_on"]) - today).days if it["expires_on"] else None
-        st = "expired" if dl is not None and dl < 0 else "amber" if dl is not None and dl <= 30 else "green"
-        out.append({"type": it["type"], "ref_no": it["ref_no"], "issued_on": it["issued_on"], "expires_on": it["expires_on"], "days_left": dl, "status": st})
-    return out
+    return ledger.items(tag)
 
 
 @app.get("/api/assets")
@@ -991,15 +1014,75 @@ def asset(tag: str, ctx: Ctx = Depends(current)) -> dict[str, Any]:
 
 @app.get("/api/alerts")
 def alerts(ctx: Ctx = Depends(current)) -> list[dict[str, Any]]:
-    today = date.today()
+    """Ledger entries inside their alert window (each category has its own lead time), visible to this person."""
     out = []
-    for r in q("""SELECT l.*, a.name, a.unit, a.owner_department FROM ledger_items l JOIN assets a ON a.tag=l.tag
-                  WHERE l.expires_on <= ? ORDER BY l.expires_on""", ((today + timedelta(days=30)).isoformat(),)):
+    for r in ledger.due_items():
         if not scope.asset_visible(ctx.subject, r):
             continue
-        dl = (date.fromisoformat(r["expires_on"]) - today).days
-        out.append({"id": r["id"], "severity": "red" if dl <= 7 else "amber", "title": tr(f"{r['tag']} {r['type']} " + (f"expired {-dl} d ago" if dl < 0 else f"expires in {dl} d")),
-                    "detail": f"{r['name']} · {r['ref_no']}", "tag": r["tag"], "due": r["expires_on"], "created_at": now_iso()})
+        dl = r["days_left"] if r["what"] == "expiry" else r["warranty_days_left"]
+        what = r["type"] if r["what"] == "expiry" else "warranty"
+        out.append({"id": r["id"], "severity": "red" if dl <= 7 else "amber", "category": r["category"],
+                    "title": tr(f"{r['tag']} {what} " + (f"expired {-dl} d ago" if dl < 0 else f"expires in {dl} d")),
+                    "detail": f"{r['name']} · {r['ref_no'] or r['serial'] or ''}".rstrip(" ·"), "tag": r["tag"],
+                    "due": r["expires_on"] if r["what"] == "expiry" else r["warranty_until"], "created_at": now_iso()})
+    return out
+
+
+@app.get("/api/ledger/categories")
+def ledger_categories(ctx: Ctx = Depends(current)) -> list[dict[str, Any]]:
+    return [{"id": k, "label": tr(v["label"]), "alert_days": v["alert_days"], "interval_months": v["interval_months"]}
+            for k, v in ledger.CATEGORIES.items()]
+
+
+@app.post("/api/assets")
+def create_asset(body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str, Any]:
+    """Register a purchased or installed asset in the digital ledger (stores, HODs, refinery management)."""
+    ctx.require("assets.edit")
+    if body.get("owner_department") and body["owner_department"] != ctx.user["department"] and not scope.plant_wide(ctx.subject):
+        raise err(403, "policy_denied", "You can register assets only for your own department.")
+    body = {**body, "owner_department": body.get("owner_department") or ctx.user["department"]}
+    try:
+        a = ledger.register_asset(body)
+    except FileExistsError as e:
+        raise err(409, "conflict", str(e))
+    except ValueError as e:
+        raise err(422, "invalid", str(e))
+    audit.write(ctx.actor, "asset.registered", f"asset:{a['tag']}", {"owner_department": a["owner_department"]})
+    return a
+
+
+def _ledger_asset(tag: str, ctx: Ctx) -> dict[str, Any]:
+    ctx.require("assets.edit")
+    a = q1("SELECT * FROM assets WHERE tag=?", (tag,))
+    if not a or not scope.asset_visible(ctx.subject, a):
+        raise err(404, "not_found", "Asset not found")
+    if a["owner_department"] != ctx.user["department"] and not scope.plant_wide(ctx.subject) and "stores" not in ctx.subject.roles:
+        raise err(403, "policy_denied", "Only the owning department, stores or refinery management can change this ledger.")
+    return a
+
+
+@app.post("/api/assets/{tag}/ledger")
+def add_ledger_item(tag: str, body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str, Any]:
+    a = _ledger_asset(tag, ctx)
+    try:
+        it = ledger.add_item(a["tag"], body, ctx.actor)
+    except ValueError as e:
+        raise err(422, "invalid", str(e))
+    audit.write(ctx.actor, "ledger.added", f"asset:{a['tag']}", {"category": it["category"], "expires_on": it["expires_on"]})
+    return it
+
+
+@app.post("/api/ledger/{iid}/renew")
+def renew_ledger_item(iid: str, body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str, Any]:
+    it = q1("SELECT * FROM ledger_items WHERE id=?", (iid,))
+    if not it:
+        raise err(404, "not_found", "Ledger entry not found.")
+    _ledger_asset(it["tag"], ctx)
+    try:
+        out = ledger.renew(iid, body)
+    except ValueError as e:
+        raise err(422, "invalid", str(e))
+    audit.write(ctx.actor, "ledger.renewed", f"ledger:{iid}", {"expires_on": out["expires_on"]})
     return out
 
 
@@ -1057,16 +1140,26 @@ def _allowed_actions(f: dict[str, Any], ctx: Ctx) -> list[str]:
 
 def _finding_out(f: dict[str, Any], ctx: Ctx) -> dict[str, Any]:
     a = user_by_id(f["approver_id"]) or {}
+    proc = q1("SELECT id, doc_number, revision, title FROM documents WHERE id=?", (f["procedure_doc_id"],)) if f.get("procedure_doc_id") else None
+    lane = f.get("lane") or lanes.lane_for(f["discipline"])
     return {**{k: f[k] for k in ("id", "title", "tag", "discipline", "severity", "state", "due_date", "evidence", "source_document_id", "page", "created_at")},
             "approver_name": a.get("display_name"), "history": uj(f["history_json"], []), "is_example": bool(f.get("is_example")),
-            "discipline_approver": _is_discipline_approver(f, ctx), "allowed_actions": _allowed_actions(f, ctx)}
+            "discipline_approver": _is_discipline_approver(f, ctx), "allowed_actions": _allowed_actions(f, ctx),
+            "lane": lane, "lane_label": tr(lanes.LANES.get(lane, {}).get("label", lane.title())),
+            "owner_department": f.get("owner_department") or scope.finding_department(f),
+            "procedure": proc, "evidence_region": uj(f.get("evidence_region_json"), None), "verification": uj(f.get("verification_json"), []),
+            "note_url": f"/api/reports/{f['note_report_id']}/file" if f.get("note_report_id") else None,
+            "acknowledged_at": f.get("acknowledged_at"),
+            "open_review_items": (q1("SELECT COUNT(*) n FROM review_items WHERE finding_id=? AND state='OPEN'", (f["id"],)) or {"n": 0})["n"]}
 
 
 @app.get("/api/findings")
 def findings(ctx: Ctx = Depends(current)) -> list[dict[str, Any]]:
     if "findings.view" not in ctx.perms and "inbox" not in ctx.perms:
         return []
-    return [_finding_out(f, ctx) for f in q("SELECT * FROM findings ORDER BY created_at DESC") if _finding_visible(f, ctx)]
+    # a DRAFT (scan waiting for a person to check uncertain fields) is shown to its reviewers only
+    return [_finding_out(f, ctx) for f in q("SELECT * FROM findings WHERE state<>'DISMISSED' ORDER BY created_at DESC")
+            if _finding_visible(f, ctx) and (f["state"] != "DRAFT" or "scan.review" in ctx.perms)]
 
 
 @app.post("/api/findings/{fid}/action")
@@ -1081,9 +1174,11 @@ def finding_action(fid: str, body: dict[str, Any], ctx: Ctx = Depends(current)) 
     hist = uj(f["history_json"], [])
     hist.append({"at": now_iso(), "event": "NOTE" if act == "note" else to, "by": ctx.user["display_name"], "note": body.get("note", "")})
     approver = f["approver_id"]
-    if act == "escalate":
-        approver = _escalation_user() or approver
+    if act == "escalate":  # one level up the approver chain: department HOD -> refinery management -> top management
+        approver = lanes.next_approver(approver, f.get("owner_department") or scope.finding_department(f)) or _escalation_user() or approver
         notify(approver, "escalation", f"Escalated finding: {f['title']}", body.get("note", ""), "/inbox")
+    if act == "acknowledge":
+        ex("UPDATE findings SET acknowledged_at=? WHERE id=?", (now_iso(), fid))
     ex("UPDATE findings SET state=?, history_json=?, approver_id=? WHERE id=?", (to, j(hist), approver, fid))
     audit.write(ctx.actor, f"finding.{act}", f"finding:{fid}", {"from": f["state"], "to": to})
     return _finding_out(q1("SELECT * FROM findings WHERE id=?", (fid,)), ctx)
@@ -1213,15 +1308,27 @@ def dossier_report(body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[st
 
 @app.get("/api/reports")
 def reports(ctx: Ctx = Depends(current)) -> list[dict[str, Any]]:
-    return q("SELECT id, kind, file_name, sha256, created_at FROM reports WHERE created_by=? ORDER BY created_at DESC", (ctx.user["id"],))
+    return [{**r, "url": f"/api/reports/{r['id']}/file"} for r in
+            q("SELECT id, kind, file_name, sha256, created_at, title, task_id FROM reports WHERE created_by=? ORDER BY created_at DESC LIMIT 200",
+              (ctx.user["id"],))]
 
 
 @app.get("/api/reports/{rid}/file")
 def report_file(rid: str, ctx: Ctx = Depends(current)) -> FileResponse:
-    r = q1("SELECT * FROM reports WHERE id=? AND created_by=?", (rid, ctx.user["id"]))
-    if not r:
+    """Own reports and deliverables; an approval note also to everyone who may see its finding."""
+    r = q1("SELECT * FROM reports WHERE id=?", (rid,))
+    ok = bool(r) and r["created_by"] == ctx.user["id"]
+    if r and not ok and r["kind"] == "approval_note":
+        f = q1("SELECT * FROM findings WHERE note_report_id=?", (rid,))
+        ok = bool(f) and _finding_visible(f, ctx)
+    if r and not ok and r.get("task_id"):
+        t = workqueue.get(r["task_id"])
+        ok = bool(t) and t["user_id"] == ctx.user["id"]
+    if not ok or not os.path.exists(r["file_path"]):
         raise err(404, "not_found", "Report not found")
-    return FileResponse(r["file_path"], filename=r["file_name"], media_type="application/pdf")
+    from .deliverables import MIME
+    return FileResponse(r["file_path"], filename=r["file_name"],
+                        media_type=MIME.get(os.path.splitext(r["file_name"])[1].lower(), "application/octet-stream"))
 
 
 # ------------------------------------------------------------------ audit, server, admin

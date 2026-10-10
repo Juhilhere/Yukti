@@ -17,8 +17,8 @@ export function MicButton({ state, onToggle, unavailable, onUnavailable, disable
     return (
       <Tip side="top" text={<><div className="font-medium">{t('voice.unavailable')}</div>{unavailable && <div className="mt-0.5 text-muted">{unavailable}</div>}</>}>
         <button type="button" aria-disabled="true" aria-label={t('voice.unavailable')} onClick={onUnavailable}
-          className="btn btn-ghost btn-sm cursor-not-allowed text-faint">
-          <MicOff size={15} /><span className="hidden md:inline">{t('voice.speak')}</span>
+          className="flex h-9 w-9 cursor-not-allowed items-center justify-center rounded-full text-faint hover:bg-white/[0.05]">
+          <MicOff size={17} strokeWidth={1.75} />
         </button>
       </Tip>
     );
@@ -26,9 +26,9 @@ export function MicButton({ state, onToggle, unavailable, onUnavailable, disable
   const label = recording ? t('voice.stopTip') : t('voice.startTip');
   return (
     <button type="button" onClick={onToggle} disabled={disabled || working} aria-label={label} title={label} aria-pressed={recording}
-      className={cx('btn btn-sm', recording ? 'btn-danger' : 'btn-ghost text-muted hover:text-text')}>
-      {working ? <Spinner size={14} /> : recording ? <Square size={12} fill="currentColor" /> : <Mic size={15} />}
-      <span className="hidden md:inline">{recording ? t('voice.stop') : t('voice.speak')}</span>
+      className={cx('flex h-9 w-9 items-center justify-center rounded-full transition-colors disabled:opacity-50',
+        recording ? 'bg-danger/15 text-red-300 hover:bg-danger/25' : 'text-muted hover:bg-white/[0.07] hover:text-text')}>
+      {working ? <Spinner size={14} /> : recording ? <Square size={12} fill="currentColor" /> : <Mic size={17} strokeWidth={1.75} />}
     </button>
   );
 }

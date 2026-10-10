@@ -100,3 +100,26 @@ rules:
     effect: allow
     resources: [guard]
     when: "resource.category in ['general', 'safety_procedure', 'asset_info', 'commercial_confidential', 'personal_data']"
+
+  # ---------- workbench tools (agentic work) ----------
+  # Tools act for the person who asked, with that person's rights: document tools still check every document.
+  - id: T-RESEARCH-ISOLATED
+    effect: deny
+    resources: [tool, document]
+    when: "'layer' in env and env['layer'] == 'research'"
+    reason: "The research layer is isolated: experimental models get no plant documents, tools or enterprise systems."
+  - id: T-NO-CONTRACTOR-CODE
+    effect: deny
+    resources: [tool]
+    when: "resource.tool_class == 'execute_code' and 'contractor' in subject.roles"
+    reason: "Contract workers cannot run code on the plant server."
+  - id: T-TOOLS
+    effect: allow
+    resources: [tool]
+    actions: [use]
+    when: "resource.tool_class in ['read', 'compute', 'write_file'] and subject.clearance >= 0"
+  - id: T-SANDBOX
+    effect: allow
+    resources: [tool]
+    actions: [use]
+    when: "resource.tool_class == 'execute_code' and subject.clearance >= 1"

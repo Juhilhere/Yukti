@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, ChevronRight, Folder, FolderPlus, MessageSquare, MoreHorizontal, Pencil, Plus, Search, Trash2, FolderInput } from 'lucide-react';
+import { ChevronDown, ChevronRight, Folder, FolderPlus, MoreHorizontal, Pencil, Search, SquarePen, Trash2, FolderInput } from 'lucide-react';
 import { api, errMsg } from '../../lib/api';
 import { qk } from '../../lib/queries';
 import type { ChatSummary, Project } from '../../lib/types';
@@ -76,9 +76,8 @@ export function ChatSidebar({ activeId, onNew }: { activeId?: string; onNew: () 
     <div key={c.id}
       onClick={() => renaming?.id !== c.id && nav(`/chat/${c.id}`)}
       onContextMenu={(e) => { e.preventDefault(); setMenu({ chat: c, x: e.clientX, y: e.clientY }); }}
-      className={cx('group flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-[12.5px]', indent && 'ml-3',
-        activeId === c.id ? 'bg-surface-3 text-text' : 'text-muted hover:bg-surface-2 hover:text-text')}>
-      <MessageSquare size={12} className="shrink-0 opacity-60" />
+      className={cx('group relative flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-[13.5px] transition-colors', indent && 'ml-3',
+        activeId === c.id ? 'bg-white/[0.08] text-text' : 'text-text/85 hover:bg-white/[0.04] hover:text-text')}>
       {renaming?.id === c.id ? (
         <input autoFocus className="input !py-0 !px-1 text-[12.5px]" value={renaming.title}
           onClick={(e) => e.stopPropagation()}
@@ -99,20 +98,24 @@ export function ChatSidebar({ activeId, onNew }: { activeId?: string; onNew: () 
   );
 
   return (
-    <aside className="flex w-[248px] shrink-0 flex-col border-r border-border bg-surface">
-      <div className="space-y-2 p-2.5">
-        <div className="flex gap-1.5">
-          <button className="btn btn-cyan flex-1 justify-center" onClick={onNew} title={t('chat.side.newChatTip')}>
-            <Plus size={14} />{t('btn.newChat')}<Kbd>Ctrl+N</Kbd>
-          </button>
-          <button className="btn btn-icon" title={t('chat.side.newFolder')} onClick={() => setNewProj('')}><FolderPlus size={14} /></button>
-        </div>
-        <div className="relative">
-          <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-faint" />
-          <input className="input !pl-7 !py-1 text-[12px]" placeholder={t('chat.side.search')} value={q} onChange={(e) => setQ(e.target.value)} />
-        </div>
+    <aside className="flex w-[264px] shrink-0 flex-col border-r border-white/[0.06] bg-surface">
+      {/* Grok-style: quiet text rows for the actions, search as a borderless field, then the list */}
+      <div className="space-y-0.5 px-2 pb-2 pt-3">
+        <button className="group flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-[14px] text-text hover:bg-white/[0.04]" onClick={onNew} title={t('chat.side.newChatTip')}>
+          <SquarePen size={16} strokeWidth={1.75} className="text-muted group-hover:text-text" />
+          <span className="flex-1">{t('btn.newChat')}</span>
+          <span className="hidden group-hover:inline"><Kbd>Ctrl+N</Kbd></span>
+        </button>
+        <button className="group flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-[14px] text-text hover:bg-white/[0.04]" onClick={() => setNewProj('')}>
+          <FolderPlus size={16} strokeWidth={1.75} className="text-muted group-hover:text-text" />
+          <span className="flex-1">{t('chat.side.newFolder')}</span>
+        </button>
+        <label className="flex items-center gap-3 rounded-xl px-3 py-2 text-muted focus-within:bg-white/[0.04]">
+          <Search size={16} strokeWidth={1.75} className="shrink-0" />
+          <input className="w-full bg-transparent text-[14px] text-text outline-none placeholder:text-muted" placeholder={t('chat.side.search')} value={q} onChange={(e) => setQ(e.target.value)} />
+        </label>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-3">
+      <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3 pt-1">
         {(chats.isLoading || projects.isLoading) && <div className="flex justify-center py-6"><Spinner /></div>}
         {chats.error ? <ErrorBox className="mx-1" error={chats.error} onRetry={() => chats.refetch()} /> : null}
         {projList.map((p) => {
@@ -122,10 +125,10 @@ export function ChatSidebar({ activeId, onNew }: { activeId?: string; onNew: () 
           return (
             <div key={p.id} className="group/folder mb-1">
               <div className="flex items-center">
-                <button className="flex min-w-0 flex-1 items-center gap-1.5 rounded-md px-2 py-1 text-left text-[12px] text-muted hover:text-text"
+                <button className="flex min-w-0 flex-1 items-center gap-2 rounded-xl px-3 py-2 text-left text-[13.5px] text-muted hover:bg-white/[0.04] hover:text-text"
                   onClick={() => setCollapsed((s) => ({ ...s, [p.id]: !s[p.id] }))}>
                   {isC ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
-                  <Folder size={12} className="text-amber/80" />
+                  <Folder size={14} strokeWidth={1.75} />
                   <span className="flex-1 truncate font-medium">{p.name}</span>
                   <span className="font-mono text-[10px] text-faint">{items.length || p.chat_count || 0}</span>
                 </button>
@@ -139,7 +142,7 @@ export function ChatSidebar({ activeId, onNew }: { activeId?: string; onNew: () 
         })}
         {loose.length > 0 && (
           <>
-            {projList.length > 0 && <div className="label px-2 pb-1 pt-2">{t('chat.side.chats')}</div>}
+<div className="px-3 pb-1.5 pt-3 text-[13px] text-faint">{t('chat.side.chats')}</div>
             {loose.map((c) => row(c))}
           </>
         )}

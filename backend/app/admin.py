@@ -43,6 +43,10 @@ ROLE_DESC = {
     "contractor": "Contract worker — minimal access, no process chemistry",
     "approver:mechanical": "Approves mechanical findings", "approver:electrical": "Approves electrical findings",
     "approver:finance": "Approves finance findings",
+    "approver:hse": "Approves HSE findings", "approver:procurement": "Approves procurement findings",
+    "approver:management": "Approves management decisions",
+    "stores": "Stores / asset team — registers purchased and installed items in the asset ledger",
+    "researcher": "Research layer — experimental models only, isolated from plant documents and tools",
     "admin": "Platform administrator — users, AI settings, models, backups, usage",
 }
 
@@ -283,7 +287,11 @@ def ai_settings() -> dict[str, Any]:
     s = get_setting("ai_settings", {}) or {}
     return {"prediction": {**DEFAULT_PREDICTION, **(s.get("prediction") or {})}, "system_prompt": s.get("system_prompt", ""),
             "default_model_id": s.get("default_model_id"), "default_engine": s.get("default_engine", "llamacpp"),
-            "default_load_config": {**DEFAULT_LOAD, **(s.get("default_load_config") or {})}, "autoload": s.get("autoload", True)}
+            "default_load_config": {**DEFAULT_LOAD, **(s.get("default_load_config") or {})}, "autoload": s.get("autoload", True),
+            # which model serves each worker of the queue (empty = the loaded chat model), and the hot KV cache
+            "worker_models": s.get("worker_models") or {}, "kv_ttl_s": int(s.get("kv_ttl_s", 1800)),
+            "kv_spill": bool(s.get("kv_spill", False)), "kv_spill_max_mb": int(s.get("kv_spill_max_mb", 4096)),
+            "performance_profile": s.get("performance_profile", "auto")}
 
 
 @router.get("/ai-settings")
@@ -326,6 +334,21 @@ def put_ai(body: dict[str, Any], ctx: Ctx = Depends(current)) -> dict[str, Any]:
             raise err(422, "invalid", f"{param_label(f['label'], get_lang())}: '{pred.get(k)}' is not a valid value")
         pred[k] = v
     new["prediction"] = pred
+    from .workqueue import WORKERS
+    wm = new.get("worker_models") or {}
+    if not isinstance(wm, dict) or any(w not in WORKERS or not isinstance(v, dict) for w, v in wm.items()):
+        raise err(422, "invalid", "Worker models: unknown worker.")
+    new["worker_models"] = {w: {"model_id": str(v.get("model_id") or "")[:300], "prediction": v.get("prediction") or {}}
+                            for w, v in wm.items() if v.get("model_id") or v.get("prediction")}
+    try:
+        new["kv_ttl_s"] = max(60, min(int(new["kv_ttl_s"]), 86400))
+        new["kv_spill_max_mb"] = max(256, min(int(new["kv_spill_max_mb"]), 262144))
+    except (TypeError, ValueError):
+        raise err(422, "invalid", "KV cache: TTL and size must be numbers.")
+    new["kv_spill"] = bool(new.get("kv_spill"))
+    from .perf_profiles import PROFILES
+    if new.get("performance_profile") not in ("auto", "off", *PROFILES):
+        raise err(422, "invalid", "Unknown performance profile.")
     set_setting("ai_settings", new, ctx.actor)
     audit.write(ctx.actor, "admin.ai_settings.updated", "ai_settings", {"keys": list(body.keys())})
     return ai_settings()

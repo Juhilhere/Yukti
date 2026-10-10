@@ -1,7 +1,7 @@
 import { memo, useState } from 'react';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { AlertTriangle, Brain, Check, ChevronDown, ChevronRight, Copy, Gauge, Info, RefreshCw, Route, ShieldCheck, ShieldX, ShieldAlert, ThumbsDown, ThumbsUp } from 'lucide-react';
+import { AlertTriangle, Brain, Check, ChevronDown, ChevronRight, Copy, CornerDownRight, Gauge, Info, RefreshCw, Route, ShieldCheck, ShieldX, ShieldAlert, ThumbsDown, ThumbsUp } from 'lucide-react';
 import { api, errMsg } from '../../lib/api';
 import { useT } from '../../lib/i18n';
 import { Modal } from '../Modal';
@@ -13,6 +13,7 @@ import { FactsTable } from './FactsTable';
 import { DeniedCard, SourcesRow } from './SourcesRow';
 import { flashSource, linkCitations, type UIMessage } from './types';
 import { PhotoReadingCard, UserPhotos } from './PhotoParts';
+import { TaskBadge, TurnDetails } from './TurnDetails';
 
 function urgencyPct(u: unknown): number {
   if (typeof u === 'number') return u <= 1 ? u * 100 : u <= 5 ? (u / 5) * 100 : Math.min(100, u);
@@ -116,9 +117,9 @@ function FeedbackButtons({ m }: { m: UIMessage }) {
   return (
     <>
       <button className={cx('btn btn-ghost btn-icon', rating > 0 ? 'text-ok' : 'text-muted')} title={t('chat.helpful')} aria-pressed={rating > 0}
-        onClick={() => { setComment(''); setPending(1); }}><ThumbsUp size={13} fill={rating > 0 ? 'currentColor' : 'none'} /></button>
+        onClick={() => { setComment(''); setPending(1); }}><ThumbsUp size={15} fill={rating > 0 ? 'currentColor' : 'none'} /></button>
       <button className={cx('btn btn-ghost btn-icon', rating < 0 ? 'text-amber' : 'text-muted')} title={t('chat.notHelpful')} aria-pressed={rating < 0}
-        onClick={() => { setComment(''); setPending(-1); }}><ThumbsDown size={13} fill={rating < 0 ? 'currentColor' : 'none'} /></button>
+        onClick={() => { setComment(''); setPending(-1); }}><ThumbsDown size={15} fill={rating < 0 ? 'currentColor' : 'none'} /></button>
       <Modal open={pending !== null} onClose={() => setPending(null)} width={440}
         title={<span className="flex items-center gap-2">{pending === 1 ? <ThumbsUp size={14} className="text-ok" /> : <ThumbsDown size={14} className="text-amber" />}{pending === 1 ? t('chat.helpful') : t('chat.notHelpful')}</span>}
         footer={<>
@@ -183,9 +184,8 @@ function StatsFooter({ m, canRegen, onRegen, details }: {
     try { await navigator.clipboard.writeText(m.content); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch { /* ignore */ }
   };
   return (
-    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] text-faint">
-      {s && <StatsLine s={s} />}
-      <span className="ml-auto flex items-center gap-0.5 font-sans">
+    <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] text-faint">
+      <span className="-ml-1.5 flex items-center gap-0.5 font-sans">
         {details && (
           <button className={cx('btn btn-ghost btn-sm !px-1.5 text-[11px]', details.open ? 'text-text' : 'text-muted')} data-details="toggle"
             title={t('declutter.details.tip')} aria-expanded={details.open} onClick={details.toggle}>
@@ -193,15 +193,20 @@ function StatsFooter({ m, canRegen, onRegen, details }: {
           </button>
         )}
         <FeedbackButtons m={m} />
-        <button className="btn btn-ghost btn-icon text-muted" title={t('btn.copy')} onClick={copy}>{copied ? <Check size={13} className="text-ok" /> : <Copy size={13} />}</button>
-        {canRegen && <button className="btn btn-ghost btn-icon text-muted" title={t('chat.regenerate')} onClick={onRegen}><RefreshCw size={13} /></button>}
+        <button className="btn btn-ghost btn-icon text-muted" title={t('btn.copy')} onClick={copy}>{copied ? <Check size={15} className="text-ok" /> : <Copy size={15} />}</button>
+        {canRegen && <button className="btn btn-ghost btn-icon text-muted" title={t('chat.regenerate')} onClick={onRegen}><RefreshCw size={15} /></button>}
       </span>
+      {s && <StatsLine s={s} />}
     </div>
   );
 }
 
-function AssistantMessageImpl({ m, isLast, busy, showStats, technical = true, question, onRegenerate, withPhotos }: {
+function AssistantMessageImpl({ m, isLast, busy, showStats, technical = true, question, onRegenerate, withPhotos, chatId, onAsk }: {
   m: UIMessage; isLast: boolean; busy: boolean; showStats: boolean; question?: string; onRegenerate?: () => void;
+  /** asks one of the suggested follow-up questions */
+  onAsk?: (question: string) => void;
+  /** the chat (for the per-turn checkpoints) */
+  chatId?: string;
   /** administrators see the router / guardrail chips and speed figures on every answer; everyone else behind "Details" */
   technical?: boolean;
   /** the question came with photos (shows "Reading the photo…" until the photo event arrives) */
@@ -228,15 +233,17 @@ function AssistantMessageImpl({ m, isLast, busy, showStats, technical = true, qu
   const hasHeader = m.route || m.guard;
   const hasDetails = !!(m.route || m.guard || m.stats);
   return (
-    <div className="group flex gap-3">
-      <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-cyan/30 bg-cyan/10 font-mono text-[11px] font-bold text-cyan">Y</div>
-      <div className="min-w-0 flex-1">
-        <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
-          <span className="text-[12px] font-semibold">Yukti</span>
-          {technical && m.route && <RouteChip route={m.route} />}
-          {technical && m.guard && <GuardChip guard={m.guard} />}
-          {!hasHeader && m.streaming && <span className="text-[11px] text-faint">{t('chat.routing')}</span>}
-        </div>
+    <div className="group">
+      {/* no avatar or name: the answer is plain text on the page, like Grok; the chips only appear when there is something to show */}
+      <div className="min-w-0">
+        {((technical && hasHeader) || m.task || (!hasHeader && m.streaming)) && (
+          <div className="mb-2 flex flex-wrap items-center gap-1.5">
+            {technical && m.route && <RouteChip route={m.route} />}
+            {technical && m.guard && <GuardChip guard={m.guard} />}
+            {m.task && <TaskBadge task={m.task} />}
+            {!hasHeader && m.streaming && <span className="text-[11px] text-faint">{t('chat.routing')}</span>}
+          </div>
+        )}
         {m.photo && <PhotoReadingCard photo={m.photo} />}
         {m.reasoning ? <Thinking text={m.reasoning} streaming={!!m.streaming && !m.content} technical={technical} /> : null}
         {waiting && <div className="flex items-center gap-2 py-1 text-[12px] text-muted"><Spinner size={12} />{withPhotos && !m.photo ? t('photo.reading') : t('chat.generating')}</div>}
@@ -260,6 +267,18 @@ function AssistantMessageImpl({ m, isLast, busy, showStats, technical = true, qu
             details={!technical && hasDetails ? { open: detailsOpen, toggle: () => setDetailsOpen((o) => !o) } : undefined} />
         )}
         {!m.streaming && !technical && detailsOpen && hasDetails && <AnswerDetails m={m} />}
+        {isLast && !busy && !m.streaming && onAsk && !!m.followups?.length && (
+          <div className="mt-4 flex flex-col items-start gap-0.5" aria-label={t('chat.followups')}>
+            {m.followups.map((f) => (
+              <button key={f} onClick={() => onAsk(f)}
+                className="group -ml-2 flex max-w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left text-[14px] text-muted transition-colors hover:bg-white/[0.04] hover:text-text">
+                <CornerDownRight size={14} className="shrink-0 text-faint group-hover:text-text" />
+                <span className="truncate">{f}</span>
+              </button>
+            ))}
+          </div>
+        )}
+        {!m.streaming && chatId && m.task && !m.id.startsWith('local-') && <TurnDetails chatId={chatId} messageId={m.id} />}
       </div>
     </div>
   );
@@ -273,7 +292,7 @@ export function UserMessage({ m }: { m: UIMessage }) {
     <div className="flex flex-col items-end gap-1.5">
       {images.length > 0 && <UserPhotos ids={images} />}
       {m.content && (
-        <div className="max-w-[80%] whitespace-pre-wrap break-words rounded-lg rounded-br-sm border border-border bg-surface-2 px-3 py-2 text-[13.5px]">
+        <div className="max-w-[80%] whitespace-pre-wrap break-words rounded-[22px] bg-surface-3 px-4 py-2.5 text-[15px] leading-relaxed">
           {m.content}
         </div>
       )}

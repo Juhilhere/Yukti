@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1000" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="g" cx="50%" cy="0%" r="70%"><stop offset="0" stop-color="#C9A96E" stop-opacity=".09"/><stop offset="1" stop-color="#C9A96E" stop-opacity="0"/></radialGradient>
+    <linearGradient id="c" x1="0" x2="1"><stop offset="0" stop-color="#EDEAE4" stop-opacity="0"/><stop offset=".4" stop-color="#EDEAE4" stop-opacity=".06"/><stop offset="1" stop-color="#EDEAE4" stop-opacity="0"/></linearGradient>
+  </defs>
+  <rect width="900" height="1000" fill="#000"/>
+  <rect width="900" height="1000" fill="url(#g)"/>
+  <g fill="none" stroke="url(#c)">
+    <path d="M-60 160 C120 90 260 210 430 150 S700 50 960 120"/><path d="M-60 210 C130 140 270 260 440 200 S710 100 970 170"/>
+    <path d="M-60 262 C140 192 282 312 452 252 S722 152 982 222"/><path d="M-60 316 C150 246 296 366 466 306 S736 206 996 276"/>
+  </g>
+  <g fill="none" stroke="#C9A96E" transform="translate(760 900)">
+    <circle r="380" stroke-opacity=".06"/><circle r="300" stroke-opacity=".09"/><circle r="220" stroke-opacity=".07" stroke-dasharray="2 6"/>
+    <circle r="260" stroke-opacity=".16" stroke-width="5" stroke-dasharray="1 16.3"/><circle r="130" stroke-opacity=".09"/>
+    <line x1="0" y1="0" x2="-200" y2="-165" stroke-opacity=".2"/>
+  </g>
+</svg>

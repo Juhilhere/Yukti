@@ -49,8 +49,9 @@ export function FactsTable({ facts, onCite }: { facts: Fact[]; onCite?: (sid: st
                   <button className="btn btn-sm !border-amber/40 !text-amber" onClick={() => setCmp(f)}><GitCompare size={12} />{t('facts.compare')}</button>
                 )}
                 {f.status === 'KNOWN' && f.candidates?.[0]?.source_id && (
-                  <button className="rounded bg-cyan/10 px-1.5 font-mono text-[10.5px] text-cyan hover:bg-cyan/20"
-                    onClick={() => onCite?.(f.candidates[0].source_id)}>{f.candidates[0].source_id}</button>
+                  <button className="max-w-[220px] truncate rounded border border-amber/20 px-1.5 font-mono text-[10.5px] text-amber/90 hover:bg-amber/10"
+                    title={f.candidates[0].source_label || undefined}
+                    onClick={() => onCite?.(f.candidates[0].source_id)}>{f.candidates[0].source_label || f.candidates[0].source_id}</button>
                 )}
               </td>
             </tr>
@@ -70,7 +71,7 @@ export function FactsTable({ facts, onCite }: { facts: Fact[]; onCite?: (sid: st
               {cmp.candidates.map((c, i) => (
                 <div key={i} className={cx('rounded-md border bg-surface-2 p-3', c.recommended ? 'border-ok/60' : 'border-border')}>
                   <div className="mb-2 flex items-center gap-2">
-                    <span className="rounded bg-cyan/10 px-1.5 font-mono text-[11px] text-cyan">{c.source_id}</span>
+                    <span className="truncate rounded border border-amber/20 px-1.5 font-mono text-[11px] text-amber/90" title={c.source_label || undefined}>{c.source_label || c.source_id}</span>
                     {c.recommended && <Badge tone="ok"><Star size={10} />{t('facts.recommended')}</Badge>}
                   </div>
                   <div className="font-mono text-[20px] font-semibold text-text">{c.value}</div>

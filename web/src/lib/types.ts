@@ -66,7 +66,12 @@ export type Source = {
   id: string; document_id: string; title: string; doc_number: string; revision: string; status: 'CURRENT' | 'SUPERSEDED';
   page: number; snippet: string; score: number; classification: string; department: string;
   is_example?: boolean; is_public?: boolean;
+  /** hybrid retrieval: exact locator and provenance of the cited passage */
+  record_id?: string | null; locator?: string | null; confidence?: number | null; ocr_confidence?: number | null;
+  channels?: string[] | null; graph_reason?: string | null; timestamp?: string | null; ingested_at?: string | null;
 };
+/** SSE "task" event: the worker of the durable queue that handles this turn. */
+export type ChatTask = { id: string; worker: string; label?: string; served_by?: { model: string; assigned: string | null; fallback: boolean } | null };
 export type Denied = { count: number; departments: string[] };
 export type FactCandidate = { value: string; source_id: string; source_label: string; revision: string; effective: string; recommended: boolean };
 export type Fact = {
@@ -96,6 +101,10 @@ export type Message = {
   images?: string[] | null;
   /** assistant messages: what was read in those photos */
   photo?: PhotoReading | null;
+  /** assistant messages: the queue task (worker) that produced the answer */
+  task?: ChatTask | null;
+  /** assistant messages: suggested next questions (made once, after the answer) */
+  followups?: string[] | null;
 };
 export type ChatDetail = {
   id: string; title: string; project_id: string | null; system_prompt: string | null;
@@ -119,7 +128,12 @@ export type AccessRequest = {
 };
 export type Grant = { id: string; scope: string; expires_at: string; approved_by: string };
 
-export type AssetItem = { type: string; ref_no: string; expires_on: string | null; days_left: number | null; status: string };
+export type AssetItem = {
+  type: string; ref_no: string; expires_on: string | null; days_left: number | null; status: string;
+  id?: string; category?: string | null; category_label?: string | null; issued_on?: string | null; alert_days?: number | null;
+  vendor?: string | null; serial?: string | null; location?: string | null; owner?: string | null; certificate?: string | null;
+  interval_months?: number | null; warranty_until?: string | null; warranty_days_left?: number | null;
+};
 export type Asset = {
   tag: string; name: string; unit: string; class: string; vendor: string; serial: string; location: string;
   owner_department: string; criticality: string; items: AssetItem[]; is_example?: boolean;
@@ -133,6 +147,11 @@ export type Finding = {
   id: string; title: string; tag: string; discipline: string; severity: string; state: string; due_date: string;
   evidence: string; source_document_id: string; page: number; approver_name: string; created_at: string;
   allowed_actions?: string[]; discipline_approver?: boolean; is_example?: boolean;
+  lane?: string; lane_label?: string; owner_department?: string | null;
+  procedure?: { id: string; doc_number: string; revision: string; title: string } | null;
+  evidence_region?: { x: number; y: number; w: number; h: number; page?: number } | null;
+  verification?: { check: string; result: string; detail?: string }[];
+  note_url?: string | null; acknowledged_at?: string | null; open_review_items?: number;
   history?: { at: string; event: string; by: string; note?: string | null }[];
 };
 
@@ -146,10 +165,16 @@ export type ProductionOverview = {
 export type ProdUnit = {
   code: string; name: string; capacity: string | number | null; unit: string; capacity_kt_month: number | null; source_url: string | null;
   feed: string; yields: Record<string, number | null>; enabled: boolean;
+  planned_down_days?: number | null;
 };
-export type ProdProduct = { name: string; price_usd_t: number | null; min_kt: number | null; max_kt: number | null };
+export type ProdProduct = {
+  name: string; price_usd_t: number | null; min_kt: number | null; max_kt: number | null;
+  demand_history?: { month: string; kt: number | null }[]; inventory_kt?: number | null; storage_max_kt?: number | null;
+  dispatch_max_kt?: number | null; contract_min_kt?: number | null; crack_usd_t?: number | null; spec_note?: string | null;
+};
 export type ProductionModel = {
   units: ProdUnit[]; products: ProdProduct[]; crude_cost_usd_t: number | null; notes: string; complete: boolean; missing: string[];
+  crude_max_kt?: number | null;
 };
 export type ScenarioInput = {
   hcu_down_days: number; petchem_margin_delta: number; crude_cost_delta_usd_t: number;
@@ -184,6 +209,8 @@ export type Role = { role: string; description: string; permissions: string[] };
 export type AiSettings = {
   prediction: Record<string, unknown>; system_prompt: string; default_model_id: string | null; default_engine: string;
   default_load_config: Record<string, unknown>; autoload: boolean;
+  worker_models?: Record<string, { model_id: string; prediction?: Record<string, unknown> }>;
+  kv_ttl_s?: number; kv_spill?: boolean; kv_spill_max_mb?: number; performance_profile?: string;
 };
 export type DayCount = { date: string; count: number };
 export type Usage = {

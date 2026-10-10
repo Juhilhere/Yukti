@@ -10,6 +10,8 @@ import { DataTable, type Column } from '../components/DataTable';
 import { Drawer } from '../components/Modal';
 import { toast } from '../components/Toast';
 import { fmtDate, fmtTime } from '../lib/format';
+import { useAuth } from '../lib/auth';
+import { AddLedgerButton, AssetGraph, RegisterAssetButton, RenewButton } from '../components/work/LedgerForms';
 
 function daysLeft(i: AssetItem): number | null {
   if (typeof i.days_left === 'number' && isFinite(i.days_left)) return i.days_left;
@@ -49,6 +51,8 @@ export default function Assets() {
   const dq = useDebounced(q);
   const [sel, setSel] = useState<string | null>(null);
   const t = useT();
+  const { can } = useAuth();
+  const canEdit = can('assets.edit');
   const assets = useQuery({ queryKey: ['assets', dq], queryFn: () => api.get<Asset[]>(`/api/assets${qs({ q: dq })}`) });
   const rows = Array.isArray(assets.data) ? assets.data : [];
   const expired = rows.filter((a) => { const n = nearest(a.items); return n && n.days < 0; }).length;
@@ -66,7 +70,7 @@ export default function Assets() {
     { key: 'criticality', header: t('assets.col.criticality'), render: (a) => <StatusChip status={a.criticality} /> },
     {
       key: 'expiry', header: t('assets.col.expiry'), sortValue: (a) => nearest(a.items)?.days ?? 99999,
-      render: (a) => { const n = nearest(a.items); return n ? <ExpiryBadge days={n.days} label={n.item.type} /> : <span className="text-faint">—</span>; },
+      render: (a) => { const n = nearest(a.items); return n ? <ExpiryBadge days={n.days} label={n.item.category_label || n.item.type} /> : <span className="text-faint">—</span>; },
     },
   ];
 
@@ -77,6 +81,7 @@ export default function Assets() {
           {rows.length > 0 && <div className="flex items-center gap-1.5 text-[12px]">
             <Badge tone="danger" mono>{t('assets.nExpired', { n: expired })}</Badge><Badge tone="amber" mono>{t('assets.nDue30', { n: due30 })}</Badge><Badge mono>{t('assets.nAssets', { n: rows.length })}</Badge>
           </div>}
+          {canEdit && <RegisterAssetButton />}
           <div className="relative w-[260px]">
             <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-faint" />
             <input className="input !pl-8" placeholder={t('assets.searchPh')} value={q} onChange={(e) => setQ(e.target.value)} />
@@ -89,12 +94,12 @@ export default function Assets() {
           </QueryState>
         </div>
       </div>
-      {sel && <AssetDrawer tag={sel} onClose={() => setSel(null)} />}
+      {sel && <AssetDrawer tag={sel} onClose={() => setSel(null)} canEdit={canEdit} />}
     </div>
   );
 }
 
-function AssetDrawer({ tag, onClose }: { tag: string; onClose: () => void }) {
+function AssetDrawer({ tag, onClose, canEdit }: { tag: string; onClose: () => void; canEdit: boolean }) {
   const t = useT();
   const detail = useQuery({ queryKey: ['asset', tag], queryFn: () => api.get<AssetDetail>(`/api/assets/${encodeURIComponent(tag)}`) });
   const dossier = useMutation({
@@ -134,24 +139,32 @@ function AssetDrawer({ tag, onClose }: { tag: string; onClose: () => void }) {
             <div><div className="text-muted text-[11px]">{t('assets.col.criticality')}</div><StatusChip status={a.criticality} /></div>
           </div>
 
-          <Card title={t('assets.items', { n: items.length })} bodyClass="p-0">
+          <Card title={t('assets.items', { n: items.length })} bodyClass="p-0" actions={canEdit ? <AddLedgerButton tag={tag} /> : undefined}>
             {items.length === 0 ? <EmptyState title={t('assets.noItems')} /> : (
-              <table className="w-full text-[12px]">
-                <thead><tr className="text-left text-[11px] uppercase tracking-wide text-muted">
-                  <th className="px-3 py-1.5">{t('assets.th.type')}</th><th className="px-3 py-1.5">{t('assets.th.ref')}</th><th className="px-3 py-1.5">{t('assets.th.expires')}</th><th className="px-3 py-1.5">{t('assets.th.left')}</th><th className="px-3 py-1.5">{t('assets.th.status')}</th>
-                </tr></thead>
-                <tbody>
-                  {[...items].sort((x, y) => (daysLeft(x) ?? 1e9) - (daysLeft(y) ?? 1e9)).map((i, idx) => (
-                    <tr key={`${i.ref_no}-${idx}`} className="border-t border-border/60">
-                      <td className="px-3 py-1.5">{i.type}</td>
-                      <td className="px-3 py-1.5 font-mono">{i.ref_no || '—'}</td>
-                      <td className="px-3 py-1.5">{fmtDate(i.expires_on)}</td>
-                      <td className="px-3 py-1.5"><ExpiryBadge days={daysLeft(i)} /></td>
-                      <td className="px-3 py-1.5"><StatusChip status={i.status} /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="overflow-x-auto">
+                <table className="w-full text-[12px]">
+                  <thead><tr className="text-left text-[11px] uppercase tracking-wide text-muted">
+                    <th className="px-3 py-1.5">{t('assets.th.type')}</th><th className="px-3 py-1.5">{t('assets.th.ref')}</th><th className="px-3 py-1.5">{t('assets.th.expires')}</th>
+                    <th className="px-3 py-1.5">{t('assets.th.left')}</th><th className="px-3 py-1.5">{t('assets.th.status')}</th>{canEdit && <th />}
+                  </tr></thead>
+                  <tbody>
+                    {[...items].sort((x, y) => (daysLeft(x) ?? 1e9) - (daysLeft(y) ?? 1e9)).map((i, idx) => (
+                      <tr key={i.id ?? `${i.ref_no}-${idx}`} className="border-t border-border/60 align-top">
+                        <td className="px-3 py-1.5">
+                          <div className="font-medium">{i.category_label || i.type}</div>
+                          {i.category_label && i.type && i.type !== i.category_label && <div className="text-[11px] text-muted">{i.type}</div>}
+                          <LedgerMeta i={i} />
+                        </td>
+                        <td className="px-3 py-1.5 font-mono">{i.ref_no || '—'}</td>
+                        <td className="px-3 py-1.5">{fmtDate(i.expires_on)}</td>
+                        <td className="px-3 py-1.5"><ExpiryBadge days={daysLeft(i)} /></td>
+                        <td className="px-3 py-1.5"><StatusChip status={i.status} /></td>
+                        {canEdit && <td className="px-1 py-1"><RenewButton item={i} tag={tag} /></td>}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </Card>
 
@@ -176,6 +189,8 @@ function AssetDrawer({ tag, onClose }: { tag: string; onClose: () => void }) {
             )}
           </Card>
 
+          <AssetGraph tag={tag} />
+
           <Card title={t('assets.docs', { n: docs.length })} icon={<FileText size={13} className="text-muted" />} bodyClass="p-0">
             {docs.length === 0 ? <EmptyState title={t('assets.noDocs')} /> : (
               <div className="divide-y divide-border/60">
@@ -194,5 +209,25 @@ function AssetDrawer({ tag, onClose }: { tag: string; onClose: () => void }) {
         </div>
       )}
     </Drawer>
+  );
+}
+
+/** Ledger details under an entry: vendor / serial / certificate, interval, warranty and the alert lead time. */
+function LedgerMeta({ i }: { i: AssetItem }) {
+  const t = useT();
+  const bits: string[] = [];
+  if (i.vendor) bits.push(i.vendor);
+  if (i.serial) bits.push(t('wb.ledger.sn', { s: i.serial }));
+  if (i.certificate) bits.push(t('wb.ledger.cert', { c: i.certificate }));
+  if (i.interval_months) bits.push(t('wb.ledger.every', { n: i.interval_months }));
+  if (i.alert_days) bits.push(t('wb.ledger.alertBefore', { n: i.alert_days }));
+  return (
+    <div className="mt-0.5 space-y-0.5 text-[11px] text-muted">
+      {bits.length > 0 && <div>{bits.join(' · ')}</div>}
+      {i.warranty_until && (
+        <div className="flex items-center gap-1">{t('wb.ledger.warrantyUntil', { d: fmtDate(i.warranty_until) })}
+          {typeof i.warranty_days_left === 'number' && <ExpiryBadge days={i.warranty_days_left} />}</div>
+      )}
+    </div>
   );
 }

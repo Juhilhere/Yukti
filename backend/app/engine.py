@@ -567,6 +567,8 @@ def unload() -> None:
 
 def load(engine: str, model_id: str, cfg: dict[str, Any], _auto: bool = False) -> dict[str, Any]:
     unload()
+    from .kvcache import hot
+    hot.reset(int((cfg or {}).get("parallel") or 1) if engine == "llamacpp" else 1)  # a new model starts with empty slots
     state.intentional_stop = False
     if not _auto:
         state.restarts = []
@@ -805,6 +807,8 @@ async def _stream_once(messages: list[dict[str, Any]], pred: dict[str, Any]) -> 
             yield ev
         return
     body = request_body(pred, engine)
+    if engine == "llamacpp" and isinstance((pred or {}).get("_slot"), int):
+        body["id_slot"] = pred["_slot"]  # the chat's own hot slot: its cached prompt prefix is reused
     body["messages"] = prepare_messages(messages)
     body["stream"] = True
     body["stream_options"] = {"include_usage": True}
@@ -868,7 +872,10 @@ async def _stream_once(messages: list[dict[str, Any]], pred: dict[str, Any]) -> 
     stats = {"tokens_in": usage.get("prompt_tokens") or timings.get("prompt_n"), "tokens_out": tokens_out,
              "tok_per_s": round(float(tps), 1), "ttft_ms": round((ttft or total) * 1000),
              "total_ms": round(total * 1000), "stop_reason": finish or "stop", "model_name": state.model_name,
-             "engine": engine, "prompt_tok_per_s": round(float(timings.get("prompt_per_second") or 0), 1)}
+             "engine": engine, "prompt_tok_per_s": round(float(timings.get("prompt_per_second") or 0), 1),
+             # prompt tokens served from the KV cache instead of being recomputed (llama.cpp timings / OpenAI usage)
+             "cached_tokens": timings.get("cache_n") if timings.get("cache_n") is not None
+             else ((usage.get("prompt_tokens_details") or {}).get("cached_tokens"))}
     state.last_stats = stats
     yield {"type": "done", "stats": stats}
 
@@ -920,6 +927,22 @@ def autoload_default() -> None:
     gemma = [m for m in ms if "gemma" in m["name"].lower()]
     pick = (next((m for m in gemma if m.get("vision")), None) or next((m for m in gemma if m.get("source") == "yukti"), None)
             or next(iter(gemma), None) or ms[0])
-    log(f"Auto-loading default model {pick['name']}")
-    load("llamacpp", pick["id"], {"backend": "auto", "ctx_size": 16384, "gpu_layers": 99, "flash_attn": "on",
-                                  "cache_type_k": "q8_0", "cache_type_v": "q8_0", "parallel": 2})
+    # load settings come from a validated Performance Engine profile chosen for this model and the free video memory
+    from . import perf_profiles
+    pid = perf_profiles.select(pick, perf_profiles.free_vram_mb())
+    log(f"Auto-loading default model {pick['name']} with performance profile '{pid}'")
+    load("llamacpp", pick["id"], perf_profiles.apply(pid, {"backend": "auto"}))
+
+
+async def slot_action(slot: int, action: str, filename: str | None = None) -> bool:
+    """Save, restore or erase one llama.cpp slot (KV cache) through llama-server's /slots API. False when it fails."""
+    if state.engine != "llamacpp" or state.status != "ready":
+        return False
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(60, connect=3)) as c:
+            r = await c.post(f"http://127.0.0.1:{state.port}/slots/{int(slot)}?action={action}",
+                             json={"filename": filename} if filename else {}, headers=_llama_headers())
+        return r.status_code == 200
+    except Exception as e:  # noqa: BLE001
+        log(f"[kv] slot {action} failed: {e!r}")
+        return False

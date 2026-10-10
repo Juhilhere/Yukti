@@ -33,6 +33,9 @@ def _watch_parent(pid: int) -> None:
 
 def main() -> int:
     multiprocessing.freeze_support()
+    if "--sandbox" in sys.argv:  # the code sandbox runs its script with the bundled interpreter (see app/sandbox.py)
+        from app.sandbox import main_from_argv
+        return main_from_argv(sys.argv)
     ap = argparse.ArgumentParser(prog="yukti-server", description="Yukti - Sovereign Industrial AI Workbench server")
     ap.add_argument("--host", default=os.environ.get("YUKTI_HOST", "127.0.0.1"), help="0.0.0.0 to serve desktop clients on the plant LAN")
     ap.add_argument("--port", type=int, default=int(os.environ.get("YUKTI_PORT", "8000")))

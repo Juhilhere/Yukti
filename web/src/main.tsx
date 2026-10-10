@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '@fontsource-variable/inter';
 import '@fontsource/jetbrains-mono/400.css';
+import '@fontsource/instrument-serif/400.css';
 import '@fontsource/jetbrains-mono/500.css';
 import './index.css';
 import App from './App';

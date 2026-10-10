@@ -25,7 +25,7 @@ uv run pyinstaller --noconfirm --clean --name yukti-server --distpath "$Out\pyi-
   --paths . --console `
   --collect-all rapidocr_onnxruntime --collect-all onnxruntime --collect-all pypdfium2 --collect-all pypdfium2_raw --collect-all docx `
   --collect-all reportlab --collect-all highspy --collect-all skl2onnx --collect-submodules sklearn --collect-data sklearn `
-  --collect-all segno --collect-all argon2 --collect-submodules uvicorn --collect-submodules app `
+  --collect-all segno --collect-all argon2 --collect-all pptx --collect-all xlsxwriter --collect-submodules uvicorn --collect-submodules app `
   --hidden-import simpleeval --hidden-import pynvml --hidden-import multipart --hidden-import python_multipart --hidden-import openpyxl --hidden-import pyotp `
   server_main.py
 # pre-train Laya once so the package needs no training at first start
@@ -52,7 +52,7 @@ Copy-Item "$Whisper\ggml-large-v3-turbo-q5_0.bin", "$Whisper\ggml-small-q8_0.bin
 Copy-Item "$LlamaCuda\*.exe", "$LlamaCuda\*.dll" "$pkg\llama\cuda\"
 Copy-Item "$LlamaVulkan\*.exe", "$LlamaVulkan\*.dll" "$pkg\llama\vulkan\"
 Copy-Item "$root\ops\package\*.cmd", "$root\ops\package\README.txt" $pkg
-Copy-Item "$root\LICENSE", "$root\NOTICE", "$root\THIRD_PARTY_NOTICES.md" $pkg
+Copy-Item "$root\LICENSE", "$root\NOTICE", "$root\docs\THIRD_PARTY_NOTICES.md" $pkg
 if ($Demo) { Set-Content -Encoding ascii "$pkg\DEMO_MODE" "Demonstration build: delete this file before the first start for production use." }
 Copy-Item "$root\ops\package\MODELS.txt" "$pkg\models\"
 

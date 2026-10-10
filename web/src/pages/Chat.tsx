@@ -2,12 +2,12 @@ import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import FeatureOffers from '../components/FeatureOffers';
-import { ArrowRight, BookOpen, Camera, Eye, PanelRightOpen, ShieldCheck } from 'lucide-react';
+import { BookOpen, CornerDownRight, Camera, Eye, PanelRightOpen, ShieldCheck } from 'lucide-react';
 import { api, errMsg } from '../lib/api';
 import { streamSSE } from '../lib/sse';
 import { qk, uiStore, useLoaded } from '../lib/queries';
 import { configSidebarOpen, setConfigSidebarOpen, useSettings } from '../lib/settings';
-import type { ChatDetail, Denied, Fact, GenStats, GuardDecision, PhotoReading, RouteDecision, Source } from '../lib/types';
+import type { ChatDetail, ChatTask, Denied, Fact, GenStats, GuardDecision, PhotoReading, RouteDecision, Source } from '../lib/types';
 import { cx } from '../lib/format';
 import { Badge, Dot, ErrorBox, Loading } from '../components/ui';
 import { Logo } from '../components/Logo';
@@ -127,6 +127,7 @@ export default function Chat() {
         switch (event) {
           case 'route': upd((m) => ({ ...m, route: data as RouteDecision })); break;
           case 'guard': upd((m) => ({ ...m, guard: data as GuardDecision })); break;
+          case 'task': upd((m) => ({ ...m, task: data as ChatTask })); break;
           case 'retrieval': {
             const r = data as { sources?: Source[]; denied?: Denied };
             upd((m) => ({ ...m, sources: r.sources ?? [], denied: r.denied ?? null }));
@@ -168,6 +169,13 @@ export default function Chat() {
       if (abortRef.current === ctrl) abortRef.current = null;
       if (streamChatRef.current === cid) streamChatRef.current = null;
       setBusy(false);
+      // suggested next questions arrive a moment after the answer (optional: nothing is shown if the model can't make them)
+      if (ended && doneId && !aborted) {
+        const mid = doneId;
+        api.post<{ followups: string[] }>(`/api/chats/${cid}/messages/${mid}/followups`)
+          .then((r) => { if (r.followups?.length) setMessages((ms) => ms.map((m) => (m.id === mid ? { ...m, followups: r.followups } : m))); })
+          .catch(() => undefined);
+      }
       qc.invalidateQueries({ queryKey: qk.chats });
       qc.invalidateQueries({ queryKey: qk.projects });
       qc.invalidateQueries({ queryKey: qk.chat(cid), refetchType: 'none' });
@@ -218,6 +226,9 @@ export default function Chat() {
     }
   }, [busy, chatId, systemPrompt, prediction, useKnowledge, nav, qc, runStream, isLlmAdmin]);
 
+  // stable between tokens, so the memoised answers don't re-render while one is streaming
+  const ask = useCallback((q: string) => { void send(q); }, [send]);
+
   const stop = useCallback(() => {
     const cid = streamChatRef.current ?? chatId;
     abortRef.current?.abort();
@@ -239,7 +250,7 @@ export default function Chat() {
 
   const modelReady = loaded.data?.status === 'ready';
   const lastAssistantIdx = messages.map((m) => m.role).lastIndexOf('assistant');
-  const width = settings.chatFullWidth ? 'max-w-none' : 'max-w-[860px]';
+  const width = settings.chatFullWidth ? 'max-w-none' : 'max-w-[800px]';
   const title = chatId ? (detail.data?.title || (detail.isLoading ? '' : t('chat.untitled'))) : t('btn.newChat');
   const showEmpty = messages.length === 0 && !(chatId && detail.isLoading) && !(chatId && detail.error);
   const vision = modelReady ? loaded.data?.vision : undefined;
@@ -283,8 +294,8 @@ export default function Chat() {
             <div className="text-[12px] text-muted">{t('photo.dropHint')}</div>
           </div>
         )}
-        <header className="flex h-10 shrink-0 items-center gap-2 border-b border-border px-4">
-          <div className="min-w-0 flex-1 truncate font-medium">{title}</div>
+        <header className="flex h-11 shrink-0 items-center gap-2 px-5">
+          <div className="min-w-0 flex-1 truncate text-[12.5px] text-muted">{chatId ? title : ''}</div>
           {/* the composer already shows the knowledge switch and the top bar the model: repeated here only for administrators */}
           {isLlmAdmin && (useKnowledge
             ? <Badge tone="cyan"><BookOpen size={11} />{t('chat.knowledgeOn')}</Badge>
@@ -312,16 +323,16 @@ export default function Chat() {
               <button className="btn btn-sm mt-3" onClick={() => nav('/chat')}>{t('chat.startNew')}</button>
             </div>
           )}
-          {showEmpty && <EmptyChat onPick={(p) => void send(p)} />}
+          {showEmpty && <EmptyHero />}
           {messages.length > 0 && (
-            <div className={cx('mx-auto space-y-6 px-5 py-6', width)}>
+            <div className={cx('chat-thread mx-auto space-y-9 px-5 pb-10 pt-4', width)}>
               {messages.map((m, i) => m.role === 'user'
                 ? <UserMessage key={m.id} m={m} />
                 : (
                   <AssistantMessage key={m.id} m={m} isLast={i === lastAssistantIdx} busy={busy} showStats={settings.showStats} technical={seesAnswerDetails}
                     question={messages[i - 1]?.role === 'user' ? messages[i - 1].content : undefined}
                     withPhotos={messages[i - 1]?.role === 'user' && !!messages[i - 1].images?.length}
-                    onRegenerate={regenerate} />
+                    onRegenerate={regenerate} chatId={chatId} onAsk={ask} />
                 ))}
             </div>
           )}
@@ -330,6 +341,8 @@ export default function Chat() {
         <Composer ref={composerRef} vision={vision} busy={busy} onSend={send} onStop={stop} useKnowledge={useKnowledge}
           onToggleKnowledge={() => setUseKnowledge((v) => !v)} sendWithEnter={settings.sendWithEnter}
           modelReady={modelReady} canLoadModel={isLlmAdmin} showTokens={seesAnswerDetails} onOpenLoader={() => uiStore.openLoader()} fullWidth={settings.chatFullWidth} />
+        {/* new chat: the box sits in the middle of the page with suggestions under it (it is the same composer, so nothing typed is lost when the answer starts) */}
+        {showEmpty && <EmptySuggestions onPick={(p) => void send(p)} />}
       </section>
 
       {cfgOpen && (
@@ -341,30 +354,32 @@ export default function Chat() {
   );
 }
 
-function EmptyChat({ onPick }: { onPick: (prompt: string) => void }) {
+function EmptyHero() {
+  const t = useT();
+  return (
+    <div className="flex min-h-full flex-col items-center justify-end px-6 pb-6 pt-10">
+      <Logo size={44} />
+      <h2 className="mt-5 text-center text-[30px] font-medium leading-tight tracking-[-0.01em]">{t('chat.empty.title')}</h2>
+      <p className="mt-2 max-w-lg text-center text-[13.5px] text-muted">{t('chat.empty.body')}</p>
+      <div className="mt-2 inline-flex items-center gap-1.5 text-[11.5px] text-faint"><ShieldCheck size={12} className="text-ok" />{t('chat.empty.badge')}</div>
+      <FeatureOffers variant="home" />
+    </div>
+  );
+}
+
+function EmptySuggestions({ onPick }: { onPick: (prompt: string) => void }) {
   const t = useT();
   const { has, me } = useAuth();
   // at most 4 examples, only about things this person may see (need-to-know), closest to their department first
   const suggestions = suggestionsFor(has, me?.user.department);
   return (
-    <div className="flex min-h-full flex-col items-center justify-center px-6 py-10">
-      <Logo size={52} />
-      <h2 className="mt-4 text-[18px] font-semibold">{t('chat.empty.title')}</h2>
-      <p className="mt-1 max-w-lg text-center text-muted">
-        {t('chat.empty.body')}
-      </p>
-      <div className="mt-2 inline-flex items-center gap-1.5 text-[11.5px] text-ok"><ShieldCheck size={12} />{t('chat.empty.badge')}</div>
-      <FeatureOffers variant="home" />
-      <div className="mt-6 grid w-full max-w-[760px] grid-cols-1 gap-2.5 sm:grid-cols-2">
+    <div className="min-h-0 flex-1 overflow-y-auto px-4">
+      <div className="mx-auto flex max-w-[800px] flex-col gap-0.5 px-2 pt-1">
         {suggestions.map((s) => (
-          <button key={s.prompt} onClick={() => onPick(t(s.prompt))}
-            className="group rounded-lg border border-border bg-surface p-3 text-left transition-colors hover:border-cyan/50 hover:bg-surface-2">
-            <div className="flex items-center gap-2">
-              <span className="label !text-[10px] text-amber/90">{t(s.tag)}</span>
-              <ArrowRight size={12} className="ml-auto text-faint transition-transform group-hover:translate-x-0.5 group-hover:text-cyan" />
-            </div>
-            <div className="mt-1 font-medium">{t(s.title)}</div>
-            <div className="mt-0.5 text-[12px] text-muted">{t(s.prompt)}</div>
+          <button key={s.prompt} onClick={() => onPick(t(s.prompt))} title={t(s.title)}
+            className="group flex items-center gap-3 rounded-xl px-3 py-2 text-left text-[14px] text-muted transition-colors hover:bg-white/[0.04] hover:text-text">
+            <CornerDownRight size={14} className="shrink-0 text-faint group-hover:text-text" />
+            <span className="truncate">{t(s.prompt)}</span>
           </button>
         ))}
       </div>

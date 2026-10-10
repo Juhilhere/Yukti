@@ -31,4 +31,4 @@
 ## Docs
 
 - [ ] README / docs updated if behaviour, commands or settings changed
-- [ ] CHANGELOG.md entry under **Unreleased**
+- [ ] docs/CHANGELOG.md entry under **Unreleased**

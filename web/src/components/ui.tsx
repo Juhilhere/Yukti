@@ -88,7 +88,7 @@ export function Card({ title, actions, children, className, bodyClass, icon, id 
   title?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string; bodyClass?: string; icon?: ReactNode; id?: string;
 }) {
   return (
-    <section id={id} className={cx('rounded-md border border-border bg-surface', className)}>
+    <section id={id} className={cx('rounded-lg border border-border bg-surface/85 backdrop-blur-sm', className)}>
       {(title || actions) && (
         <header className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
           <div className="flex items-center gap-2 font-semibold text-[13px]">{icon}{title}</div>
@@ -106,7 +106,7 @@ export function PageHeader({ title, subtitle, actions, icon }: { title: ReactNod
       <div className="flex items-center gap-2.5 min-w-0">
         {icon && <div className="text-muted">{icon}</div>}
         <div className="min-w-0">
-          <h1 className="text-[15px] font-semibold leading-tight">{title}</h1>
+          <h1 className="page-title">{title}</h1>
           {subtitle && <div className="text-muted text-[12px] mt-0.5">{subtitle}</div>}
         </div>
       </div>
@@ -204,7 +204,7 @@ export function Tabs<T extends string>({ tabs, value, onChange, className }: {
       {tabs.map((t) => (
         <button key={t.id} onClick={() => onChange(t.id)}
           className={cx('relative -mb-px flex items-center gap-1.5 border-b-2 px-3 py-2 text-[12.5px] font-medium transition-colors',
-            value === t.id ? 'border-amber text-text' : 'border-transparent text-muted hover:text-text')}>
+            value === t.id ? 'border-amber text-text' : 'border-transparent text-muted hover:border-border-strong hover:text-text')}>
           {t.label}
           {t.count !== undefined && t.count > 0 && <span className="rounded bg-surface-3 px-1.5 font-mono text-[10.5px] text-muted">{t.count}</span>}
         </button>

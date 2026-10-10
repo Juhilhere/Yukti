@@ -22,6 +22,10 @@ import FeedbackAdmin from './pages/admin/Feedback';
 import BackupExport from './pages/admin/Backup';
 import PoliciesLaya from './pages/admin/Policies';
 import ModelsAdmin from './pages/admin/ModelsAdmin';
+import WorkQueue from './pages/admin/WorkQueue';
+import ResearchAdmin from './pages/admin/ResearchAdmin';
+import Workbench from './pages/Workbench';
+import Research from './pages/Research';
 import FeatureOffers from './components/FeatureOffers';
 import Developer from './pages/Developer';
 import { Forbidden, NotFound } from './pages/Errors';
@@ -68,6 +72,8 @@ export default function App() {
         <Route path="/inbox" element={<Perm perm={INBOX_PERMS}><Inbox /></Perm>} />
         <Route path="/assets" element={<Perm perm="assets.view"><Assets /></Perm>} />
         <Route path="/production" element={<Perm perm="production.view"><Production /></Perm>} />
+        <Route path="/work" element={<Perm perm="work.create"><Workbench /></Perm>} />
+        <Route path="/research" element={<Perm perm="research.use" strict><Research /></Perm>} />
         <Route path="/audit" element={<Perm perm="audit.view"><Audit /></Perm>} />
         <Route path="/admin" element={<Perm perm={ADMIN_PERMS}><AdminLayout /></Perm>}>
           <Route index element={<AdminIndex />} />
@@ -79,6 +85,8 @@ export default function App() {
           <Route path="policies" element={<Perm perm="admin"><PoliciesLaya /></Perm>} />
           <Route path="models" element={<Perm perm="models.manage"><ModelsAdmin /></Perm>} />
           <Route path="features" element={<Perm perm="models.manage"><div className="p-4"><FeatureOffers variant="panel" /></div></Perm>} />
+          <Route path="queue" element={<Perm perm="queue.view"><WorkQueue /></Perm>} />
+          <Route path="research" element={<Perm perm="research.manage"><ResearchAdmin /></Perm>} />
           <Route path="developer" element={<Perm perm="developer"><Developer /></Perm>} />
           <Route path="*" element={<NotFound />} />
         </Route>

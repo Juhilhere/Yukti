@@ -157,6 +157,29 @@ CREATE TABLE IF NOT EXISTS engines(id TEXT PRIMARY KEY, base_url TEXT, api_key T
 CREATE TABLE IF NOT EXISTS attachments(id TEXT PRIMARY KEY, user_id TEXT, width INTEGER, height INTEGER, size_bytes INTEGER, ocr_json TEXT, created_at TEXT);
 CREATE TABLE IF NOT EXISTS laya_log(id INTEGER PRIMARY KEY AUTOINCREMENT, text TEXT, decision_json TEXT, latency_ms REAL, at TEXT);
 
+-- durable work queue: every request Laya routes becomes a task for one specialist worker (survives restarts)
+CREATE TABLE IF NOT EXISTS tasks(
+  id TEXT PRIMARY KEY, kind TEXT, worker TEXT, status TEXT, user_id TEXT, chat_id TEXT, title TEXT,
+  route_json TEXT DEFAULT '{}', payload_json TEXT DEFAULT '{}', steps_json TEXT DEFAULT '[]', result_json TEXT DEFAULT '{}',
+  error TEXT, attempts INTEGER DEFAULT 0, served_by TEXT, created_at TEXT, started_at TEXT, finished_at TEXT);
+CREATE INDEX IF NOT EXISTS tasks_status ON tasks(status, created_at);
+CREATE INDEX IF NOT EXISTS tasks_user ON tasks(user_id, created_at);
+-- per chat ID: the state of each answered turn (task, tool calls, approvals, KV-cache slot and reuse)
+CREATE TABLE IF NOT EXISTS chat_checkpoints(
+  id INTEGER PRIMARY KEY AUTOINCREMENT, chat_id TEXT, message_id TEXT, task_id TEXT, worker TEXT, model TEXT,
+  kv_json TEXT DEFAULT '{}', tools_json TEXT DEFAULT '[]', approvals_json TEXT DEFAULT '[]', citations_json TEXT DEFAULT '[]',
+  created_at TEXT);
+CREATE INDEX IF NOT EXISTS checkpoints_chat ON chat_checkpoints(chat_id, id);
+-- knowledge graph: links between assets, documents, procedures and records (graph-aware retrieval)
+CREATE TABLE IF NOT EXISTS kg_edges(src TEXT, rel TEXT, dst TEXT, source TEXT, PRIMARY KEY(src, rel, dst));
+CREATE INDEX IF NOT EXISTS kg_dst ON kg_edges(dst);
+-- dense vectors of chunks (optional: only when an embedding model is configured)
+CREATE TABLE IF NOT EXISTS chunk_vectors(chunk_id TEXT PRIMARY KEY, model TEXT, dim INTEGER, vec BLOB);
+-- fields of a scanned report that a person must check before a finding is raised
+CREATE TABLE IF NOT EXISTS review_items(
+  id TEXT PRIMARY KEY, document_id TEXT, finding_id TEXT, field TEXT, value TEXT, expected TEXT, reason TEXT,
+  confidence REAL, region_json TEXT, state TEXT DEFAULT 'OPEN', reviewer_id TEXT, resolution TEXT, created_at TEXT, decided_at TEXT);
+
 CREATE TABLE IF NOT EXISTS audit_log(
   seq INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT, actor TEXT, event TEXT, entity TEXT, detail_json TEXT,
   prev_hash TEXT, hash TEXT);
@@ -169,6 +192,33 @@ MIGRATIONS = [
     "ALTER TABLE grants ADD COLUMN max_classification INTEGER",
     # earlier versions kept the question text in the router log: replace it by its length (texts are never stored)
     "UPDATE laya_log SET text = 'len=' || length(text) WHERE text NOT LIKE 'len=%'",
+    # digital asset ledger: everything purchased or installed, with what makes it expire
+    "ALTER TABLE ledger_items ADD COLUMN category TEXT",
+    "ALTER TABLE ledger_items ADD COLUMN vendor TEXT",
+    "ALTER TABLE ledger_items ADD COLUMN serial TEXT",
+    "ALTER TABLE ledger_items ADD COLUMN location TEXT",
+    "ALTER TABLE ledger_items ADD COLUMN owner TEXT",
+    "ALTER TABLE ledger_items ADD COLUMN certificate TEXT",
+    "ALTER TABLE ledger_items ADD COLUMN interval_months INTEGER",
+    "ALTER TABLE ledger_items ADD COLUMN warranty_until TEXT",
+    "ALTER TABLE ledger_items ADD COLUMN alert_days INTEGER",
+    "ALTER TABLE ledger_items ADD COLUMN created_by TEXT",
+    "ALTER TABLE ledger_items ADD COLUMN created_at TEXT",
+    # findings: approver lane, owner, linked procedure, evidence region, approval note, follow-up
+    "ALTER TABLE findings ADD COLUMN lane TEXT",
+    "ALTER TABLE findings ADD COLUMN owner_department TEXT",
+    "ALTER TABLE findings ADD COLUMN procedure_doc_id TEXT",
+    "ALTER TABLE findings ADD COLUMN evidence_region_json TEXT",
+    "ALTER TABLE findings ADD COLUMN verification_json TEXT",
+    "ALTER TABLE findings ADD COLUMN note_report_id TEXT",
+    "ALTER TABLE findings ADD COLUMN acknowledged_at TEXT",
+    "ALTER TABLE findings ADD COLUMN last_follow_up_at TEXT",
+    # deliverables made by the workbench (approval notes, Word / Excel / PowerPoint files) belong to a task and a user
+    "ALTER TABLE reports ADD COLUMN task_id TEXT",
+    "ALTER TABLE reports ADD COLUMN title TEXT",
+    # approved points of contact per department
+    "ALTER TABLE contacts ADD COLUMN approved_poc INTEGER DEFAULT 0",
+    "ALTER TABLE contacts ADD COLUMN topic TEXT",
 ]
 
 

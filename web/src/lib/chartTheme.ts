@@ -1,11 +1,11 @@
 // Shared chart styling (neutral dark theme).
-export const CYAN = '#22D3EE';
-export const AMBER = '#F5A524';
-export const GRID = '#2A2A2E';
-export const AXIS = '#9A9AA3';
-export const SURFACE = '#161618';
-export const OTHER = '#6B6B73';
-/** Categorical order — validated (dark surface #161618) with the dataviz validator. */
-export const SERIES = ['#0891B2', '#D97706', '#8B5CF6', '#EC4899', '#3B82F6', '#65A30D'];
-export const tooltipStyle = { background: '#1E1E21', border: '1px solid #2A2A2E', borderRadius: 6, fontSize: 12, color: '#ECECEE' };
+export const CYAN = '#A7BCC7';
+export const AMBER = '#C9A96E';
+export const GRID = '#1F1E1C';
+export const AXIS = '#9C978E';
+export const SURFACE = '#0B0B0C';
+export const OTHER = '#67635C';
+/** Categorical order on the near-black surface: muted, distinct hues (steel, gold, mauve, rose, sage, sand). */
+export const SERIES = ['#7FA7BF', '#C9A96E', '#A98BC0', '#C9857F', '#8DB38E', '#B9A37E'];
+export const tooltipStyle = { background: '#131314', border: '1px solid #33302B', borderRadius: 6, fontSize: 12, color: '#EDEAE4' };
 export const axisProps = { stroke: AXIS, tick: { fontSize: 11, fill: AXIS }, tickLine: false } as const;

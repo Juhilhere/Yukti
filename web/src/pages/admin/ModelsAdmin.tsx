@@ -13,6 +13,7 @@ import { DataTable, type Column } from '../../components/DataTable';
 import { toast } from '../../components/Toast';
 import { useT } from '../../lib/i18n';
 import { rich } from './AdminLayout';
+import { KvCard, ProfilesCard, RetrievalCard } from './PerfEngine';
 
 function LoadedCard() {
   const t = useT();
@@ -203,6 +204,9 @@ export default function ModelsAdmin() {
           <button className="btn btn-primary" onClick={() => uiStore.openLoader()}><Cpu size={13} />{t('admin.models.loader')} <span className="font-mono text-[10.5px] opacity-70">Ctrl+L</span></button>
         </div>
         <LoadedCard />
+        {manage && <ProfilesCard modelLoaded={loaded.data?.status === 'ready'} />}
+        {manage && <KvCard />}
+        {can('admin') && <RetrievalCard />}
         <ImportCard />
         <Card title={models.data ? t('admin.models.localN', { n: models.data.length }) : t('admin.models.local')} icon={<Boxes size={14} className="text-cyan" />} bodyClass="p-0"
           actions={<div className="relative"><Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-faint" />

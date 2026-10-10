@@ -11,3 +11,15 @@ Voice input (speech\models; OpenAI Whisper, MIT licence; ggml conversions from h
 
 Add larger models for GPU servers in the app: Admin > Models > Import from path (e.g. a USB drive). Any llama.cpp GGUF works.
 A model can see photos when its image module (a file with "mmproj" in its name) is in the same folder.
+
+Optional models (not shipped; copy them in when the plant wants these abilities)
+  Reasoning worker (27B class)  any llama.cpp GGUF of a 27B-class open-weight model, e.g. Gemma 3 27B Q4_K_M, in models\.
+                                Assign it under Admin > AI settings > Worker models; load it with a Performance Engine
+                                profile (reasoning-27b-12gb / -16gb / -24gb), then validate the profile on this server.
+  Dense retrieval (vectors)     BAAI BGE-M3 GGUF (file name containing "bge-m3"), in models\. Yukti starts it as a separate
+                                local embedding server and fuses vector search with BM25. Licence: MIT.
+  Hindi / Kannada speech        AI4Bharat IndicWhisper (Vistaar) models converted to ggml for whisper.cpp, in speech\models:
+                                ggml-indicwhisper-hi.bin, ggml-indicwhisper-kn.bin. Used for speech detected as that language;
+                                Whisper stays the default. Licence: see the AI4Bharat model card.
+  Research layer                an experimental open-weight model (for example a Heretic-style decensored GGUF) chosen under
+                                Admin > Research layer. It runs in its own process and never sees plant documents or tools.

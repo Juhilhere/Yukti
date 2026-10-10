@@ -879,7 +879,7 @@ export default function Company() {
   return (
     <div className="h-full overflow-y-auto">
       <div className="relative border-b border-border bg-gradient-to-b from-surface-2/70 to-transparent px-5 py-4">
-        <div className="pointer-events-none absolute inset-0 opacity-[0.07]" style={{ backgroundImage: 'linear-gradient(#22D3EE 1px, transparent 1px), linear-gradient(90deg, #22D3EE 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
+        <div className="pointer-events-none absolute inset-0 opacity-[0.07]" style={{ backgroundImage: 'linear-gradient(#C9A96E 1px, transparent 1px), linear-gradient(90deg, #C9A96E 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
         <div className="relative flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-amber/40 bg-amber/10 text-amber"><Building2 size={20} /></div>

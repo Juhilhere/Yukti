@@ -4,8 +4,8 @@
 
 | Version | Supported |
 |---|---|
-| 0.3.x | Yes |
-| < 0.3 | No (demo builds) |
+| 0.5.x | Yes |
+| < 0.5 | No |
 
 ## Reporting a vulnerability
 
@@ -13,10 +13,10 @@
 
 Email **juhilprogramming@gmail.com** with the subject `[Yukti security]`. Please include:
 
-- the affected version and component (server, web UI, desktop app, installer, release tooling)
+- the affected version and component (server, web UI, desktop app, installer, release tooling, workbench / sandbox, research layer)
 - steps to reproduce, or a proof of concept
 - the impact you observed (for example: policy bypass, data seen by the wrong role, authentication or session issue, audit-chain tampering,
-  outbound network access despite the offline guard)
+  outbound network access despite the offline guard, code escaping the sandbox, the research layer reaching plant documents or tools)
 - whether the issue is already public
 
 What to expect from us:
@@ -29,9 +29,10 @@ Please test only on your own installation. Do not access data that belongs to ot
 
 ## Scope and known limitations
 
-The design, threat model and known limitations are documented in [docs/SECURITY_MODEL.md](docs/SECURITY_MODEL.md). The following are known and
+The design, threat model and known limitations are documented in [docs/SECURITY_MODEL.md](SECURITY_MODEL.md). The following are known and
 documented, so they need no report:
 
 - installers and the server executable are not code-signed
 - the `demo` tier shows demo accounts and passwords on the login screen (use `YUKTI_TIER=prod`)
-- there is no built-in TLS
+- TLS is optional (`--tls-cert` / `--tls-key`); without it, run the server on a segregated plant VLAN
+- the code sandbox is defence in depth, not a guarantee against deliberately hostile code (reports of a concrete escape are still welcome)

@@ -1,5 +1,5 @@
 // Generates build/icon.png (512) and build/icon.ico (256/128/64/48/32/16, PNG-embedded)
-// Hexagon (amber rim, dark core) with a cyan "Y". Pure Node — no dependencies.
+// Hexagon (champagne-gold rim, black core) with an ivory "Y". Pure Node — no dependencies.
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -66,7 +66,7 @@ function segDist(px, py, ax, ay, bx, by) {
   return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
 }
 const OUTER = hexPts(0.48), INNER = hexPts(0.40);
-const AMBER = [245, 166, 35], CORE = [16, 24, 38], CYAN = [34, 211, 238];
+const AMBER = [201, 169, 110], CORE = [11, 11, 12], CYAN = [237, 234, 228];  // champagne rim, black core, ivory "Y"
 const Y_W = 0.055; // half stroke width
 const cx = 0.5, cy = 0.53;
 const SEGS = [

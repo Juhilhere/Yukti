@@ -11,8 +11,9 @@ import { Badge, Card, EmptyState, ErrorBox, PageHeader, ProvenanceBadges, QueryS
 import { toast } from '../components/Toast';
 import { AccessRequestDialog } from '../components/chat/AccessRequestDialog';
 import { countdown, cx, fmtDate, fmtTime, timeAgo } from '../lib/format';
+import { FindingExtras, ScanReviewTab, useReviewItems } from '../components/work/ScanReview';
 
-type Tab = 'findings' | 'requests' | 'grants';
+type Tab = 'findings' | 'review' | 'requests' | 'grants';
 type FindingAction = 'acknowledge' | 'approve' | 'reject' | 'escalate' | 'note';
 
 export default function Inbox() {
@@ -20,14 +21,17 @@ export default function Inbox() {
   const [params] = useSearchParams();
   const want = params.get('tab');
   // findings are for people whose role handles them; everyone else sees only their access requests and grants
-  const { can } = useAuth();
+  const { can, has } = useAuth();
   const seesFindings = can(FINDINGS_PERMS);
-  const initial: Tab = want === 'access' || want === 'requests' ? 'requests' : want === 'grants' ? 'grants' : seesFindings ? 'findings' : 'requests';
+  const reviews = has('scan.review');  // human review of uncertain scan fields (engineers, HSE, HODs, plant manager)
+  const initial: Tab = want === 'access' || want === 'requests' ? 'requests' : want === 'grants' ? 'grants'
+    : want === 'review' && reviews ? 'review' : seesFindings ? 'findings' : 'requests';
   const [tab, setTab] = useState<Tab>(initial);
   useEffect(() => { setTab(initial); }, [want]); // eslint-disable-line react-hooks/exhaustive-deps
   const findings = useQuery({ queryKey: ['findings'], queryFn: () => api.get<Finding[]>('/api/findings'), enabled: seesFindings });
   const ars = useQuery({ queryKey: ['access-requests'], queryFn: () => api.get<{ mine: AccessRequest[]; to_approve: AccessRequest[] }>('/api/access-requests') });
   const grants = useQuery({ queryKey: ['grants'], queryFn: () => api.get<Grant[]>('/api/grants') });
+  const reviewItems = useReviewItems(reviews);
 
   const t = useT();
   const openFindings = (findings.data ?? []).filter((f) => (f.allowed_actions ?? []).some((a) => a !== 'note')).length;
@@ -39,11 +43,13 @@ export default function Inbox() {
       <PageHeader icon={<InboxIcon size={18} />} title={t('page.inbox')} subtitle={t('page.inbox.sub')} />
       <Tabs className="px-4" value={tab} onChange={setTab} tabs={[
         ...(seesFindings ? [{ id: 'findings' as const, label: t('inbox.tab.findings'), count: openFindings }] : []),
+        ...(reviews ? [{ id: 'review' as const, label: t('wb.review.tab'), count: (reviewItems.data ?? []).length }] : []),
         { id: 'requests', label: t('inbox.tab.requests'), count: pendingAr },
         { id: 'grants', label: t('inbox.tab.grants'), count: activeGrants },
       ]} />
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
         {tab === 'findings' && seesFindings && <FindingsTab q={findings} />}
+        {tab === 'review' && reviews && <ScanReviewTab q={reviewItems} />}
         {tab === 'requests' && <RequestsTab q={ars} />}
         {tab === 'grants' && <GrantsTab q={grants} />}
       </div>
@@ -103,7 +109,7 @@ function FindingCard({ f }: { f: Finding }) {
           <div className="flex flex-wrap items-center gap-1.5">
             <Badge mono tone="cyan">{f.tag || '—'}</Badge>
             <StatusChip status={f.severity} />
-            <StatusChip status={f.state} />
+            {f.state === 'DRAFT' ? <Badge tone="amber" mono title={t('wb.draftTip')}>{t('wb.waitingReview')}</Badge> : <StatusChip status={f.state} />}
             {f.discipline && <Badge tone="muted">{f.discipline}</Badge>}
             <ProvenanceBadges isExample={f.is_example} />
             {f.discipline_approver && <Badge tone="violet" title={t('findings.approverTip')}>{t('findings.approver')}</Badge>}
@@ -111,6 +117,7 @@ function FindingCard({ f }: { f: Finding }) {
           </div>
           <div className="mt-1.5 font-medium">{f.title}</div>
           {f.evidence && <div className="mt-1 line-clamp-3 text-[12px] text-muted">{f.evidence}</div>}
+          <FindingExtras f={f} />
           <div className="mt-2 flex flex-wrap items-center gap-3 text-[11.5px] text-muted">
             <span className={cx('flex items-center gap-1', overdue && 'text-danger')}><Clock size={11} /> {overdue ? t('findings.dueOverdue', { date: fmtDate(f.due_date) }) : t('findings.due', { date: fmtDate(f.due_date) })}</span>
             {f.approver_name && <span className="flex items-center gap-1"><ShieldCheck size={11} /> {f.approver_name}</span>}

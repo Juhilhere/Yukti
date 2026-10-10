@@ -3,14 +3,16 @@ YUKTI SERVER 0.5.1 — self-contained, fully offline
 Nothing else needs to be installed: no Python, no Bionic/LM Studio, no Ollama, no vLLM, no internet.
 
 Contents
-  yukti-server.exe + _internal\      Yukti backend (auth, policy engine, audit, RAG, OCR, Laya, optimizer)
+  yukti-server.exe + _internal\      Yukti backend (auth, policy engine, audit, hybrid RAG, OCR, Laya, work queue,
+                                      workbench + sandbox, scan to finding, asset ledger, forecast + optimizer)
   llama\cuda\                         llama.cpp b11255 CUDA 12.4 build (NVIDIA GPUs)  — used automatically when an NVIDIA GPU is present
   llama\vulkan\                       llama.cpp b11255 Vulkan build (AMD/Intel GPUs, or CPU)
   models\                             open-weight GGUF models (default: Gemma-3-4B-it Q4_K_M + its image module). Add more via Admin > Models.
   speech\                             voice input: whisper.cpp whisper-server (cuda\ = NVIDIA GPU, cpu\ = processor) + Whisper models
+                                      (optional AI4Bharat IndicWhisper models for Hindi / Kannada: see MODELS.txt)
   data\store\laya\                    Laya router (pre-trained, ONNX Runtime)
   data\mrpl\                          MRPL public information with source links
-  data\corpus\                        15 EXAMPLE plant documents (watermarked; delete in Admin/Knowledge when real data is added)
+  data\corpus\                        18 EXAMPLE plant documents (watermarked; delete in Admin/Knowledge when real data is added)
   web\dist\                           the Yukti user interface
   backend\policies\core.yaml          access-control and company-guardrail policy
 

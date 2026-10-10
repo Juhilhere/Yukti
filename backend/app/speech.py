@@ -1,7 +1,10 @@
-"""Speech to text for the microphone button: whisper.cpp (OpenAI Whisper models), fully offline.
+"""Speech to text for the microphone button: whisper.cpp, fully offline.
 
 - NVIDIA GPU present (and ~1 GB of video memory free): Whisper large-v3-turbo on the GPU (about 2 s for a 10 s question).
 - Otherwise: Whisper small on the processor (about 3-4 s).
+- Hindi and Kannada: when AI4Bharat's IndicWhisper model for that language is installed (ggml conversion in
+  speech/models, e.g. ggml-indicwhisper-kn.bin), speech detected as that language is recognised by it instead; it runs in
+  its own whisper.cpp process, started on first use and stopped when idle like the main recogniser.
 The recogniser is started on first use and stopped after 10 idle minutes. It is given the plant's own vocabulary
 (equipment tags the person can see, common plant words) as a hint, which roughly halves mistakes on tags like "E-310".
 The transcript is only put into the question box; the person reads and corrects it before sending.
@@ -40,6 +43,9 @@ MODEL = {
     "cpu": ("ggml-small-q8_0.bin", "Whisper small"),
 }
 MODEL_DIRS = [ROOT / "speech" / "models", _DEV]
+# AI4Bharat IndicWhisper (Vistaar benchmark models, Whisper architecture) converted to ggml: one model per language
+INDIC = {"hi": ("ggml-indicwhisper-hi.bin", "AI4Bharat IndicWhisper (Hindi)"),
+         "kn": ("ggml-indicwhisper-kn.bin", "AI4Bharat IndicWhisper (Kannada)")}
 _EMPTY = engine.LOG_DIR.parent / "speech-www"  # whisper-server serves static files from here: keep it empty
 _EMPTY.mkdir(parents=True, exist_ok=True)
 IDLE_S = 10 * 60
@@ -138,12 +144,60 @@ def _open_log() -> Any:
     return _S.log_f
 
 
+def indic_model(lang: str) -> Path | None:
+    return _first([d / INDIC[lang][0] for d in MODEL_DIRS]) if lang in INDIC else None
+
+
 def status() -> dict[str, Any]:
     c = choose()
     if "reason" in c:
         return {"available": False, "device": None, "model": None, "reason": c["reason"]}
     p = _S.proc
-    return {"available": True, "device": c["device"], "model": c["model_name"], "running": bool(p and p.poll() is None)}
+    return {"available": True, "device": c["device"], "model": c["model_name"], "running": bool(p and p.poll() is None),
+            "indic_models": {lang: INDIC[lang][1] for lang in INDIC if indic_model(lang)}}
+
+
+_IND: dict[str, tuple[subprocess.Popen, int, str]] = {}
+
+
+def _start_indic(lang: str) -> tuple[subprocess.Popen | None, int, str]:
+    """Start (under the lock) the AI4Bharat recogniser for one language, on the processor or the GPU like the main one."""
+    cur = _IND.get(lang)
+    if cur and cur[0].poll() is None:
+        return cur
+    c = choose()
+    model = indic_model(lang)
+    if "reason" in c or not model:
+        raise RuntimeError("No AI4Bharat model for this language.")
+    port = engine._free_port(8800 + list(INDIC).index(lang) * 10)
+    path = "/" + secrets.token_hex(12)
+    threads = max(2, min(8, (os.cpu_count() or 4) - 1))
+    args = [str(c["binary"]), "-m", str(model), "--host", "127.0.0.1", "--port", str(port), "-t", str(threads), "-bs", "5",
+            "-sns", "-nt", "--public", str(_EMPTY), "--request-path", path] + (["-ng"] if c["device"] != "gpu" else [])
+    proc = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, cwd=str(c["binary"].parent),
+                            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    engine._attach_to_job(proc)
+    t0 = time.time()
+    import socket
+    while time.time() - t0 < 90:
+        if proc.poll() is not None:
+            raise RuntimeError("The AI4Bharat recogniser could not start.")
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=0.5):
+                break
+        except OSError:
+            time.sleep(0.3)
+    else:
+        proc.kill()
+        raise RuntimeError("The AI4Bharat recogniser took too long to start.")
+    _IND[lang] = (proc, port, path)
+    engine.log(f"[speech] {INDIC[lang][1]} ready")
+    return _IND[lang]
+
+
+def _locked_start_indic(lang: str) -> tuple[subprocess.Popen | None, int, str]:
+    with _S.lock:
+        return _start_indic(lang)
 
 
 def _start() -> None:
@@ -225,6 +279,13 @@ def _stop_proc(proc: subprocess.Popen | None, wait: bool = True) -> None:
 def stop(wait: bool = True) -> None:
     """Stop the recogniser (server shutdown, tests). wait=False never blocks for more than a moment."""
     _stop_proc(_S.proc, wait)
+    for lang, (ip, _, _) in list(_IND.items()):
+        try:
+            if ip.poll() is None:
+                ip.kill()
+        except Exception as e:  # noqa: BLE001
+            journal.swallowed("speech", "stopping the AI4Bharat recogniser", e)
+        _IND.pop(lang, None)
 
 
 def _idle_watch() -> None:
@@ -238,6 +299,11 @@ def _idle_watch() -> None:
                     _S.proc = None
                     _close_log()
                     engine.log("[speech] stopped after 10 idle minutes")
+                if time.time() - _S.last_used > IDLE_S:
+                    for lang, (ip, _, _) in list(_IND.items()):
+                        if ip.poll() is None:
+                            ip.kill()
+                        _IND.pop(lang, None)
         except Exception as e:  # noqa: BLE001 - the watcher must survive anything, or the recogniser would never be stopped again
             journal.swallowed("speech", "idle watcher", e)
 
@@ -391,7 +457,15 @@ async def transcribe(s: Subject, data: bytes, language: str) -> dict[str, Any]:
             out = await _recognise(data, lang, vocabulary(s), srv=srv)
             text = _clean(str(out.get("text") or ""))
         else:
-            parts = [_clean(str((await _recognise(piece, lang, "", srv=srv)).get("text") or "")) for piece in split_wav(data)]
+            use = srv
+            if indic_model(lang):  # AI4Bharat's model for this language, when it is installed
+                try:
+                    use = await asyncio.to_thread(_locked_start_indic, lang)
+                    device = f"{device} · {INDIC[lang][1]}"
+                except (RuntimeError, OSError) as e:
+                    journal.swallowed("speech", "starting the AI4Bharat recogniser", e)
+                    use = srv
+            parts = [_clean(str((await _recognise(piece, lang, "", srv=use)).get("text") or "")) for piece in split_wav(data)]
             text = " ".join(p for p in parts if p and p.lower() not in HALLUCINATIONS)
     if text.lower() in HALLUCINATIONS and rms < 0.02:
         text = ""

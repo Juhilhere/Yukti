@@ -27,19 +27,30 @@ LOCK_MINUTES = 5
 
 ROLE_PERMS: dict[str, list[str]] = {
     # need-to-know: company-level information (finances, strategy, company-wide figures) is for top management only
-    "*": ["chat", "documents.view", "assets.view", "access.request", "notifications", "feedback"],
+    "*": ["chat", "documents.view", "assets.view", "access.request", "notifications", "feedback", "work.create"],
     "executive": ["company.view", "production.view", "findings.view"],
-    "engineer": ["findings.view"],
-    "hse": ["findings.view"],
+    "engineer": ["findings.view", "scan.review"],
+    "hse": ["findings.view", "scan.review", "assets.edit"],
     "contractor": [],
-    "dept_manager": ["access.approve", "findings.view", "findings.approve", "audit.view", "documents.upload"],
-    "plant_manager": ["access.approve", "findings.view", "findings.approve", "audit.view", "audit.export", "production.view"],
+    "dept_manager": ["access.approve", "findings.view", "findings.approve", "audit.view", "documents.upload", "scan.review",
+                     "assets.edit"],
+    "plant_manager": ["access.approve", "findings.view", "findings.approve", "audit.view", "audit.export", "production.view",
+                      "scan.review", "assets.edit", "queue.view"],
     "planner": ["production.view", "production.edit"],
-    "auditor": ["audit.view", "audit.export"],
+    "auditor": ["audit.view", "audit.export", "queue.view"],
+    "stores": ["assets.edit"],
+    # approver lanes: each kind of decision has its own approvers
     "approver:mechanical": ["findings.approve"],
     "approver:electrical": ["findings.approve"],
+    "approver:hse": ["findings.approve"],
+    "approver:procurement": ["findings.approve"],
+    "approver:finance": ["findings.approve"],
+    "approver:management": ["findings.approve"],
+    # isolated research layer (experimental models): no plant documents, no tools, no enterprise systems
+    "researcher": ["research.use"],
     "admin": ["models.manage", "admin", "audit.view", "audit.export", "production.view", "production.edit", "findings.view",
-              "findings.approve", "access.approve", "developer", "users.manage", "ai.settings", "usage.view", "backup.manage"],
+              "findings.approve", "access.approve", "developer", "users.manage", "ai.settings", "usage.view", "backup.manage",
+              "queue.view", "research.manage"],
 }
 
 

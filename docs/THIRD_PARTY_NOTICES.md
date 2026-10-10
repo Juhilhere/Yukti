@@ -1,6 +1,6 @@
 # Third-party notices
 
-Yukti is proprietary software by Team UniMinds (see [NOTICE](NOTICE)). It is built on, and the Yukti Server package redistributes, the open-source
+Yukti is proprietary software by Team UniMinds (see [NOTICE](../NOTICE)). It is built on, and the Yukti Server package redistributes, the open-source
 components and open-weight model listed below. Each remains under its own licence, and its copyright belongs to its respective authors.
 
 Licence names are given where we are confident of them. Where the entry says *see upstream*, consult the project's own licence file. Transitive
@@ -19,6 +19,14 @@ under `_internal\`; for Node, `node_modules/*/LICENSE`).
 | [OpenBLAS](https://github.com/OpenMathLib/OpenBLAS) (shipped with the whisper.cpp CPU build) | Maths library | BSD-3-Clause |
 | RapidOCR PP-OCR ONNX models (derived from PaddleOCR) | OCR of scanned pages | Apache-2.0 |
 
+## Optional models (not bundled; added by an administrator)
+
+| Component | Use | Licence |
+|---|---|---|
+| [BAAI BGE-M3](https://huggingface.co/BAAI/bge-m3) (GGUF conversion) | Multilingual embeddings for optional vector search | MIT |
+| [AI4Bharat IndicWhisper](https://github.com/AI4Bharat/vistaar) (Hindi and Kannada models, ggml conversion) | Optional Hindi and Kannada speech recognition | See the AI4Bharat model card |
+| Any 27B-class reasoning model or research model in GGUF format | Optional reasoning worker / isolated research layer | Its own licence; check the model card before use |
+
 ## Backend (Python)
 
 | Component | Use | Licence |
@@ -29,8 +37,10 @@ under `_internal\`; for Node, `node_modules/*/LICENSE`).
 | [RapidOCR (rapidocr-onnxruntime)](https://github.com/RapidAI/RapidOCR) | OCR | Apache-2.0 |
 | [ONNX Runtime](https://onnxruntime.ai/) | Laya and OCR inference | MIT |
 | [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) / PDFium | PDF text and rendering | Apache-2.0 / BSD-3-Clause |
-| [python-docx](https://github.com/python-openxml/python-docx) | DOCX reading | MIT |
-| [openpyxl](https://openpyxl.readthedocs.io/) | XLSX reading | MIT |
+| [python-docx](https://github.com/python-openxml/python-docx) | DOCX reading and Word deliverables (approval notes) | MIT |
+| [python-pptx](https://github.com/scanny/python-pptx) | PowerPoint deliverables | MIT |
+| [XlsxWriter](https://github.com/jmcnamara/XlsxWriter) (dependency of python-pptx) | Excel writing library | BSD-2-Clause |
+| [openpyxl](https://openpyxl.readthedocs.io/) | XLSX reading and Excel deliverables | MIT |
 | [reportlab](https://www.reportlab.com/opensource/) | PDF dossier generation | BSD |
 | [HiGHS](https://highs.dev/) / highspy | Linear-programming optimizer | MIT |
 | [scikit-learn](https://scikit-learn.org/) | Laya training | BSD-3-Clause |
@@ -76,4 +86,4 @@ under `_internal\`; for Node, `node_modules/*/LICENSE`).
 - **MRPL public information** in `data/mrpl/` is a compilation of facts from publicly available sources (the company website, annual reports, BRSR,
   regulatory filings, environmental clearances and credit-rating rationales). Each fact carries its source URL. The underlying documents remain the
   property of their publishers. Team UniMinds is not affiliated with MRPL.
-- **Example documents** in `data/corpus/` were written by Team UniMinds and are covered by [NOTICE](NOTICE).
+- **Example documents** in `data/corpus/` were written by Team UniMinds and are covered by [NOTICE](../NOTICE).

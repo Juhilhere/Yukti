@@ -11,6 +11,7 @@ import { qk, uiStore, useEngines, useLoaded, useModels, useSchema, useSystem, us
 import { tr, useT } from '../lib/i18n';
 import type { Engine, LoadedModel, Model } from '../lib/types';
 import { useAuth } from '../lib/auth';
+import { ProfileSelect } from '../pages/admin/PerfEngine';
 
 // getters so the labels follow the chosen language
 export const ENGINE_LABEL: Record<string, string> = {
@@ -46,6 +47,7 @@ export function ModelLoader() {
   const [showAdv, setShowAdv] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<unknown>(null);
+  const [profile, setProfile] = useState('auto');  // Performance Engine profile (llama.cpp only)
   // simple view (default) for everyone; the full engine/parameter view is for IT staff
   const [advanced, setAdvancedRaw] = useState(() => { try { return localStorage.getItem('yukti.loader.advanced') === '1'; } catch { return false; } });
   const setAdvanced = (v: boolean) => { setAdvancedRaw(v); try { localStorage.setItem('yukti.loader.advanced', v ? '1' : '0'); } catch { /* ignore */ } };
@@ -107,7 +109,7 @@ export function ModelLoader() {
     try {
       const payload = over
         ? { engine: over.engine, model_id: over.model, load_config: over.cfg }
-        : { engine, model_id: selected, load_config: diffFromDefaults(schema.data?.load ?? [], cfg) };
+        : { engine, model_id: selected, load_config: diffFromDefaults(schema.data?.load ?? [], cfg), ...(engine === 'llamacpp' && profile && canManage ? { profile } : {}) };
       const r = await api.post<LoadedModel>('/api/models/load', payload);
       qc.setQueryData(qk.loaded, r);
       // poll until ready / error
@@ -237,6 +239,7 @@ export function ModelLoader() {
           </div>
         )}
 
+        {engine === 'llamacpp' && canManage && <ProfileSelect modelId={selected} value={profile} onChange={setProfile} />}
         <div className="rounded-md border border-border">
           <button className="flex w-full items-center gap-2 px-3 py-2 text-left" onClick={() => setShowCfg((s) => !s)}>
             {showCfg ? <ChevronDown size={14} /> : <ChevronRight size={14} />}

@@ -5,6 +5,41 @@ All notable changes to Yukti are documented here. The format follows [Keep a Cha
 
 ## [Unreleased]
 
+### Added
+- **Durable work queue and specialist workers.** Laya's typed decision now also chooses the worker (policy, small LLM,
+  OCR + VLM, analytics, reasoning, coder, workflow). Every chat turn is a task; background work is queued and resumes after
+  a restart. Administrators assign models per worker (for example a 27B-class reasoning model) and see the queue.
+- **Per-chat checkpoints and hot KV cache.** Each answered turn records its task, worker, tool calls, policy approvals,
+  citations and KV-cache metadata. A chat keeps its llama.cpp slot while in use (TTL + LRU), optionally spilling evicted
+  slots to disk under a size cap.
+- **Performance Engine profiles.** Load settings are chosen from validated profiles by model size and free VRAM (measured
+  4B profiles; reference profiles for 8B and 27B-class models on 12, 16 and 24 GB GPUs), and can be validated on the
+  plant's own server.
+- **Hybrid retrieval.** A knowledge graph of assets, documents, procedures and records, intent-aware metadata boosts and
+  optional BGE-M3 dense vectors are fused with BM25, behind the same per-document policy check. Every source now shows its
+  page or record ID, timestamp, confidence and the channels that found it.
+- **Agentic workbench.** Multi-step work with policy-checked local tools that delivers approval notes, Word, PowerPoint and
+  Excel files, calculations with every step shown, and code run in a sandbox (no network, no system access).
+- **Scan to finding.** OCR with positions and the vision model, verification against the asset master, human review of
+  uncertain fields, findings linked to the asset, procedure, owner, due date and evidence region, a drafted approval note
+  and routing to the approver lane.
+- **Approver lanes** (electrical, mechanical, HSE, procurement, finance, management) with acknowledgement, automatic
+  escalation and daily follow-up of overdue findings. New roles: `approver:hse`, `approver:procurement`,
+  `approver:management`, `stores`, `researcher`.
+- **Digital asset ledger.** Vendor, serial, location, owner, certificate, inspection interval, warranty and expiry, with
+  category lead times (fire extinguishers, calibrations, pressure-vessel inspections, safety devices, spares, licences);
+  register assets, add and renew entries. The example asset register, contacts roster and 1998 commissioning letter are
+  now part of the example knowledge base.
+- **Production plan.** A demand forecast with uncertainty feeds the optimizer, which now also respects inventory, storage,
+  dispatch, contract minimums, crude availability and planned maintenance; the scenario card shows the proposed change,
+  expected value, alternatives and assumptions.
+- **Isolated research layer** for experimental models, with its own guardrails and no access to documents or tools.
+- **AI4Bharat IndicWhisper** models are used for Hindi and Kannada speech when installed.
+- Docs: feasibility and viability, research references.
+
+### Fixed
+- Excel files whose first row is a title are now read with the right header row, so their records are citable by field.
+
 ## [0.5.1] — 2026-10-01
 
 ### Changed

@@ -10,6 +10,9 @@ import { toast } from '../../components/Toast';
 import { ENGINE_LABEL } from '../../layout/ModelLoader';
 import { useT } from '../../lib/i18n';
 import { rich } from './AdminLayout';
+import { WORKERS, WORKER_KEY } from '../../lib/work';
+import { useProfiles } from './PerfEngine';
+import { Layers } from 'lucide-react';
 
 export default function AiSettings() {
   const t = useT();
@@ -109,6 +112,7 @@ export default function AiSettings() {
               </div>
             </div>
           </Card>
+          <WorkersCard draft={draft} set={set} />
         </div>
         <Card title={t('admin.ai.sampling')} icon={<SlidersHorizontal size={14} className="text-cyan" />}>
           <ParamForm fields={predFields} values={draft.prediction ?? {}} engine={draft.default_engine}
@@ -120,5 +124,56 @@ export default function AiSettings() {
         </Card>
       </div>
     </div>
+  );
+}
+
+/** Which model serves each worker of the queue, the Performance Engine default and the hot KV cache. */
+function WorkersCard({ draft, set }: { draft: AiSettingsT; set: (p: Partial<AiSettingsT>) => void }) {
+  const t = useT();
+  const models = useModels();
+  const profiles = useProfiles(null);
+  const wm = draft.worker_models ?? {};
+  const setWorker = (w: string, modelId: string) => {
+    const n = { ...wm };
+    if (modelId) n[w] = { ...(n[w] ?? {}), model_id: modelId }; else delete n[w];
+    set({ worker_models: n });
+  };
+  const modelWorkers = WORKERS.filter((w) => !['policy', 'analytics', 'workflow'].includes(w));
+  return (
+    <Card title={t('wq.aiTitle')} icon={<Layers size={14} className="text-cyan" />}>
+      <div className="space-y-3">
+        <div className="text-[12px] text-muted">{t('wq.aiIntro')}</div>
+        <div className="grid gap-2 md:grid-cols-2">
+          {modelWorkers.map((w) => (
+            <Field key={w} label={t(WORKER_KEY[w])}>
+              <select className="input" value={wm[w]?.model_id ?? ''} onChange={(e) => setWorker(w, e.target.value)}>
+                <option value="">{t('wq.loadedModel')}</option>
+                {wm[w]?.model_id && !(models.data ?? []).some((m) => m.id === wm[w]?.model_id) && <option value={wm[w]!.model_id}>{wm[w]!.model_id}</option>}
+                {(models.data ?? []).map((m) => <option key={m.id} value={m.id}>{m.name}{m.quant ? ` · ${m.quant}` : ''}</option>)}
+              </select>
+            </Field>
+          ))}
+        </div>
+        <Field label={t('perf.defaultProfile')} hint={t('perf.defaultProfileHint')}>
+          <select className="input" value={draft.performance_profile ?? 'auto'} onChange={(e) => set({ performance_profile: e.target.value })}>
+            <option value="auto">{t('perf.auto')}</option>
+            <option value="off">{t('perf.off')}</option>
+            {(profiles.data?.profiles ?? []).map((p) => <option key={p.id} value={p.id}>{p.label} · {t(`perf.status.${p.status}`, p.status)}</option>)}
+          </select>
+        </Field>
+        <div className="label">{t('perf.kv.title')}</div>
+        <div className="grid gap-3 md:grid-cols-2">
+          <Field label={t('perf.kv.ttl')} hint={t('perf.kv.ttlHint')}>
+            <input type="number" min={60} max={86400} className="input font-mono" value={draft.kv_ttl_s ?? 1800}
+              onChange={(e) => set({ kv_ttl_s: Number(e.target.value) || 0 })} />
+          </Field>
+          <Field label={t('perf.kv.spillMax')} hint={t('perf.kv.spillMaxHint')}>
+            <input type="number" min={256} className="input font-mono" value={draft.kv_spill_max_mb ?? 4096} disabled={!draft.kv_spill}
+              onChange={(e) => set({ kv_spill_max_mb: Number(e.target.value) || 0 })} />
+          </Field>
+        </div>
+        <Toggle checked={!!draft.kv_spill} onChange={(v) => set({ kv_spill: v })} label={t('perf.kv.spill')} />
+      </div>
+    </Card>
   );
 }

@@ -37,7 +37,7 @@ Problems? In Yukti: **Help → Report a problem**, or email **juhilprogramming@g
 
 **Already using Yukti?** Download and run the new **Yukti-Setup.exe**, then click **Update now**. Your documents, chats and settings are kept.
 
-The full list of changes is in the [changelog](https://github.com/{REPO}/blob/main/CHANGELOG.md).
+The full list of changes is in the [changelog](https://github.com/{REPO}/blob/main/docs/CHANGELOG.md).
 
 ---
 

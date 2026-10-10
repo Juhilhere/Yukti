@@ -1,7 +1,7 @@
 # Yukti architecture
 
-This document describes how Yukti 0.3.0 is built and how a request moves through it. For the security view, see
-[SECURITY_MODEL.md](SECURITY_MODEL.md). For the HTTP contract, see [API.md](API.md) and [API_v2.md](API_v2.md).
+This document describes how Yukti 0.5.1 is built and how a request moves through it. For the security view, see
+[SECURITY_MODEL.md](SECURITY_MODEL.md). For the HTTP contract, see [API.md](API.md) and [API_v2.md](API_v2.md). The research behind the design is in [REFERENCES.md](REFERENCES.md).
 
 ## 1. Components
 
@@ -10,12 +10,17 @@ This document describes how Yukti 0.3.0 is built and how a request moves through
 | **Yukti Server** | `backend/app/main.py`, `server_main.py` | FastAPI application on `:8000`. Serves the REST/SSE API under `/api` and the SPA from `web/dist`. Frozen into `yukti-server.exe` with PyInstaller. |
 | Identity | `auth.py` | argon2id passwords, opaque server-side sessions (cookie `yukti_sid`), CSRF, lockout, forced password change, TOTP MFA and recovery codes. Also role-to-permission mapping and the subject snapshot. |
 | Policy decision point | `policy.py`, `policies/core.yaml` | Deterministic ABAC evaluation of YAML rules (simpleeval). Deny-overrides, default deny, fail closed. |
-| Laya | `laya.py` | Intent/department/urgency/sensitivity router (TF-IDF + logistic regression exported to ONNX). Also hosts the company-guardrail input classifier. |
-| Chat orchestrator | `chat.py` | Laya, then guardrails, then retrieval, then facts, then LLM stream, then citation check, then audit. |
-| Knowledge / RAG | `rag.py` | Ingestion (type sniffing, digital/scanned page detection, RapidOCR, tagging, chunking, FTS5) and policy-filtered retrieval. Also dossier facts. |
-| Engine manager | `engine.py`, `llm_params.py` | Starts and monitors `llama-server`, maps 67 load + 35 sampling parameters to llama.cpp flags and request fields, streams tokens and runs the watchdog. Also talks to external OpenAI-compatible engines (Bionic/LM Studio, vLLM, remote). |
+| Laya | `laya.py` | System-One decision model: intent/department/urgency/sensitivity/worker (TF-IDF + logistic regression exported to ONNX). Also hosts the company-guardrail input classifier. |
+| Work queue | `workqueue.py` | Durable task queue (`tasks` table) and the specialist workers: policy, small LLM, OCR + VLM, analytics, reasoning, coder, workflow. Background tasks are re-queued after a restart. |
+| Chat orchestrator | `chat.py` | Laya, then a task for the chosen worker, then guardrails, then retrieval, then facts, then LLM stream, then citation check, then checkpoint, then audit. |
+| Knowledge / RAG | `rag.py`, `graph.py`, `vectors.py` | Ingestion (type sniffing, digital/scanned page detection, RapidOCR, tagging, chunking, FTS5, graph edges) and hybrid policy-filtered retrieval (BM25, tags, metadata, knowledge graph, optional BGE-M3 vectors). Also dossier facts. |
+| Engine manager | `engine.py`, `llm_params.py`, `perf_profiles.py`, `kvcache.py` | Starts and monitors `llama-server`, maps 67 load + 35 sampling parameters to llama.cpp flags and request fields (chosen from validated Performance Engine profiles), keeps hot KV slots per chat (TTL + LRU), streams tokens and runs the watchdog. Also talks to external OpenAI-compatible engines (Bionic/LM Studio, vLLM, remote). |
+| Workbench | `workbench.py`, `deliverables.py`, `sandbox.py` | Plans multi-step work with policy-checked tools and writes Word, Excel, PowerPoint and approval-note files; runs code only in the sandbox. |
+| Scan to finding | `scan_findings.py`, `lanes.py` | OCR with positions + VLM → field extraction → verification against the asset master → human review → finding → approval note → approver lane, with escalation and follow-up. |
+| Asset ledger | `ledger.py` | Everything purchased or installed: vendor, serial, location, owner, certificate, interval, warranty, expiry; category-specific alert lead times. |
+| Research layer | `research.py` | Experimental model in its own process, its own guardrails, no documents or tools (`T-RESEARCH-ISOLATED`). |
 | Administration | `admin.py` | Users and CSV import, organisation AI settings, usage and health, feedback, backups and restore, model import, Laya benchmark. |
-| Production | `production.py` | Public production/financial overview, planner-entered plant model, HiGHS LP scenario solver. |
+| Production | `production.py`, `forecast.py` | Public production/financial overview, planner-entered plant model, demand forecast with uncertainty, HiGHS LP scenario solver and the plan scenario card. |
 | MRPL intelligence | `mrpl.py`, `mrpl_facts.py`, `data/mrpl/` | Public research (JSON + Markdown with source URLs). Seeds departments, is ingested as PUBLIC citable documents and backs structured fact search. |
 | Reports | `reports.py` | Asset dossier PDF (reportlab) built from the same fact records as chat. |
 | Audit | `audit.py` | Append-only, SHA-256 hash-chained log with verification. |
@@ -35,7 +40,10 @@ flowchart TB
     PDP["policy.py + core.yaml"]
     CHAT["chat.py"]
     LAYA["laya.py (ONNX Runtime)"]
-    RAG["rag.py"]
+    WQ["workqueue.py (tasks)"]
+    WB["workbench.py + sandbox.py"]
+    SCAN["scan_findings.py + lanes.py"]
+    RAG["rag.py + graph.py + vectors.py"]
     ENG["engine.py"]
     ADM["admin.py"]
     PROD["production.py (HiGHS)"]
@@ -46,6 +54,10 @@ flowchart TB
   LS["llama-server :8080<br/>(127.0.0.1 only)"]
   UI --> API --> AUTH --> PDP
   API --> CHAT --> LAYA
+  CHAT --> WQ
+  API --> WB --> WQ
+  API --> SCAN --> WQ
+  WB --> RAG
   CHAT --> RAG --> DB
   RAG --> BLOB
   CHAT --> ENG --> LS
@@ -71,23 +83,26 @@ sequenceDiagram
   U->>A: POST /api/chats/{id}/messages (cookie + X-CSRF-Token)
   A->>A: resolve session, check CSRF, forced password change, build Subject
   A->>L: classify(text)
-  L-->>U: SSE route {intent, department, urgency, sensitivity, confidence, latency_ms}
+  L-->>U: SSE route {intent, department, urgency, sensitivity, worker, confidence, latency_ms}
+  A->>A: task row on the durable queue (worker = Laya's choice)
+  A-->>U: SSE task {id, worker, label, served_by}
   A->>P: decide(subject, "ask", {type: guard, category})
   P-->>U: SSE guard {decision, rule_ids, reason}
   P->>Au: chat.guard
   alt denied by guardrail
     A-->>U: fixed refusal text + done (engine "policy")
   else allowed
-    A->>R: BM25 search (top 80 chunks)
+    A->>R: hybrid search: BM25 (top 80 chunks) + tags + graph links + metadata (+ vectors)
     R->>P: decide(subject, "cite", document) per document
     R-->>U: SSE retrieval {sources, denied: {count, departments}}
     R->>Au: retrieval (allowed_n, denied_n, cited refs)
     A->>F: dossier facts for asset tag / MRPL public facts
     F-->>U: SSE facts [KNOWN | MISSING | CONFLICTING]
-    A->>E: system rules + CONTEXT + FACTS + question (org AI settings)
+    A->>E: system rules + CONTEXT + FACTS + question (org AI settings + worker settings, the chat's hot KV slot)
     E-->>U: SSE token ... token
     A->>A: citation check ([S#]/[F#] must exist)
-    A->>Au: chat.answer (model, engine, intent, tokens, citations)
+    A->>A: checkpoint (task, worker, KV slot/state/cached tokens, tool calls, approvals, citations)
+    A->>Au: chat.answer (model, engine, intent, tokens, citations, task, worker)
     A-->>U: SSE done {message_id, stats}
   end
 ```
@@ -108,8 +123,10 @@ SQLite in WAL mode (`busy_timeout=5000`, foreign keys on), at `data/store/yukti.
 | Identity | `users`, `sessions`, `login_attempts`, `departments` |
 | Knowledge | `documents`, `pages`, `chunks`, `chunks_fts` (FTS5, porter + unicode61), `jobs` |
 | Plant (example) | `assets`, `tag_alias`, `ledger_items`, `work_orders`, `contacts`, `facts` |
-| Conversations | `projects`, `chats`, `messages`, `presets`, `feedback` |
-| Workflows | `access_requests`, `grants`, `findings`, `notifications`, `reports` |
+| Conversations | `projects`, `chats`, `messages`, `chat_checkpoints`, `presets`, `feedback` |
+| Work | `tasks` (durable queue), `reports` (also workbench deliverables and approval notes) |
+| Knowledge graph & vectors | `kg_edges`, `chunk_vectors` |
+| Workflows | `access_requests`, `grants`, `findings` (lane, owner, procedure, evidence region, verification, approval note), `review_items`, `notifications` |
 | Configuration | `settings` (org AI settings, production model, …), `engines` |
 | Telemetry (local) | `answer_stats`, `laya_log` |
 | Audit | `audit_log`. Triggers block `UPDATE` and `DELETE`. |
@@ -169,8 +186,10 @@ PDF parsing and OCR are serialised with a lock because pdfium is not thread-safe
 ## 7. Laya
 
 - **Model:** character + word TF-IDF with logistic-regression heads, trained at first start from seeded templates and exported to ONNX
-  (`data/store/laya/laya-0.3.0.onnx`). The server package ships a pre-trained copy. Inference runs on ONNX Runtime (CPU) in about 1 ms.
-- **Output:** intent, department, urgency (raised for trip, fire, leak, H2S, emergency), sensitivity, route, confidence and an **abstain** flag
+  (`data/store/laya/laya-0.4.0.onnx`). The server package ships a pre-trained copy. Inference runs on ONNX Runtime (CPU) in about 1 ms.
+- **Pattern:** a small System-One decision model (Kahneman's fast, typed judgements first). Jev is the closed-source reference
+  pattern for this category; Laya is the open-weight implementation with a compatible typed interface, running locally on ONNX Runtime.
+- **Output:** intent, department, urgency (raised for trip, fire, leak, H2S, emergency), sensitivity, route, **worker** (queue selection), a review signal, confidence and an **abstain** flag
   (confidence < 0.40 or margin < 0.10). When Laya abstains, the request falls back to the LLM + RAG route and is marked for review.
 - **Logging:** every decision goes to `laya_log`. `POST /api/admin/laya/benchmark` measures the loaded LLM as a router on logged queries,
   so the comparison is always measured on your own server and never hard-coded.
@@ -192,6 +211,11 @@ fixed refusal without calling the LLM. Allowed process-chemistry questions with 
   **The optimizer never runs on invented numbers.**
 - HiGHS maximises margin for the baseline and for the scenario (unit downtime, price deltas, crude cost delta). It returns product deltas,
   binding constraints and shadow prices.
+- **Plan (scenario card).** `forecast.py` estimates next month's demand per product from the planner's monthly history
+  (Holt linear smoothing, 80 % interval; a short history falls back to the mean). The LP then runs for the expected, low and
+  high demand cases with inventory, storage, dispatch, contract-minimum, crude-availability and planned-maintenance
+  constraints. The card shows the proposed % change per product, the expected value (margin and its change), the
+  alternatives and the assumptions.
 - If a model is loaded, the LLM writes a 4-bullet explanation. Any number in that text which is not in the optimizer output causes the
   wording to be withheld, and the factual summary is shown instead.
 
@@ -222,9 +246,9 @@ and only to the server origin. Downloads prompt for a location.
 ```json
 {
   "product": "yukti-server",
-  "version": "0.3.0",
+  "version": "0.5.1",
   "published_at": "2026-…Z",
-  "desktop": { "file": "Yukti-Setup-0.3.0.exe", "size": 0, "sha256": "…" },
+  "desktop": { "file": "Yukti-Setup.exe", "size": 0, "sha256": "…" },
   "artifacts": [
     { "name": "server-core", "kind": "zip", "check": "yukti-server.exe", "replace_dir": "_internal",
       "label": "Yukti server, UI, Laya, public data, examples", "size": 0, "sha256": "…",
@@ -251,9 +275,89 @@ local testing or intranet hosting.
 | `data/mrpl/` | Public research (`corporate`, `refinery`, `products`, `finance_esg` as `.json` + `.md`) |
 | `data/corpus/` | Example documents + `manifest.json` |
 | `data/structured/` | Example asset and work-order data |
-| `data/store/` (runtime, git-ignored) | `yukti.db`, `blobs/`, `reports/`, `logs/`, `backups/`, `laya/`, `slots/` |
+| `data/store/` (runtime, git-ignored) | `yukti.db`, `blobs/`, `reports/` (also workbench files and approval notes), `logs/`, `backups/`, `laya/`, `slots/` (spilled KV slots), `sandbox/` |
 | `models/` (git-ignored) | GGUF models |
 | `llama/cuda`, `llama/vulkan` (package only) | Bundled llama.cpp builds |
 | `ops/` | Build, release and run scripts; `ops/package/` holds files copied into the server package |
 
 In the frozen package, `ROOT` is the folder containing `yukti-server.exe`. `YUKTI_HOME` and `YUKTI_STORE` override the root and the runtime store.
+
+## 12. Durable work queue and workers
+
+Every request that Laya routes becomes a row in `tasks` **before** any work starts. Chat turns run inline (the answer
+streams to the person) but are still recorded with their worker, steps and outcome; when the policy engine answers
+(guardrail, off-topic, need-to-know) the task is moved to the `policy` worker and no model is called. Background work
+(workbench deliverables, scan to finding) is queued and picked up by a dispatcher thread with a concurrency limit per
+worker. At startup, background tasks that were running are queued again (at most 3 attempts) and interrupted chat turns
+are marked `interrupted`.
+
+| Worker | Serves | Model |
+|---|---|---|
+| `policy` | Guardrail denials, off-topic and need-to-know answers | none |
+| `small_llm` | Cited answers, search, summaries | the loaded chat model |
+| `ocr_vlm` | Photos, scans, stamps, drawings | RapidOCR + the loaded model's image module |
+| `analytics` | Forecasts, the optimizer, ledger and expiry queries | deterministic code |
+| `reasoning` | Synthesis (why / root cause / compare) | a 27B-class model when assigned; thinking on |
+| `coder` | Scripts, SQL, calculations | the loaded model; code runs only in the sandbox |
+| `workflow` | Access requests, approvals, escalation | deterministic code |
+
+One llama.cpp model is resident per GPU, so a worker whose assigned model is not the loaded one is served by the loaded
+model with that worker's settings; the task's `served_by` says so.
+
+## 13. Performance Engine: profiles and hot KV cache
+
+- **Profiles** (`perf_profiles.py`): complete load configurations for a model class on a hardware class (context, offload with
+  auto-fit, batch and micro-batch, KV type, flash attention, continuous batching, slots, speculative decoding). Yukti picks one
+  from the model's size and the free VRAM when it loads a model by itself; an administrator may pick one explicitly. Profiles
+  are `measured` (numbers measured by the team), `reference` (starting points) or `validated` (measured on this server with
+  *Validate*, which records tok/s, time to first token and VRAM).
+- **Hot KV** (`kvcache.py`): each chat keeps its llama.cpp slot (`id_slot`) while in use, so the next turn reuses the cached
+  prompt prefix. Slots are given out least-recently-used first; a chat idle longer than the TTL loses its claim. Optionally
+  an evicted slot is saved to disk (`--slot-save-path`) and restored when its chat returns, with a size cap (LRU) on the
+  spilled files. Context is otherwise reused retrieval-driven: earlier turns and relevant documents are retrieved again.
+- **Checkpoints**: each answered turn writes `chat_checkpoints` (task, worker, model, KV slot and state, cached tokens, tool
+  calls, policy approvals, citations).
+
+## 14. Hybrid retrieval and the knowledge graph
+
+`rag.retrieve()` fuses channels and keeps the per-document policy check in front of all of them:
+
+1. **BM25** keywords over chunks (FTS5), tag-matched chunks ×1.5, superseded revisions ×0.8.
+2. **Metadata**: document types that fit Laya's intent (an SOP for a procedure question) ×1.15.
+3. **Knowledge graph** (`graph.py`, `kg_edges`): documents linked to the asset (documented in, procedure), documents those
+   reference by number, documents of related assets; graph-only documents enter below solid keyword hits.
+4. **Vectors** (`vectors.py`, optional): BGE-M3 embeddings served by a second local llama.cpp process (`--embedding`) or a
+   local `YUKTI_EMBED_URL`; cosine similarity is added to the keyword score.
+5. **Structured facts**: asset dossier facts (KNOWN / MISSING / CONFLICTING), ledger entries for expiry questions.
+
+Each source carries document, revision, status, page or record ID (`A2_WorkOrders!34`), timestamp, confidence (relative
+score × OCR confidence for scanned pages) and the channels that found it.
+
+## 15. Workbench, deliverables and the sandbox
+
+`POST /api/work` turns a request into a plan of tool calls on one task: `search_documents`, `read_facts`, `read_records`,
+`read_spreadsheet`, `calculate` (every step shown), `draft_text` (the LLM drafts from the evidence, cited; without a model an
+extractive draft), `write_docx` / `write_xlsx` / `write_pptx`, `run_code`. Each call is authorised by the policy engine
+for the person who asked (`T-TOOLS`, `T-SANDBOX`, `T-NO-CONTRACTOR-CODE`; `R-NO-CONTROL-WRITE` stays a hard floor) and
+written to the audit log. Code runs in `sandbox.py`: its own process, isolated mode, no network, an import allow-list,
+files only in its own folder, a time limit and a memory limit (Windows job object without child processes; resource limits
+elsewhere). Files are stored under `reports/`, fingerprinted and downloadable by their owner.
+
+## 16. Scan to finding, approver lanes and follow-up
+
+`scan_findings.py` reads each page with RapidOCR keeping box positions, groups boxes into lines (tolerant of skew), asks the
+vision model (when loaded) for stamps, signatures and markings, and extracts fields (report number, dates, tag, serial,
+make/model, thickness readings, valve pressures, results). It verifies them against the asset master (tag, unit, serial,
+model, design limits, ledger due date). Mismatches and low-confidence fields become `review_items`; the finding stays
+`DRAFT` until a reviewer confirms, corrects or dismisses them. The finding is then linked to the asset, the applicable
+procedure (graph), the owner department, a due date (by severity) and the evidence region, an approval note is drafted
+(.docx) and it is routed to the lane approver (`lanes.py`). Unacknowledged findings escalate (high 24 h, medium 72 h, low
+168 h) up the chain lane approver → department HOD → refinery management → top management; overdue findings get a daily
+reminder.
+
+## 17. Isolated research layer
+
+`research.py` runs an experimental model (for example a Heretic-style model studied for refinery-specific guardrails) in
+its own llama.cpp process or at a 127.0.0.1 URL, never as the production engine. Only `research.use` holders can ask it,
+questions are audited as fingerprints, answers are labelled experimental, and the policy engine denies it every document
+and tool (`T-RESEARCH-ISOLATED`). Production chats, the workbench, approvals and the optimizer never call it.

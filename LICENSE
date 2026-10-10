@@ -58,7 +58,7 @@ Refinery and Petrochemicals Limited (MRPL).
 6. THIRD-PARTY COMPONENTS
 
    The Software includes open-source components and an open-weight language model that are licensed by
-   their own authors under their own terms (listed in THIRD_PARTY_NOTICES.md). Those terms apply to those
+   their own authors under their own terms (listed in docs/THIRD_PARTY_NOTICES.md). Those terms apply to those
    components and are not restricted or replaced by this licence.
 
 

@@ -27,9 +27,12 @@ body:
       label: Area
       options:
         - Chat / retrieval / facts
-        - Knowledge and ingestion
-        - Workflows (access, findings, alerts)
-        - Production optimizer
+        - Workbench / deliverables / sandbox
+        - Knowledge and ingestion (including scan to finding)
+        - Workflows (access, findings, approver lanes, ledger, alerts)
+        - Production forecast and optimizer
+        - Performance Engine / work queue / models
+        - Research layer
         - Administration
         - Security / policy / audit
         - Desktop app / installation

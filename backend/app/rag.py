@@ -177,11 +177,13 @@ def _extract(path: Path, mime_hint: str, jid: str | None) -> list[dict[str, Any]
         wb = openpyxl.load_workbook(str(path), read_only=True, data_only=True)
         for si, ws in enumerate(wb.worksheets):
             rows = list(ws.iter_rows(values_only=True))
-            if not rows:
+            # the header is the first row with at least two filled cells (exports often start with a title row)
+            h0 = next((i for i, r in enumerate(rows) if sum(1 for v in r if v not in (None, "")) >= 2), None)
+            if h0 is None:
                 continue
-            hdr = [str(h) if h is not None else "" for h in rows[0]]
+            hdr = [str(h) if h is not None else "" for h in rows[h0]]
             lines = []
-            for ri, r in enumerate(rows[1:], start=2):
+            for ri, r in enumerate(rows[h0 + 1:], start=h0 + 2):
                 cells = [f"{hdr[i] if i < len(hdr) else i}={v}" for i, v in enumerate(r) if v not in (None, "")]
                 if cells:
                     lines.append(f"[{ws.title}!{ri}] " + "; ".join(cells))
@@ -244,6 +246,11 @@ def ingest(document_id: str, jid: str | None, actor: str) -> None:
         _stage(jid, 4, "done", f"{n} chunks")
         _stage(jid, 5, "done", "FTS5 BM25 index updated")
         ex("UPDATE documents SET pages=?, asset_tags_json=? WHERE id=?", (len(pages), j(tags), document_id))
+        from . import graph, vectors
+        graph.index_document(document_id)  # links to assets, procedures and referenced documents
+        if vectors.ready():
+            import threading
+            threading.Thread(target=vectors.index_missing, daemon=True, name="embed-index").start()
         if jid:
             ex("UPDATE jobs SET status='done', updated_at=? WHERE id=?", (now_iso(), jid))
         audit.write(actor, "document.ingested", f"document:{document_id}",
@@ -338,7 +345,26 @@ def _fts_query(text: str, extra_tags: list[str]) -> str:
     return " OR ".join('"' + t.replace('"', "") + '"' for t in dict.fromkeys(toks)) or '""'
 
 
-def retrieve(subject: Subject, text: str, k: int = 8) -> dict[str, Any]:
+# document types that answer a given kind of question best (metadata channel of the hybrid search)
+INTENT_DOC_TYPES = {
+    "procedure_lookup": {"SOP", "troubleshooting_guide"},
+    "asset_dossier": {"datasheet", "drawing_sld", "drawing_pid", "work_order_export", "SOP"},
+    "finding_review": {"inspection_report", "calibration_certificate"},
+    "process_chemistry": {"MSDS", "process_manual"},
+    "asset_expiry": {"calibration_certificate", "inspection_report", "asset_register"},
+}
+_RECORD = re.compile(r"\[([^\[\]!]{1,40}![0-9]{1,7})\]")
+
+
+def retrieve(subject: Subject, text: str, k: int = 8, intent: str | None = None, embedder: Any = None) -> dict[str, Any]:
+    """Hybrid, policy-filtered retrieval.
+
+    Channels: BM25 keywords (FTS5), asset tags, document metadata (type that fits the question), knowledge-graph links
+    (documents linked to the asset, procedures, referenced documents) and, when an embedding model runs, dense vectors.
+    Every candidate document is checked with the policy engine (`cite`) before anything about it is used; withheld
+    documents are only counted. Each source carries its revision, page or record ID, timestamp, confidence and the
+    channels that found it."""
+    from . import graph, vectors
     tags = detect_tags(text)
     fq = _fts_query(text, tags)
     t0 = time.time()
@@ -357,9 +383,42 @@ def retrieve(subject: Subject, text: str, k: int = 8) -> dict[str, Any]:
         except Exception as e2:  # noqa: BLE001
             log(f"[search] fallback query with {len(words)} term(s) failed too ({type(e2).__name__})")
             rows = []
+    channels: dict[str, set[str]] = {r["cid"]: {"bm25"} for r in rows}
+    if tags:
+        for r in rows:
+            if any(t in (r["tags"] or "").split() for t in tags):
+                channels[r["cid"]].add("tags")
+    # dense vectors (only when an embedding model runs)
+    dense = dict(vectors.search(text, 40, embedder)) if (embedder is not None or vectors.ready()) else {}
+    extra_ids = [cid for cid in dense if cid not in channels]
+    if extra_ids:
+        marks = ",".join("?" * len(extra_ids))
+        for r in q(f"SELECT c.id cid, c.document_id, c.page, c.text, c.tags, 0.0 score FROM chunks c WHERE c.id IN ({marks})", extra_ids):
+            rows.append(r)
+            channels[r["cid"]] = set()
+    for cid in dense:
+        if cid in channels:
+            channels[cid].add("vector")
+    # knowledge graph: documents linked to the asset (its procedures, drawings, referenced documents)
+    linked = graph.linked_documents(tags) if tags else {}
+    have_docs = {r["document_id"] for r in rows}
+    for did in [d for d in linked if d not in have_docs][:6]:
+        best = q("SELECT id cid, document_id, page, text, tags, 0.0 score FROM chunks WHERE document_id=? ORDER BY "
+                 "(CASE WHEN " + " OR ".join(["tags LIKE ?"] * len(tags)) + " THEN 0 ELSE 1 END), page, ordinal LIMIT 1",
+                 (did, *[f"%{t}%" for t in tags]))
+        for r in best:
+            rows.append(r)
+            channels[r["cid"]] = set()
+    for r in rows:
+        if r["document_id"] in linked:
+            channels[r["cid"]].add("graph")
+    want_types = INTENT_DOC_TYPES.get(intent or "", set())
+
     docs: dict[str, dict[str, Any]] = {}
     allowed: dict[str, bool] = {}
     denied_docs: dict[str, dict[str, Any]] = {}
+    base = [-float(r["score"]) for r in rows if "bm25" in channels[r["cid"]]]
+    top = max(base) if base else 1.0
     scored: list[tuple[float, dict[str, Any]]] = []
     for r in rows:
         did = r["document_id"]
@@ -372,33 +431,58 @@ def retrieve(subject: Subject, text: str, k: int = 8) -> dict[str, Any]:
             if d["doc_type"] != "company_briefing":
                 denied_docs[did] = d
             continue
-        s = -float(r["score"])
-        if tags and any(t in (r["tags"] or "").split() for t in tags):
+        ch = channels[r["cid"]]
+        s = -float(r["score"]) if "bm25" in ch else 0.0
+        if "vector" in ch:
+            s += 0.5 * top * max(0.0, dense[r["cid"]])
+        if not ch & {"bm25", "vector"}:  # reached only through the graph: below solid keyword hits, but in the evidence
+            s = 0.35 * top
+        if "tags" in ch:
             s *= 1.5
+        if "graph" in ch and ch & {"bm25", "vector"}:
+            s *= 1.15
+        if want_types and d["doc_type"] in want_types:
+            ch.add("metadata")
+            s *= 1.15
         if d["status"] == "SUPERSEDED":
             s *= 0.8
         scored.append((s, {**r, "doc": d}))
     scored.sort(key=lambda x: -x[0])
+    best_s = scored[0][0] if scored else 1.0
     out: list[dict[str, Any]] = []
     per_doc: dict[str, int] = {}
+    ocr: dict[tuple[str, int], float | None] = {}
     for s, r in scored:
         did = r["document_id"]
         if per_doc.get(did, 0) >= 2:
             continue
         per_doc[did] = per_doc.get(did, 0) + 1
         d = r["doc"]
+        key = (did, int(r["page"] or 0))
+        if key not in ocr:
+            pg = q1("SELECT mode, ocr_conf FROM pages WHERE document_id=? AND page_no=?", key)
+            ocr[key] = float(pg["ocr_conf"]) if pg and pg["mode"] != "digital" and pg["ocr_conf"] is not None else None
+        conf = max(0.0, min(1.0, s / best_s if best_s > 0 else 0.0)) * (ocr[key] if ocr[key] is not None else 1.0)
+        rec = _RECORD.search(r["text"] or "")
         out.append({
             "id": f"S{len(out) + 1}", "document_id": did, "title": d["title"], "doc_number": d["doc_number"] or "",
             "revision": d["revision"] or "", "status": d["status"], "page": r["page"], "snippet": r["text"][:600],
-            "score": round(s, 3), "classification": ["PUBLIC", "INTERNAL", "RESTRICTED", "CONFIDENTIAL", "SECRET"][int(d["classification"])],
+            "record_id": rec.group(1) if rec else None,
+            "locator": (f"record {rec.group(1)}" if rec else f"p.{r['page']}"),
+            "score": round(s, 3), "confidence": round(conf, 2), "ocr_confidence": ocr[key],
+            "channels": sorted(channels[r["cid"]]), "graph_reason": (linked.get(did) or [None])[0],
+            "classification": ["PUBLIC", "INTERNAL", "RESTRICTED", "CONFIDENTIAL", "SECRET"][int(d["classification"])],
             "department": d["department"], "doc_type": d["doc_type"], "effective_date": d["effective_date"],
+            "timestamp": d["effective_date"] or (d["created_at"] or "")[:10], "ingested_at": d["created_at"],
             "_text": r["text"],
         })
         if len(out) >= k:
             break
     denied_depts = sorted({d["department"] for d in denied_docs.values()}) if subject.clearance >= 1 else []
     return {"sources": out, "denied": {"count": len(denied_docs), "departments": denied_depts, "doc_types": []},
-            "tags": tags, "latency_ms": round((time.time() - t0) * 1000, 1)}
+            "tags": tags, "related_tags": graph.related_tags(tags) if tags else [],
+            "channels": {"bm25": True, "tags": bool(tags), "graph": bool(linked), "vector": bool(dense), "metadata": bool(want_types)},
+            "latency_ms": round((time.time() - t0) * 1000, 1)}
 
 
 # ------------------------------------------------------------------ dossier facts (KNOWN / MISSING / CONFLICTING)

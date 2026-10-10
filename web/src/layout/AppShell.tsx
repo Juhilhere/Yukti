@@ -1,4 +1,5 @@
 import { ErrorBoundary } from '../components/ErrorBoundary';
+import { Backdrop } from '../components/Backdrop';
 import { ReportProblem } from '../components/ReportProblem';
 import { useEffect, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
@@ -6,7 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Activity, Bell, BookOpen, Building2, Cpu, Factory, Globe2, HelpCircle, Inbox, KeyRound, LogOut, MemoryStick, MessageSquare,
   MonitorSmartphone, Settings, ShieldCheck, ShieldHalf, ScrollText, User2, Wrench, Gauge, Zap, AlertTriangle, CheckCheck,
-  Bug, Eye,
+  Bug, Eye, Hammer, FlaskConical,
 } from 'lucide-react';
 import { useT } from '../lib/i18n';
 import { ADMIN_PERMS } from '../pages/admin/AdminLayout';
@@ -27,11 +28,13 @@ function RailLink({ item }: { item: NavItem }) {
   return (
     <Tip text={item.label}>
       <NavLink to={item.to}
-        className={({ isActive }) => cx('relative flex h-10 w-10 items-center justify-center rounded-md transition-colors',
-          isActive ? 'bg-surface-3 text-text before:absolute before:-left-2 before:h-5 before:w-[3px] before:rounded-r before:bg-amber' : 'text-muted hover:bg-surface-2 hover:text-text')}>
+        className={({ isActive }) => cx('relative flex h-10 w-10 items-center justify-center rounded-lg border transition-all duration-200',
+          isActive
+            ? 'border-amber/25 bg-amber/[0.07] text-amber before:absolute before:-left-[13px] before:h-6 before:w-[2px] before:rounded-r before:bg-amber before:shadow-[0_0_10px_rgba(201,169,110,.6)]'
+            : 'border-transparent text-faint hover:border-border hover:bg-white/[0.03] hover:text-text')}>
         {item.icon}
         {!!item.badge && item.badge > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber px-1 font-mono text-[9.5px] font-bold text-[#1a1204]">
+          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber px-1 font-mono text-[9.5px] font-bold text-[#15110A] ring-2 ring-black">
             {item.badge > 99 ? '99+' : item.badge}
           </span>
         )}
@@ -89,6 +92,8 @@ function Rail() {
     { to: '/inbox', label: t('nav.inbox'), icon: <Inbox size={18} />, perm: INBOX_PERMS, badge: inbox },
     { to: '/assets', label: t('nav.assets'), icon: <Wrench size={18} />, perm: 'assets.view' },
     { to: '/production', label: t('nav.production'), icon: <Factory size={18} />, perm: 'production.view' },
+    { to: '/work', label: t('nav.work'), icon: <Hammer size={18} />, perm: 'work.create' },
+    { to: '/research', label: t('nav.research'), icon: <FlaskConical size={18} />, perm: 'research.use', strict: true },
   ];
   const bottom: NavItem[] = [
     { to: '/audit', label: t('nav.audit'), icon: <ScrollText size={18} />, perm: 'audit.view' },
@@ -99,14 +104,16 @@ function Rail() {
   const allowed = (i: NavItem) => (i.strict && i.perm ? has(i.perm) : can(i.perm));
   const initials = (me?.user.display_name || me?.user.username || '?').split(/\s+/).map((s) => s[0]).slice(0, 2).join('').toUpperCase();
   return (
-    <nav className="flex w-14 shrink-0 flex-col items-center gap-1 border-r border-border bg-surface py-2">
-      <Tip text={`Yukti — ${t('login.title')}`}><NavLink to="/chat" className="mb-2 mt-0.5"><Logo size={30} /></NavLink></Tip>
+    <nav className="glass flex w-16 shrink-0 flex-col items-center gap-1.5 border-r border-border py-3">
+      <Tip text={`Yukti — ${t('login.title')}`}><NavLink to="/chat" className="mb-1"><Logo size={30} /></NavLink></Tip>
+      <div className="mb-2 mt-1 h-px w-8 bg-gradient-to-r from-transparent via-amber/40 to-transparent" />
       {top.filter(allowed).map((i) => <RailLink key={i.to} item={i} />)}
       <div className="flex-1" />
+      <div className="mb-1 h-px w-8 bg-gradient-to-r from-transparent via-border-strong to-transparent" />
       {bottom.filter(allowed).map((i) => <RailLink key={i.to} item={i} />)}
       <Popover direction="up" className="!bottom-0 !left-full !mb-0 ml-2 w-64"
         trigger={(_o, toggle) => (
-          <button onClick={toggle} className="mt-1 flex h-9 w-9 items-center justify-center rounded-full border border-border-strong bg-cyan/15 text-[12px] font-semibold text-cyan hover:border-cyan">
+          <button onClick={toggle} className="mt-2 flex h-9 w-9 items-center justify-center rounded-full border border-amber/40 bg-black font-display text-[15px] text-amber transition-colors hover:border-amber hover:bg-amber/10">
             {initials}
           </button>
         )}>
@@ -241,9 +248,9 @@ function TopBar() {
   const sys = useSystem();
   const offline = sys.data ? sys.data.offline_guard : true;
   return (
-    <header className="grid h-11 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-border bg-surface px-3">
+    <header className="glass grid h-11 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-border px-3">
       <div className="flex min-w-0 items-center gap-2">
-        <span className="font-semibold tracking-tight">Yukti</span>
+        <span className="font-display text-[19px] leading-none text-text">Yukti</span>
         <span className="hidden truncate text-[11.5px] text-faint xl:inline">{t('login.title')}</span>
       </div>
       {isLlmAdmin ? <ModelPill /> : <ModelChip />}
@@ -286,7 +293,7 @@ function StatusBar() {
     <span title={title} className="flex items-center gap-1.5 whitespace-nowrap border-r border-border px-2.5 last:border-r-0">{children}</span>
   );
   return (
-    <footer className="flex h-6 shrink-0 items-center overflow-hidden border-t border-border bg-surface font-mono text-[10.5px] text-muted">
+    <footer className="glass flex h-6 shrink-0 items-center overflow-hidden border-t border-border font-mono text-[10.5px] text-muted">
       {sys.error && !s ? <Item><Dot tone="danger" /> {t('shell.status.statsUnavailable')}</Item> : null}
       {s?.offline_guard && <Item title={t('shell.status.offlineTip')}><Dot tone="ok" /> {t('shell.status.offline')}</Item>}
       {s?.ram && <>
@@ -339,7 +346,9 @@ export function AppShell() {
     return () => window.removeEventListener('hashchange', check);
   }, []);
   return (
-    <div className="flex h-full w-full overflow-hidden">
+    <div className="relative h-full w-full overflow-hidden">
+    <Backdrop />
+    <div className="app-layer flex h-full w-full overflow-hidden">
       <Rail />
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar />
@@ -354,6 +363,7 @@ export function AppShell() {
       <ReportProblem />
       <IdleWatcher />
       <Shortcuts />
+    </div>
     </div>
   );
 }

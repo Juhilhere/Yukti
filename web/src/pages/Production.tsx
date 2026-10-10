@@ -13,6 +13,7 @@ import { AMBER, AXIS, CYAN, GRID, OTHER, SERIES, SURFACE, axisProps, tooltipStyl
 import { Badge, Card, EmptyState, ErrorBox, Field, Loading, PageHeader, Slider, Spinner, Tabs } from '../components/ui';
 import { toast } from '../components/Toast';
 import { cx, num } from '../lib/format';
+import { PlanCard, ProductRow } from '../components/work/PlanCard';
 
 /* ----------------------------- helpers ----------------------------- */
 const isUrl = (u: unknown): u is string => typeof u === 'string' && /^https?:\/\//i.test(u);
@@ -218,6 +219,9 @@ function UnitRow({ u, products, canEdit, onChange }: { u: ProdUnit; products: Pr
         <tr className="bg-bg">
           <td />
           <td colSpan={5} className="px-2 py-2">
+            <label className="mb-2 flex items-center gap-2 text-[11.5px] text-muted">{t('plan.f.downtime')}
+              <NumIn className="!w-20" value={u.planned_down_days ?? null} disabled={!canEdit} onChange={(v) => onChange({ ...u, planned_down_days: v })} />
+            </label>
             <div className="mb-1 text-[11px] text-muted">{t('production.unit.yieldsHint')}</div>
             <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-6">
               {products.map((p) => (
@@ -245,8 +249,8 @@ function ModelEditor({ q }: { q: ReturnType<typeof useModelQuery> }) {
   useEffect(() => { if (q.data && !draft) setDraft(structuredClone(q.data)); }, [q.data, draft]);
   const save = useMutation({
     mutationFn: (m: ProductionModel) => {
-      const { units, products, crude_cost_usd_t, notes } = m;
-      return api.put<ProductionModel>('/api/production/model', { units, products, crude_cost_usd_t, notes });
+      const { units, products, crude_cost_usd_t, crude_max_kt, notes } = m;
+      return api.put<ProductionModel>('/api/production/model', { units, products, crude_cost_usd_t, crude_max_kt, notes });
     },
     onSuccess: (r) => {
       toast.success(t('production.toast.saved'), r?.complete ? t('production.toast.complete') : t('production.toast.stillMissing', { n: r?.missing?.length ?? 0 }));
@@ -299,6 +303,7 @@ function ModelEditor({ q }: { q: ReturnType<typeof useModelQuery> }) {
           <Card title={t('production.model.crudeNotes')}>
             <div className="space-y-3">
               <Field label={t('production.model.crudeCost')}><NumIn value={draft.crude_cost_usd_t} disabled={!canEdit} onChange={(v) => setDraft((d) => d && ({ ...d, crude_cost_usd_t: v }))} /></Field>
+              <Field label={t('plan.f.crudeMax')} hint={t('plan.f.crudeMaxHint')}><NumIn value={draft.crude_max_kt ?? null} disabled={!canEdit} onChange={(v) => setDraft((d) => d && ({ ...d, crude_max_kt: v }))} /></Field>
               <Field label={t('production.model.notes')}><textarea className="input min-h-[60px] text-[12px]" disabled={!canEdit} value={draft.notes ?? ''} onChange={(e) => setDraft((d) => d && ({ ...d, notes: e.target.value }))} /></Field>
             </div>
           </Card>
@@ -309,12 +314,11 @@ function ModelEditor({ q }: { q: ReturnType<typeof useModelQuery> }) {
                   <th className="px-2 py-1.5">{t('production.col.product')}</th><th className="px-2 py-1.5">{t('production.col.price')}</th><th className="px-2 py-1.5">{t('production.col.min')}</th><th className="px-2 py-1.5">{t('production.col.max')}</th>
                 </tr></thead>
                 <tbody>{draft.products.map((p) => (
-                  <tr key={p.name} className="border-t border-border/60">
-                    <td className="px-2 py-1">{p.name}</td>
+                  <ProductRow key={p.name} p={p} canEdit={canEdit} onChange={(patch) => setProd(p.name, patch)} cells={<>
                     <td className="px-2 py-1"><NumIn value={p.price_usd_t} disabled={!canEdit} onChange={(v) => setProd(p.name, { price_usd_t: v })} /></td>
                     <td className="px-2 py-1"><NumIn value={p.min_kt} disabled={!canEdit} onChange={(v) => setProd(p.name, { min_kt: v })} /></td>
                     <td className="px-2 py-1"><NumIn value={p.max_kt} disabled={!canEdit} onChange={(v) => setProd(p.name, { max_kt: v })} /></td>
-                  </tr>
+                  </>} />
                 ))}</tbody>
               </table>
             </div>
@@ -484,7 +488,7 @@ function useModelQuery() {
   return useQuery({ queryKey: ['production', 'model'], queryFn: () => api.get<ProductionModel>('/api/production/model') });
 }
 
-type Tab = 'overview' | 'model' | 'scenario';
+type Tab = 'overview' | 'model' | 'scenario' | 'plan';
 
 export default function Production() {
   const t = useT();
@@ -502,6 +506,7 @@ export default function Production() {
         { id: 'overview', label: t('production.tab.overview') },
         { id: 'model', label: <span className="flex items-center gap-1.5">{t('production.tab.model')} {complete ? <CheckCircle2 size={12} className="text-ok" /> : <AlertTriangle size={12} className="text-amber" />}</span> },
         { id: 'scenario', label: t('production.tab.scenario') },
+        { id: 'plan', label: t('plan.tab') },
       ]} />
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
         <div className="flex items-start gap-2.5 rounded-md border border-amber/40 bg-amber/10 px-3 py-2.5 text-[12.5px]">
@@ -528,6 +533,7 @@ export default function Production() {
         </>}
         {tab === 'model' && <ModelEditor q={model} />}
         {tab === 'scenario' && <Scenario model={model.data} />}
+        {tab === 'plan' && <PlanCard model={model.data} />}
       </div>
     </div>
   );

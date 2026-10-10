@@ -1,6 +1,6 @@
 # Contributing to Yukti
 
-Yukti is a private, proprietary repository of Team UniMinds (see [NOTICE](NOTICE)). These notes are for team members and invited collaborators.
+Yukti is a private, proprietary repository of Team UniMinds (see [NOTICE](../NOTICE)). These notes are for team members and invited collaborators.
 
 ## Development setup
 
@@ -49,7 +49,7 @@ The first start seeds `data\store\`. Delete that folder to start fresh.
 | Change touches | Run |
 |---|---|
 | Backend | `cd backend; uv run pytest` (no GPU or model needed) |
-| Chat, engine, auth, policy (with a server running) | `cd backend; uv run python tests/live/e2e_live.py` (74 checks) |
+| Chat, engine, auth, policy (with a server running) | `cd backend; uv run python tests/live/e2e_live.py` (86 checks) |
 | Engine lifecycle, concurrency, uploads | `cd backend; uv run python tests/live/stress_live.py` (it kills and reloads the engine; do not run it against a shared server) |
 | Web | `cd web; npm run build` (runs `tsc --noEmit`, then the Vite build) |
 | Desktop | `cd desktop; npm test` (installer self-test: download, resume, SHA-256, GPU-aware selection, idempotent update) and `node --check` on changed files |

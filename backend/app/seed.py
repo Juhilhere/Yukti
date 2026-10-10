@@ -57,6 +57,10 @@ EXAMPLE_FILES = [
     "SLD-MCC-2_revB.pdf", "SLD-MCC-2_revC.pdf", "A2_troubleshooting_guide.pdf", "inspection_E-310_scan.pdf",
     "inspection_PSV-118_scan.png", "FIN-AUD-2026-Q2_boiler_fuel_cost.pdf", "MSDS_MDEA_amine.pdf", "Process_manual_amine_unit.pdf",
     "shift_log_2026-09-29.txt", "work_orders_A2.xlsx",
+    # the example asset register (with its certificate / calibration / licence ledger) and the department contacts roster
+    "asset_register.xlsx", "contacts_oncall.xlsx",
+    # company history: a digitised 1998 commissioning letter (old scan)
+    "company_history_1998_commissioning_letter_scan.png",
 ]
 
 
@@ -116,24 +120,13 @@ def run(ingest: bool = True) -> None:
     for dept, mgr in MANAGERS.items():
         uid = q1("SELECT id FROM users WHERE username=?", (mgr,))["id"]
         ex("INSERT OR IGNORE INTO departments(id, code, name, manager_user_id) VALUES(?,?,?,?)", (new_id(), dept, dept, uid))
-    # on-call contacts are the employees themselves (no invented directory)
+    # on-call contacts are the employees themselves (no invented directory); each department's HOD is its approved point
+    # of contact
+    hods = set(MANAGERS.values())
     for u in personas:
-        ex("INSERT INTO contacts(id, name, dept, role, ext, on_call) VALUES(?,?,?,?,?,?)",
-           (new_id(), u[1], u[3], u[2], "", int(u[0] in ON_CALL)))
-    kept_tags = _example_tags()
-    assets = json.loads((STRUCT / "assets.json").read_text(encoding="utf-8"))
-    for a in assets:
-        if a["tag"] not in kept_tags:
-            continue
-        ex("""INSERT OR REPLACE INTO assets(tag, name, unit, class, vendor, model, serial, location, owner_department, criticality, specs_json, is_example)
-              VALUES(?,?,?,?,?,?,?,?,?,?,?,1)""",
-           (a["tag"], a["name"], a["unit"], a["class"], a.get("vendor"), a.get("model"), a.get("serial"), a.get("location"),
-            DEPT_MAP.get(a.get("owner_department"), a.get("owner_department")), a.get("criticality"), j(a.get("specs", {}))))
-        for al in {a["tag"], *a.get("specs", {}).get("aliases", [])}:
-            ex("INSERT OR IGNORE INTO tag_alias(alias, tag) VALUES(?,?)", (al, a["tag"]))
-        for it in a.get("items", []):
-            ex("INSERT INTO ledger_items(id, tag, type, ref_no, issued_on, expires_on) VALUES(?,?,?,?,?,?)",
-               (new_id(), a["tag"], it["type"], it.get("ref_no"), it.get("issued_on"), it.get("expires_on")))
+        ex("INSERT INTO contacts(id, name, dept, role, ext, on_call, approved_poc, topic) VALUES(?,?,?,?,?,?,?,?)",
+           (new_id(), u[1], u[3], u[2], "", int(u[0] in ON_CALL), int(u[0] in hods), u[3] if u[0] in hods else None))
+    seed_example_assets()
     for extra in ["MCC-2-F07", "XV-2041", "XV-2042", "XV-2043", "FIC-101", "C-2F07-01"]:
         ex("INSERT OR IGNORE INTO tag_alias(alias, tag) VALUES(?,?)", (extra, extra))
     for w in json.loads((STRUCT / "work_orders.json").read_text(encoding="utf-8")):
@@ -156,6 +149,35 @@ def run(ingest: bool = True) -> None:
     if ingest:
         ingest_examples()
         seed_workflows()
+
+
+def seed_example_assets() -> int:
+    """Assets and ledger entries described by the example documents (asset register included). Idempotent: an asset
+    that already exists is left as it is, so upgrades only add what is missing."""
+    from . import ledger
+    kept_tags = _example_tags()
+    added = 0
+    for a in json.loads((STRUCT / "assets.json").read_text(encoding="utf-8")):
+        if a["tag"] not in kept_tags or q1("SELECT 1 FROM assets WHERE tag=?", (a["tag"],)):
+            continue
+        ex("""INSERT INTO assets(tag, name, unit, class, vendor, model, serial, location, owner_department, criticality, specs_json, is_example)
+              VALUES(?,?,?,?,?,?,?,?,?,?,?,1)""",
+           (a["tag"], a["name"], a["unit"], a["class"], a.get("vendor"), a.get("model"), a.get("serial"), a.get("location"),
+            DEPT_MAP.get(a.get("owner_department"), a.get("owner_department")), a.get("criticality"), j(a.get("specs", {}))))
+        for al in {a["tag"], *a.get("specs", {}).get("aliases", [])}:
+            ex("INSERT OR IGNORE INTO tag_alias(alias, tag) VALUES(?,?)", (al, a["tag"]))
+        for it in a.get("items", []):
+            cat = ("fire_extinguisher" if a["class"] == "extinguisher" and it["type"] == "inspection"
+                   else "safety_device" if a["class"] == "psv" and it["type"] != "calibration"
+                   else "pressure_vessel_inspection" if a["class"] in ("vessel", "exchanger", "boiler") and it["type"] == "inspection"
+                   else ledger.guess_category(it["type"]))
+            ex("""INSERT INTO ledger_items(id, tag, type, ref_no, issued_on, expires_on, category, vendor, serial, location, owner,
+                  interval_months, created_by, created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+               (new_id(), a["tag"], it["type"], it.get("ref_no"), it.get("issued_on"), it.get("expires_on"), cat, a.get("vendor"),
+                a.get("serial"), a.get("location"), DEPT_MAP.get(a.get("owner_department"), a.get("owner_department")),
+                ledger.CATEGORIES.get(cat, {}).get("interval_months"), "seed", now_iso()))
+        added += 1
+    return added
 
 
 def _manifest() -> list[dict]:
