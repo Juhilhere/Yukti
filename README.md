@@ -1,33 +1,16 @@
-<div align="center">
+# Yukti
 
-# 🛡️ Yukti
+**Sovereign Industrial AI Workbench.** Scattered plant knowledge becomes an authorized, traceable decision flow.<br>
+Self-hosted and air-gapped: it runs on the plant's own GPU server and nothing leaves the premises.
 
-### Sovereign Industrial AI Workbench
-
-**Scattered plant knowledge → an authorized, traceable decision flow.**<br>
-Self-hosted · air-gapped · runs on the plant's own GPU server · nothing leaves the premises
-
-[![Version](https://img.shields.io/badge/version-0.5.1-f5a524)](docs/CHANGELOG.md)
-[![Platform](https://img.shields.io/badge/Windows-10%20%2F%2011-0078d4)](docs/DEPLOYMENT.md)
-[![macOS](https://img.shields.io/badge/macOS-13.3%2B%20·%20Apple%20silicon-111111)](#-get-started)
-[![Offline](https://img.shields.io/badge/deployment-air--gapped-2ea44f)](docs/SECURITY_MODEL.md)
-[![Languages](https://img.shields.io/badge/UI-English%20·%20हिंदी%20·%20ಕನ್ನಡ-ff6f61)](docs/USER_GUIDE.md)
-[![SIH 2026](https://img.shields.io/badge/SIH%202026-SIH26117-6f42c1)](#-team)
-[![CI](https://github.com/Juhilhere/Yukti/actions/workflows/ci.yml/badge.svg)](https://github.com/Juhilhere/Yukti/actions/workflows/ci.yml)
-
-<br>
-
-[**⬇️ Download for Windows**](https://github.com/Juhilhere/Yukti/releases/latest/download/Yukti-Setup.exe) &nbsp;·&nbsp;
-[**🍎 Download for Mac**](https://github.com/Juhilhere/Yukti/releases/latest/download/Yukti-macOS-arm64.dmg) &nbsp;·&nbsp;
-[**🌐 Try it — yukti.cypherion.tech**](https://yukti.cypherion.tech) &nbsp;·&nbsp;
-[**📖 Docs**](#-documentation)
-
-</div>
+**Download:** [Windows](https://github.com/Juhilhere/Yukti/releases/latest/download/Yukti-Setup.exe) · [Mac](https://github.com/Juhilhere/Yukti/releases/latest/download/Yukti-macOS-arm64.dmg)<br>
+**Website:** [yukti.cypherion.tech](https://yukti.cypherion.tech) · **Documentation:** [guides and reference](#-documentation)<br>
+Version 0.5.1 · Windows 10 / 11 · macOS 13.3+ on Apple silicon · English, हिंदी, ಕನ್ನಡ
 
 <br>
 
 | ⚡ **~1 ms** | 🚀 **44–58 tok/s** | 🌏 **3 languages** | 🔒 **0 bytes out** |
-|:---:|:---:|:---:|:---:|
+|:---|:---|:---|:---|
 | Laya routes a request<br>before any LLM call | Gemma 3 4B on a<br>6 GB laptop GPU | English · हिंदी · ಕನ್ನಡ<br>with offline speech | Offline guard blocks<br>and counts egress |
 
 > [!NOTE]
@@ -407,17 +390,13 @@ flowchart LR
 
 ## 👥 Team
 
-<div align="center">
-
 **Team UniMinds** · Team ID 152431 · Smart India Hackathon 2026
 
 **SIH26117** — *Sovereign On-Premise Agentic AI Workbench using Open-Weight Multimodal LLMs for Confidential Industrial Work*<br>
 Theme: Smart Automation · Category: Software
 
 | Juhil Modi (lead) | Saswata Das | Harshit Tiwari | Rohan Jangam | Ritesh Prajapati | Sanskriti |
-|:---:|:---:|:---:|:---:|:---:|:---:|
-
-</div>
+|:---|:---|:---|:---|:---|:---|
 
 ---
 
