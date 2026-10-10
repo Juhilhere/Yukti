@@ -1,0 +1,98 @@
+name: Windows release build
+
+# Builds the parts of a Windows release that change with the code: the frozen Yukti server (server-core.zip) and the
+# one-click installer (Yukti-Setup.exe, with desktop/distribution.json built in). The runtimes and models (llama.cpp,
+# whisper.cpp, Gemma, voice models) are not rebuilt: the release manifest keeps pointing at the files already published.
+# The manifest is split, signed and uploaded on the publisher's computer (the signing key never comes here).
+
+on:
+  workflow_dispatch:
+    inputs:
+      demo:
+        description: Demonstration build (sample accounts on the sign-in page)
+        type: boolean
+        default: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      UV_PYTHON_PREFERENCE: only-managed
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv python install 3.12
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Web UI
+        working-directory: web
+        run: |
+          npm ci
+          npm run build
+
+      - name: Freeze server
+        working-directory: backend
+        run: |
+          uv sync --frozen
+          uv run pyinstaller --noconfirm --clean --name yukti-server --distpath "$env:RUNNER_TEMP\pyi-dist" --workpath "$env:RUNNER_TEMP\pyi-work" --specpath "$env:RUNNER_TEMP" `
+            --paths . --console `
+            --collect-all rapidocr_onnxruntime --collect-all onnxruntime --collect-all pypdfium2 --collect-all pypdfium2_raw --collect-all docx `
+            --collect-all reportlab --collect-all highspy --collect-all skl2onnx --collect-submodules sklearn --collect-data sklearn `
+            --collect-all segno --collect-all argon2 --collect-all pptx --collect-all xlsxwriter --collect-submodules uvicorn --collect-submodules app `
+            --hidden-import simpleeval --hidden-import pynvml --hidden-import multipart --hidden-import python_multipart --hidden-import openpyxl --hidden-import pyotp `
+            server_main.py
+          if ($LASTEXITCODE -ne 0) { throw "PyInstaller failed" }
+          # pre-train Laya once (in a scratch data folder) so the server needs no training at first start
+          $env:YUKTI_STORE = "$env:RUNNER_TEMP\laya-store"
+          uv run python -c "from app import db; db.init_db(); from app import laya; laya.get()"
+
+      - name: Assemble server-core.zip
+        shell: python
+        env:
+          DEMO: ${{ inputs.demo }}
+        run: |
+          import os, re, shutil, sys
+          from pathlib import Path
+          sys.path.insert(0, "ops")
+          from publish import make_zip
+          tmp = Path(os.environ["RUNNER_TEMP"]); pkg = tmp / "pkg"
+          shutil.copytree(tmp / "pyi-dist" / "yukti-server", pkg)
+          (pkg / "backend" / "policies").mkdir(parents=True); shutil.copy("backend/policies/core.yaml", pkg / "backend" / "policies")
+          shutil.copytree("web/dist", pkg / "web" / "dist")
+          for d in ("structured", "mrpl"):
+              shutil.copytree(Path("data") / d, pkg / "data" / d)
+          (pkg / "data" / "corpus").mkdir(); shutil.copy("data/corpus/manifest.json", pkg / "data" / "corpus")
+          s = Path("backend/app/seed.py").read_text(encoding="utf8"); i = s.index("EXAMPLE_FILES")
+          for f in re.findall(r'"([^"]+\.(?:pdf|docx|png|txt|xlsx))"', s[i:s.index("]", i)]):
+              shutil.copy(Path("data/corpus") / f, pkg / "data" / "corpus")
+          shutil.copytree(tmp / "laya-store" / "laya", pkg / "data" / "store" / "laya")
+          for f in [*Path("ops/package").glob("*.cmd"), Path("ops/package/README.txt"), Path("LICENSE"), Path("NOTICE"), Path("docs/THIRD_PARTY_NOTICES.md")]:
+              shutil.copy(f, pkg)
+          (pkg / "models").mkdir(); shutil.copy("ops/package/MODELS.txt", pkg / "models")
+          if os.environ.get("DEMO") == "true":
+              (pkg / "DEMO_MODE").write_text("Demonstration build: delete this file before the first start for production use.\n", encoding="ascii")
+          assert (pkg / "yukti-server.exe").exists(), "yukti-server.exe missing"
+          # the same members as the server-core of ops/publish.py
+          make_zip(pkg, [p for p in pkg.iterdir() if p.name not in ("llama", "models", "data", "speech")] +
+                   [p for p in (pkg / "data").iterdir() if p.name != "store"] + [pkg / "data" / "store" / "laya", pkg / "models" / "MODELS.txt"],
+                   tmp / "server-core.zip")
+          print("server-core.zip", (tmp / "server-core.zip").stat().st_size // 2**20, "MB")
+
+      - name: Desktop installer
+        working-directory: desktop
+        run: |
+          npm ci
+          npm run dist
+          if ($LASTEXITCODE -ne 0) { throw "installer build failed" }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-release
+          path: |
+            ${{ runner.temp }}/server-core.zip
+            desktop/dist/Yukti-Setup.exe
+          retention-days: 7
+          compression-level: 0
