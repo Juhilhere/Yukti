@@ -3,19 +3,17 @@
 **Sovereign Industrial AI Workbench.** Scattered plant knowledge becomes an authorized, traceable decision flow.<br>
 Self-hosted and air-gapped: it runs on the plant's own GPU server and nothing leaves the premises.
 
-**Download:** [Windows](https://github.com/Juhilhere/Yukti/releases/latest/download/Yukti-Setup.exe) · [Mac](https://github.com/Juhilhere/Yukti/releases/latest/download/Yukti-macOS-arm64.dmg)<br>
-**Website:** [yukti.cypherion.tech](https://yukti.cypherion.tech) · **Documentation:** [guides and reference](#-documentation)<br>
-Version 0.5.1 · Windows 10 / 11 · macOS 13.3+ on Apple silicon · English, हिंदी, ಕನ್ನಡ
+> ### Download Yukti: [Windows](https://github.com/Juhilhere/Yukti/releases/latest/download/Yukti-Setup.exe) · [Mac](https://github.com/Juhilhere/Yukti/releases/latest/download/Yukti-macOS-arm64.dmg)
+>
+> ### Website: [yukti.cypherion.tech](https://yukti.cypherion.tech)
+
+Version 0.5.1 · Windows 10 / 11 · macOS 13.3+ on Apple silicon · English, हिंदी, ಕನ್ನಡ · [Documentation](#-documentation)
 
 <br>
 
 | ⚡ **~1 ms** | 🚀 **44–58 tok/s** | 🌏 **3 languages** | 🔒 **0 bytes out** |
 |:---|:---|:---|:---|
 | Laya routes a request<br>before any LLM call | Gemma 3 4B on a<br>6 GB laptop GPU | English · हिंदी · ಕನ್ನಡ<br>with offline speech | Offline guard blocks<br>and counts egress |
-
-> [!NOTE]
-> Team UniMinds is **not affiliated with MRPL**. MRPL facts in Yukti are public information with source links.
-> The plant documents shipped with Yukti are **EXAMPLES written by Team UniMinds**, watermarked and badged in the UI.
 
 ---
 
