@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-paper: #ffffff;
+  --color-paper-2: #f7f7f5;
+  --color-paper-3: #efeeea;
+  --color-ink: #0b0b0c;
+  --color-ink-2: #3a3936;
+  --color-mute: #76736c;
+  --color-faint: #a9a59c;
+  --color-line: #e8e6e1;
+  --color-line-2: #d9d6cf;
+  --color-gold: #a8823f;
+  --color-gold-soft: #f3ecdf;
+  --color-ok: #2f8f55;
+  --color-ok-soft: #e7f4ec;
+  --color-warn: #c27a12;
+  --color-warn-soft: #fbf1e1;
+  --color-bad: #d2453b;
+  --color-bad-soft: #fbe9e7;
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-serif-display);
+  --font-deva: var(--font-noto-deva);
+  --font-knda: var(--font-noto-knda);
+}
+
+html { scroll-behavior: smooth; }
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+::selection { background: #0b0b0c; color: #fff; }
+
+/* blueprint: a fine grid that fades toward the edges */
+.bp-grid {
+  background-image:
+    linear-gradient(to right, rgba(11, 11, 12, 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(11, 11, 12, 0.055) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+.bp-grid-fine {
+  background-image:
+    linear-gradient(to right, rgba(11, 11, 12, 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(11, 11, 12, 0.035) 1px, transparent 1px);
+  background-size: 14px 14px;
+}
+.fade-mask { mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 30%, transparent 75%); }
+.fade-mask-b { mask-image: linear-gradient(to bottom, #000 40%, transparent); }
+.dots {
+  background-image: radial-gradient(rgba(11, 11, 12, 0.16) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+.hatch {
+  background-image: repeating-linear-gradient(135deg, rgba(11, 11, 12, 0.06) 0 1px, transparent 1px 7px);
+}
+
+/* the "+" marks drawn where the frame lines cross */
+.cross { position: absolute; width: 11px; height: 11px; pointer-events: none; }
+.cross::before, .cross::after { content: ""; position: absolute; background: #0b0b0c; }
+.cross::before { left: 5px; top: 0; width: 1px; height: 11px; }
+.cross::after { top: 5px; left: 0; height: 1px; width: 11px; }
+
+@keyframes dash-flow { to { stroke-dashoffset: -24; } }
+.dash-flow { stroke-dasharray: 4 8; animation: dash-flow 1.2s linear infinite; }
+@keyframes pulse-ring { 0% { transform: scale(0.8); opacity: 0.7; } 100% { transform: scale(2.2); opacity: 0; } }
+.pulse-ring { animation: pulse-ring 1.8s cubic-bezier(0.2, 0.6, 0.3, 1) infinite; }
+@keyframes scan { 0% { transform: translateY(0); } 100% { transform: translateY(100%); } }
+@keyframes marquee { to { transform: translateX(-50%); } }
+.marquee { animation: marquee 40s linear infinite; }
+@keyframes spin-slow { to { transform: rotate(360deg); } }
+.spin-slow { animation: spin-slow 60s linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .dash-flow, .pulse-ring, .marquee, .spin-slow { animation: none; }
+  html { scroll-behavior: auto; }
+}

@@ -13,11 +13,14 @@ ROOT = Path(os.environ.get("YUKTI_HOME") or (Path(sys.executable).parent if geta
 BACKEND = ROOT / "backend"
 DATA = ROOT / "data"
 FROZEN = bool(getattr(sys, "frozen", False))
-_APPDATA = Path(os.environ.get("LOCALAPPDATA") or (Path.home() / "AppData" / "Local")) / "Yukti"
+MACOS = sys.platform == "darwin"
+# per-user data folder: %LOCALAPPDATA%\Yukti on Windows, ~/Library/Application Support/Yukti on macOS
+_APPDATA = (Path.home() / "Library" / "Application Support" / "Yukti") if MACOS else \
+    Path(os.environ.get("LOCALAPPDATA") or (Path.home() / "AppData" / "Local")) / "Yukti"
 
 
 def _default_store() -> Path:
-    """Runtime data (database, uploads, logs, backups).
+    r"""Runtime data (database, uploads, logs, backups).
 
     Packaged builds keep data in %LOCALAPPDATA%\Yukti\data, outside the program folder, so that
     - the program folder may be read-only (e.g. extracted under C:\Program Files), and
@@ -52,8 +55,13 @@ def _writable(d: Path) -> bool:
         return False
 
 
-# models imported by the administrator go next to the bundled ones when possible, else to the user's app-data folder
-USER_MODELS = ROOT / "models" if _writable(ROOT / "models") else _APPDATA / "models"
+# Mac app: the server lives inside the signed app bundle; what the app downloads (AI model, photos, voice) goes to the
+# user's data folder instead
+MAC_APP = MACOS and FROZEN
+
+# models imported by the administrator go next to the bundled ones when possible, else to the user's app-data folder.
+# Never inside a macOS app bundle: writing there breaks its signature and is lost when the app is replaced.
+USER_MODELS = ROOT / "models" if not MAC_APP and _writable(ROOT / "models") else _APPDATA / "models"
 USER_MODELS.mkdir(parents=True, exist_ok=True)
 MODELS_DIRS = list(dict.fromkeys([ROOT / "models", USER_MODELS, Path.home() / ".lmstudio" / "models"]))
 
@@ -81,7 +89,9 @@ def _first(*cands: str | Path | None) -> str:
 # Bundled llama.cpp builds first (shipped with Yukti), then dev locations. No external runtime (Bionic/Ollama/vLLM) required.
 LLAMA_BINARIES = {
     "cuda": _first(os.environ.get("YUKTI_LLAMA_CUDA"), ROOT / "llama" / "cuda" / "llama-server.exe", "E:/tools/llama-cuda/llama-server.exe"),
-    "vulkan": _first(os.environ.get("YUKTI_LLAMA_VULKAN"), ROOT / "llama" / "vulkan" / "llama-server.exe", shutil.which("llama-server")),
+    # macOS: the bundled Metal build stands in for Vulkan (same role: the build used without an NVIDIA GPU)
+    "vulkan": _first(os.environ.get("YUKTI_LLAMA_VULKAN"), ROOT / "llama" / "vulkan" / "llama-server.exe",
+                     ROOT / "llama" / "metal" / "llama-server", shutil.which("llama-server")),
 }
 
 

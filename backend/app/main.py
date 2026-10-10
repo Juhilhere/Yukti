@@ -22,7 +22,7 @@ from fastapi.staticfiles import StaticFiles
 from . import admin, attachments, audit, chat, engine, journal, laya, mrpl, production, rag, seed, speech
 from . import graph, kvcache, lanes, ledger, perf_profiles, research, sandbox, scan_findings, vectors, workbench, workqueue
 from .auth import Ctx, current, err, notify, router as auth_router, user_by_id
-from .config import CLEARANCE_LABELS, CLEARANCE_BY_LABEL, DEMO_MODE, REPORTS, ROOT, VERSION, WEB_DIST, has_nvidia_gpu
+from .config import _APPDATA, CLEARANCE_LABELS, CLEARANCE_BY_LABEL, DEMO_MODE, MAC_APP, REPORTS, ROOT, VERSION, WEB_DIST, has_nvidia_gpu
 from . import scope
 from .db import ex, get_setting, init_db, j, new_id, now_iso, q, q1, set_setting, uj
 from .llm_params import DEFAULT_PREDICTION, schema, vllm_command
@@ -138,6 +138,8 @@ def startup() -> None:
         engine.log(f"[queue] after restart: {rec}")
     seed.run(ingest=False)          # accounts, departments, example assets: fast
     seed.seed_example_assets()      # upgrades: example assets added in later versions (asset register ledger)
+    if DEMO_MODE:                   # demonstration mode switched on later: list the untouched sample accounts on the login page
+        seed.ensure_demo_accounts()
     seed.ensure_top_management()    # upgrades: somebody must hold the Top management role (demo: sample account; else: tell the admin)
     mrpl.ensure_departments()
     threading.Thread(target=_photo_sweeper, daemon=True, name="photo-sweeper").start()
@@ -638,7 +640,7 @@ async def features(ctx: Ctx = Depends(current)) -> dict[str, Any]:
         "gpu": has_nvidia_gpu(),   # the voice add-on is larger with an NVIDIA graphics card (faster recogniser)
         # installed by Yukti-Setup (installed.json): the desktop app on this computer can download add-ons. A complete
         # package (single zip) or a developer copy cannot - the home screen must not offer an "Add" that leads nowhere
-        "downloadable": (ROOT / "installed.json").exists(),
+        "downloadable": MAC_APP or _install_state().exists(),
         # Yukti's own AI model was left out at installation (another model was already on this computer): the photo
         # add-on brings it along, so its download is larger
         "vision_with_model": _own_model_left_out(),
@@ -646,10 +648,16 @@ async def features(ctx: Ctx = Depends(current)) -> dict[str, Any]:
     }
 
 
+def _install_state() -> Path:
+    """installed.json of what the desktop app downloaded: next to the server, or (Mac app, whose server is inside the
+    signed app) in the user's data folder."""
+    return _APPDATA / "installed.json" if MAC_APP else ROOT / "installed.json"
+
+
 def _own_model_left_out() -> bool:
     """Installed with Yukti-Setup, and no AI model of Yukti's own is recorded in installed.json."""
     try:
-        arts = json.loads((ROOT / "installed.json").read_text(encoding="utf-8")).get("artifacts") or {}
+        arts = json.loads(_install_state().read_text(encoding="utf-8")).get("artifacts") or {}
     except (OSError, ValueError):
         return False
     return not any(k.startswith("model-") and "mmproj" not in k for k in arts)

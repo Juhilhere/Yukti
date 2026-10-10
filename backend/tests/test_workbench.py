@@ -446,3 +446,17 @@ def test_ai4bharat_models_are_used_only_when_installed():
     from app import speech
     assert set(speech.INDIC) == {"hi", "kn"} and speech.indic_model("en") is None
     assert all(n.startswith("AI4Bharat") for _, n in speech.INDIC.values())
+
+
+# ------------------------------------------------------------------ demonstration mode on a production-started database
+def test_demo_mode_relists_only_untouched_sample_accounts(app_client):
+    from app import seed
+    from app.auth import hash_password
+    from app.db import ex, q1
+    ex("UPDATE users SET demo_password=NULL, must_change_password=1 WHERE username IN ('anil.u', 'meera.me')")
+    ex("UPDATE users SET password_hash=? WHERE username='meera.me'", (hash_password("Changed!Pass-2026"),))
+    seed.ensure_demo_accounts()
+    assert q1("SELECT demo_password FROM users WHERE username='anil.u'")["demo_password"] == "Anil@2026"
+    assert q1("SELECT demo_password FROM users WHERE username='meera.me'")["demo_password"] is None  # changed: stays private
+    ex("UPDATE users SET password_hash=?, demo_password='Meera@2026', must_change_password=0 WHERE username='meera.me'",
+       (hash_password("Meera@2026"),))

@@ -68,25 +68,53 @@ export default function Login() {
   };
   const demoUsers = Array.isArray(demo.data) ? demo.data : [];
 
+  const demoBox = (wide: boolean) => (
+    <div className={cx('rounded-xl border border-amber/20 bg-black/50 backdrop-blur-md', wide ? 'p-5' : 'p-4')}>
+      <div className="mb-1 flex items-center gap-2">
+        <Users size={14} className="text-amber" />
+        <span className="label !text-text">{t('login.demo.title')}</span>
+        <span className="ml-auto rounded-sm border border-amber/30 px-1.5 py-px font-mono text-[9.5px] uppercase tracking-wider text-amber">{t('login.demo.badge')}</span>
+      </div>
+      <div className="mb-3 text-[12px] text-muted">{t('login.demo.hint')}</div>
+      <div className={cx('grid gap-2 overflow-y-auto pr-1', wide ? 'max-h-[max(220px,min(440px,calc(100vh-430px)))] sm:grid-cols-2' : 'max-h-[300px] grid-cols-1')}>
+        {demoUsers.map((u) => (
+          <button key={u.username} disabled={busy}
+            onClick={() => { setMfaStep(false); setUsername(u.username); setPassword(u.password); void doLogin(u.username, u.password); }}
+            className="group flex min-w-0 items-center gap-3 rounded-lg border border-border bg-surface-2/50 px-3 py-2.5 text-left transition-colors hover:border-amber/40 hover:bg-amber/[0.06]">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-amber/30 font-display text-[15px] text-amber">
+              {(u.display_name || u.username).slice(0, 1).toUpperCase()}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[13px] text-text group-hover:text-amber">{u.display_name}</span>
+              <span className="block truncate text-[11.5px] text-muted">{u.post}</span>
+              <span className="block truncate font-mono text-[10.5px] text-faint">{u.username} · {u.department}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
   const principles: [string, string][] = [['login.p1.title', 'login.p1.body'], ['login.p2.title', 'login.p2.body'], ['login.p3.title', 'login.p3.body']];
 
   return (
     <div className="relative h-full overflow-auto bg-bg">
       <Backdrop />
-      <div className="app-layer grid min-h-full lg:grid-cols-[minmax(0,1.15fr)_minmax(420px,0.85fr)]">
+      <div className="app-layer grid min-h-full lg:grid-cols-[minmax(0,1.5fr)_minmax(400px,0.75fr)]">
 
         {/* brand panel */}
-        <section className="relative hidden flex-col justify-between px-14 py-12 lg:flex">
+        <section className="relative hidden flex-col justify-between gap-8 px-14 py-10 lg:flex">
           <div className="flex items-center gap-3">
             <Logo size={34} />
             <span className="font-display text-[26px] leading-none">Yukti</span>
           </div>
-          <div className="max-w-[560px]">
+          <div className={demoUsers.length ? 'max-w-[860px]' : 'max-w-[560px]'}>
             <div className="mb-5 flex items-center gap-3 tracking-latin text-[10.5px] font-medium uppercase tracking-[0.28em] text-amber">
               <span className="h-px w-10 bg-amber/60" />{t('login.title')}
             </div>
-            <h1 className="font-display text-[56px] leading-[1.02] tracking-[-0.01em] text-text">{t('login.hero.title')}</h1>
+            <h1 className={cx('font-display leading-[1.02] tracking-[-0.01em] text-text', demoUsers.length ? 'text-[44px]' : 'text-[56px]')}>{t('login.hero.title')}</h1>
             <p className="mt-5 max-w-[480px] text-[14px] leading-relaxed text-muted">{t('login.hero.sub')}</p>
+            {demoUsers.length > 0 ? <div className="mt-6">{demoBox(true)}</div> : (
             <ol className="mt-10 space-y-0">
               {principles.map(([a, b], i) => (
                 <li key={a} className="grid grid-cols-[44px_1fr] gap-x-2 border-t border-amber/15 py-4 last:border-b">
@@ -98,6 +126,7 @@ export default function Login() {
                 </li>
               ))}
             </ol>
+            )}
           </div>
           <div className="flex items-center gap-2 tracking-latin font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">
             <ShieldCheck size={12} className="text-ok" /> {t('login.onprem')}
@@ -171,32 +200,8 @@ export default function Login() {
               </button>
             )}
 
-            {demoUsers.length > 0 && (
-              <div className="mt-10">
-                <div className="mb-2 flex items-center gap-2">
-                  <Users size={13} className="text-amber" />
-                  <span className="label !text-text">{t('login.demo.title')}</span>
-                  <span className="ml-auto rounded-sm border border-amber/30 px-1.5 py-px font-mono text-[9.5px] uppercase tracking-wider text-amber">{t('login.demo.badge')}</span>
-                </div>
-                <div className="mb-2 text-[11.5px] text-faint">{t('login.demo.hint')}</div>
-                <div className="max-h-[248px] divide-y divide-border/70 overflow-y-auto rounded-md border border-border bg-black/40">
-                  {demoUsers.map((u) => (
-                    <button key={u.username} disabled={busy}
-                      onClick={() => { setMfaStep(false); setUsername(u.username); setPassword(u.password); void doLogin(u.username, u.password); }}
-                      className="group flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-amber/[0.06]">
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-amber/30 font-display text-[14px] text-amber">
-                        {(u.display_name || u.username).slice(0, 1).toUpperCase()}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[12.5px] text-text group-hover:text-amber">{u.display_name}</span>
-                        <span className="block truncate text-[11px] text-muted">{u.post} · {u.department}</span>
-                      </span>
-                      <span className="shrink-0 font-mono text-[10px] text-faint">{u.username}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* narrow screens: the brand panel is hidden, so the demo accounts follow the form */}
+            {demoUsers.length > 0 && <div className="mt-10 lg:hidden">{demoBox(false)}</div>}
           </div>
         </section>
       </div>

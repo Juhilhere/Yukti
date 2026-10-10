@@ -17,7 +17,7 @@ export function MicButton({ state, onToggle, unavailable, onUnavailable, disable
     return (
       <Tip side="top" text={<><div className="font-medium">{t('voice.unavailable')}</div>{unavailable && <div className="mt-0.5 text-muted">{unavailable}</div>}</>}>
         <button type="button" aria-disabled="true" aria-label={t('voice.unavailable')} onClick={onUnavailable}
-          className="flex h-9 w-9 cursor-not-allowed items-center justify-center rounded-full text-faint hover:bg-white/[0.05]">
+          className="flex h-9 w-9 items-center justify-center rounded-full text-faint transition-colors hover:bg-white/[0.07] hover:text-muted">
           <MicOff size={17} strokeWidth={1.75} />
         </button>
       </Tip>

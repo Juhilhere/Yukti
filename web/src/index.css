@@ -59,7 +59,13 @@ h1.page-title { font-family: var(--font-display); font-weight: 400; font-size: 2
 .slow-turn { transform-box: fill-box; transform-origin: center; animation: slow-turn 240s linear infinite; }
 @media (prefers-reduced-motion: reduce) { .slow-turn { animation: none; } }
 
-input, textarea, select, button { font: inherit; color: inherit; }
+/* Tailwind 4 no longer gives buttons a hand cursor: everything clickable shows one (a utility class still overrides it).
+   In the base layer, so a text-* class on a button or field wins over the inherited colour. */
+@layer base {
+  input, textarea, select, button { font: inherit; color: inherit; }
+  button:not(:disabled), [role="button"]:not([aria-disabled="true"]), a[href], summary, select:not(:disabled), label[for],
+  input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabled), input[type="file"]:not(:disabled) { cursor: pointer; }
+}
 
 @layer components {
 .input {

@@ -85,6 +85,33 @@ def _insert_persona(p: tuple, demo: bool) -> None:
         0 if demo else 1, now_iso()))
 
 
+def ensure_demo_accounts() -> int:
+    """Demonstration mode on a database that was first started in production mode: the sample accounts appear on the
+    login page again. Only accounts that still have their published starting password are listed (checked against the
+    password hash), so an account whose password was changed is never exposed. Returns how many were (re)listed."""
+    from argon2 import PasswordHasher
+    from argon2.exceptions import VerificationError, VerifyMismatchError, InvalidHashError
+    ph = PasswordHasher()
+    n = 0
+    for p in PERSONAS:
+        u, pw = p[0], p[7]
+        row = q1("SELECT id, password_hash, demo_password FROM users WHERE username=?", (u,))
+        if row is None:
+            if u in DEMO_ONLY:  # demonstration-only persona (e.g. top management) that a production start left out
+                _insert_persona(p, True)
+                n += 1
+            continue
+        if row["demo_password"]:
+            continue
+        try:
+            ph.verify(row["password_hash"], pw)
+        except (VerifyMismatchError, VerificationError, InvalidHashError):
+            continue  # its password was changed: keep it private
+        ex("UPDATE users SET demo_password=?, must_change_password=0 WHERE id=?", (pw, row["id"]))
+        n += 1
+    return n
+
+
 def ensure_top_management() -> None:
     """Run at every start. If nobody holds the `executive` (Top management) role - an installation made before the role
     existed, or a production installation - then: demonstration mode gets the fictional sample account; a production

@@ -26,16 +26,22 @@ const BG = '#0e0e10';
 const DEFAULT_PORT = Number(process.env.YUKTI_TEST_PORT) || 8000;
 const PORT_RANGE = [8001, 8099];
 const localUrl = (port) => `http://127.0.0.1:${port}`;
-const DEFAULT_DEST = path.join(process.env.LOCALAPPDATA || require('os').homedir(), 'Yukti', 'Server');
+const MAC = process.platform === 'darwin';
+// per-user data folder of the server (same rule as the server's config.py)
+const APPDATA_DIR = MAC ? path.join(require('os').homedir(), 'Library', 'Application Support', 'Yukti')
+  : path.join(process.env.LOCALAPPDATA || path.join(require('os').homedir(), 'AppData', 'Local'), 'Yukti');
+const SERVER_EXE = process.platform === 'win32' ? 'yukti-server.exe' : 'yukti-server';
+const DEFAULT_DEST = MAC ? path.join(APPDATA_DIR, 'Server') : path.join(process.env.LOCALAPPDATA || require('os').homedir(), 'Yukti', 'Server');
 const DEFAULTS = { mode: null, serverUrl: localUrl(DEFAULT_PORT), installRoot: DEFAULT_DEST, localPort: DEFAULT_PORT, manifestUrl: null, bounds: null, startedOnce: false };
 const FIRST_RUN_TIMEOUT_MS = 10 * 60 * 1000;
 const READY_TIMEOUT_MS = 5 * 60 * 1000;
 
 // Download source for "Install Yukti on this PC": set at build time in distribution.json (the publisher's website).
 // Single-zip distribution: Yukti.exe with the complete Yukti Server in ./server next to it.
-const BUNDLED_ROOT = app.isPackaged ? path.join(path.dirname(process.execPath), 'server') : null;
+// macOS: the server ships inside the app (Yukti.app/Contents/Resources/server).
+const BUNDLED_ROOT = !app.isPackaged ? null : MAC ? path.join(process.resourcesPath, 'server') : path.join(path.dirname(process.execPath), 'server');
 function bundledServer() {
-  return BUNDLED_ROOT && fs.existsSync(path.join(BUNDLED_ROOT, 'yukti-server.exe')) ? BUNDLED_ROOT : null;
+  return BUNDLED_ROOT && fs.existsSync(path.join(BUNDLED_ROOT, SERVER_EXE)) ? BUNDLED_ROOT : null;
 }
 // Windows lets people double-click Yukti.exe inside a zip without extracting it; the server folder is then missing.
 function runningFromZipPreview() {
@@ -214,7 +220,7 @@ function serverLogDir(root = config.installRoot) {
   // packaged servers keep data in %LOCALAPPDATA%\Yukti\data (older installs: <install>\data\store)
   const legacy = path.join(root || '', 'data', 'store', 'logs');
   if (root && fs.existsSync(path.join(root, 'data', 'store', 'yukti.db'))) return fs.existsSync(legacy) ? legacy : null;
-  const appdata = path.join(process.env.LOCALAPPDATA || path.join(require('os').homedir(), 'AppData', 'Local'), 'Yukti', 'data', 'logs');
+  const appdata = path.join(APPDATA_DIR, 'data', 'logs');
   return fs.existsSync(appdata) ? appdata : (root && fs.existsSync(legacy) ? legacy : null);
 }
 // same fingerprint as the server's /api/health "instance" (sha256 of the lower-cased install folder)
@@ -265,7 +271,7 @@ async function firstFreePort() {
 // ------------------------------------------------------------ local server
 function serverKind(root) {
   if (!root) return null;
-  if (fs.existsSync(path.join(root, 'yukti-server.exe'))) return 'bundle';          // shipped, self-contained package
+  if (fs.existsSync(path.join(root, SERVER_EXE))) return 'bundle';                  // shipped, self-contained package
   if (fs.existsSync(path.join(root, 'backend', 'app', 'main.py'))) return 'dev';     // developer checkout (uv)
   return null;
 }
@@ -277,7 +283,10 @@ function startLocalServer(installRoot, port) {
   const env = { ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUNBUFFERED: '1' };
   let proc;
   if (kind === 'bundle') {
-    const exe = path.join(installRoot, 'yukti-server.exe');
+    const exe = path.join(installRoot, SERVER_EXE);
+    // macOS: an app from a downloaded disk image carries the quarantine flag on every file, and Gatekeeper would refuse
+    // the server and llama.cpp it starts (approving Yukti.app covers only the app itself). Clear it on our own files.
+    if (MAC) { try { require('child_process').execFileSync('xattr', ['-dr', 'com.apple.quarantine', installRoot], { timeout: 20000 }); } catch { /* not ours to change (read-only copy) */ } }
     // --parent-pid: the server exits by itself if this app disappears (crash / task kill)
     const args = ['--host', '127.0.0.1', '--port', String(port), '--parent-pid', String(process.pid)];
     log(`> ${exe} ${args.join(' ')}`);
@@ -396,6 +405,8 @@ async function bootLocal() {
     }
   }
   if (!live()) return;
+  if (!base) await ensureMacDownloads(live);
+  if (!live()) return;
   if (!base) {
     // the port of the last run first, so the address of Yukti (and what the page stored under it, e.g. the chosen
     // language) stays the same between runs; then the usual port, then the first free one of the range
@@ -416,6 +427,51 @@ async function bootLocal() {
   config.serverUrl = base;
   saveConfig();
   return waitReadyThenOpen(base, live);
+}
+
+// macOS app: the server and its programs ship inside the app, the model files do not. On the first start everything
+// else is downloaded from the signed release manifest (every part checked against its SHA-256) into
+// ~/Library/Application Support/Yukti, which the server searches: the AI model (2.4 GB, unless this Mac already has one,
+// e.g. in LM Studio), its image module for photos (0.8 GB) and the voice model (0.55 GB). Offline: Yukti starts without
+// what is missing and the download resumes on the next start.
+const MAC_MODEL = 'model-gemma-3-4b-it-q4_k_m';
+const MAC_PHOTOS = 'model-mmproj-gemma-3-4b-it-f16';
+const MAC_VOICE = 'voice-ggml-large-v3-turbo-q5_0';
+async function ensureMacDownloads(live) {
+  if (!MAC || !bundledServer() || config.installRoot !== bundledServer() || !manifestUrl()) return;
+  try {
+    const own = path.join(APPDATA_DIR, 'models', 'gemma-3-4b-it-GGUF');
+    const have = await installer.findLocalModels([path.join(require('os').homedir(), '.lmstudio', 'models'), path.join(APPDATA_DIR, 'models')]);
+    // a model that can already see photos: an image module (mmproj) next to it
+    const seesPhotos = have.some((m) => { try { return fs.readdirSync(path.dirname(m.path)).some((f) => /mmproj.*\.gguf$/i.test(f)); } catch { return false; } });
+    const ownThere = have.some((m) => path.dirname(m.path) === own);
+    // Yukti's own model is needed when there is no model, or when none of them can see photos (its image module fits only it)
+    const wantModel = !have.length || (!seesPhotos && !ownThere);
+    const only = [MAC_VOICE, ...(seesPhotos && !ownThere ? [] : [MAC_PHOTOS]), ...(wantModel ? [MAC_MODEL] : [])];
+    // everything already here (every later start): no network needed, Yukti starts at once, also offline
+    const there = { [MAC_VOICE]: path.join(APPDATA_DIR, 'speech', 'models', 'ggml-large-v3-turbo-q5_0.bin'),
+      [MAC_PHOTOS]: path.join(own, 'mmproj-gemma-3-4b-it-f16.gguf'), [MAC_MODEL]: path.join(own, 'gemma-3-4b-it-Q4_K_M.gguf') };
+    const state = (() => { try { return JSON.parse(fs.readFileSync(path.join(APPDATA_DIR, 'installed.json'), 'utf8')).artifacts || {}; } catch { return {}; } })();
+    if (only.every((n) => state[n] && fs.existsSync(there[n]))) return;
+    log(`[setup] first start on this Mac: downloading ${only.join(', ')}`);
+    if (unsignedRefusal('AI model download')) return;
+    installAbort = new AbortController();
+    const gb = (n) => (n / 2 ** 30).toFixed(2);
+    await installer.install({
+      ...(await installerOpts(manifestUrl(), APPDATA_DIR)), only, features: ['vision', 'voice'], ownModel: wantModel, signal: installAbort.signal,
+      onProgress: (ev) => {
+        if (!live()) return;
+        if (ev.phase === 'download') setStatus({ step: 'check', secs: 0, text: T('main.modelDownload', { pct: ev.pct, done: gb(ev.doneBytes), total: gb(ev.totalBytes) }) });
+        else if (ev.phase === 'verify') setStatus({ step: 'check', secs: 0, text: T('main.modelVerify') });
+        else if (ev.message) log(`[setup] ${ev.message}`);
+      },
+    });
+    log('[setup] AI model, photos and voice ready');
+  } catch (e) {
+    log(`[setup] download not finished (${e.message}): starting Yukti without the missing parts; it resumes on the next start`);
+  } finally {
+    installAbort = null;
+  }
 }
 
 async function waitReadyThenOpen(base, live) {
@@ -756,6 +812,7 @@ const busyChanging = () => !!installAbort || !!removing;
 
 function buildMenu() {
   const tpl = [
+    ...(MAC ? [{ role: 'appMenu' }] : []),
     { label: T('menu.file'), submenu: [
       { label: T('menu.switch'), accelerator: 'CmdOrCtrl+Shift+S', enabled: page !== 'setup' && !busyChanging(), click: () => { bootSeq++; showSetup(); } },
       // only from inside Yukti: while it is still starting, the start-up sequence owns the window
@@ -927,7 +984,7 @@ function nvidiaGpu() {
 }
 // options every call into the installer shares: release key, graphics card, and Chromium's network stack for downloads
 async function installerOpts(url, dest) {
-  return { manifestUrl: url, publicKey: releaseKey(), dest, forceGpu: await nvidiaGpu(), fetch: netFetch };
+  return { manifestUrl: url, publicKey: releaseKey(), dest, forceGpu: await nvidiaGpu(), fetch: netFetch, ...(MAC ? { mac: true } : {}) };
 }
 /**
  * Is a Yukti server running from this install folder that this app did NOT start (e.g. the "Yukti Server" window)?
@@ -946,6 +1003,12 @@ async function startedOutside(root) {
 }
 
 let planRefusalLogged = false;
+// A first install brings everything: the photo and voice add-ons are downloaded with the server (on an update, the
+// add-ons this install already has, or has had removed, stay as they are)
+async function firstInstallFeatures(dest) {
+  const st = await installer.installedVersion(dest);
+  return st && st.version ? undefined : ['vision', 'voice'];
+}
 handle('yukti:plan', async (_e, req = {}) => {
   const url = String(req.manifestUrl || '').trim();
   const dest = String(req.dest || '').trim() || DEFAULT_DEST;
@@ -957,14 +1020,19 @@ handle('yukti:plan', async (_e, req = {}) => {
   }
   try {
     // ownModel: "also download Yukti's own AI model" (otherwise it is left out when this computer already has a model)
-    const p = await installer.plan({ ...(await installerOpts(url, dest)), ownModel: req.ownModel === true ? true : undefined });
+    const p = await installer.plan({ ...(await installerOpts(url, dest)), ownModel: req.ownModel === true ? true : undefined,
+      features: await firstInstallFeatures(dest) });
     delete p.manifest;
     return { ok: true, dest, installed, plan: p, updateAvailable: !!(installed && installed.version && installed.version !== p.version) };
   } catch (e) { return { ok: false, dest, installed, error: e.message }; }
 });
 // ------------------------------------------------------------ add-ons (photos, voice): downloaded later, on request
 const FEATURES = ['vision', 'voice'];
-const localInstall = () => config.mode === 'local' && config.installRoot && fs.existsSync(path.join(config.installRoot, 'installed.json'));
+// Mac app: the server is inside the app; what is downloaded (AI model, photos, voice) goes to the user's data folder
+const macBundle = () => MAC && !!bundledServer() && config.installRoot === bundledServer();
+const featureRoot = () => (macBundle() ? APPDATA_DIR : config.installRoot);
+const localInstall = () => config.mode === 'local' && config.installRoot &&
+  (macBundle() || fs.existsSync(path.join(config.installRoot, 'installed.json')));
 let featureBusy = null;   // add-on being downloaded right now (the add-on page may be reloaded meanwhile)
 let removing = null;      // add-on being removed right now (nothing may be added or installed meanwhile)
 let lastFeature = null;   // how the last add / remove ended (for a page that was reloaded and missed the answer)
@@ -1002,10 +1070,10 @@ handle('yukti:featuresPlan', async (_e, req = {}) => {
   const state = { busy: featureBusy || removing, removing: !!removing, last: lastFeature };
   // what is already added is known from this computer alone (and can still be removed) — without internet, and in a
   // build that may not download anything
-  const known = async () => { try { return await installer.localFeatures(config.installRoot); } catch { return {}; /* unreadable installed.json */ } };
+  const known = async () => { try { return await installer.localFeatures(featureRoot()); } catch { return {}; /* unreadable installed.json */ } };
   if (app.isPackaged && !releaseKey()) return { ok: false, local: true, error: T('main.unsigned'), plain: true, known: await known(), ...state };
   try {
-    const p = await installer.plan(await installerOpts(manifestUrl(), config.installRoot));
+    const p = await installer.plan(await installerOpts(manifestUrl(), featureRoot()));
     return { ok: true, local: true, features: p.features, freeBytes: p.freeBytes, ...state,
       updatePending: !!(p.installed && p.installed.version !== p.version) };
   } catch (e) {
@@ -1020,15 +1088,15 @@ handle('yukti:featureInstall', async (_e, feature) => {
   const ctl = installAbort = new AbortController();
   featureBusy = feature;
   buildMenu();
-  const dest = config.installRoot;
+  const dest = featureRoot();
   const send = (p) => { if (p.message && p.phase !== 'download') log(`[add-on] ${p.message}`); sendUi('features', 'install:progress', { ...p, feature });
     if (p.pct !== undefined && win && !win.isDestroyed()) win.setProgressBar(p.pct / 100); };
   let result;
   try {
     const refusal = unsignedRefusal(`add-on ${feature}`);
     if (refusal) result = { ok: false, feature, error: refusal, plain: true };
-    else if (await startedOutside(dest)) {
-      log(`[add-on] ${feature} refused: the Yukti server in ${dest} was not started by this app and cannot be stopped by it`);
+    else if (await startedOutside(config.installRoot)) {
+      log(`[add-on] ${feature} refused: the Yukti server in ${config.installRoot} was not started by this app and cannot be stopped by it`);
       result = { ok: false, feature, error: T('main.outside'), plain: true };
     } else {
       const cur = ((await installer.installedVersion(dest)) || {}).features || [];
@@ -1073,7 +1141,7 @@ handle('yukti:featureRemove', async (_e, feature) => {
     } else {
       if (serverAlive()) await stopLocalServer();   // the files are in use while Yukti runs
       featureRestart = true;                        // …so it must be started again on the way back
-      await installer.removeFeature(config.installRoot, feature);
+      await installer.removeFeature(featureRoot(), feature);
       log(`[add-on] ${feature} removed`);
       result = { ok: true, feature, removing: true, restart: true };
     }
@@ -1117,7 +1185,7 @@ handle('yukti:install', async (_e, req = {}) => {
     } else {
       if (serverAlive()) await stopLocalServer();   // updating a running install
       const r = await installer.install({ ...(await installerOpts(url, dest)), ownModel: req.ownModel === true ? true : undefined,
-        signal: ctl.signal, onProgress: send });
+        features: await firstInstallFeatures(dest), signal: ctl.signal, onProgress: send });
       // the update is in: do not offer it again (also remembered when the user chose "Later", see yukti:connect)
       config.mode = 'local'; config.installRoot = r.dest; config.manifestUrl = url; config.startedOnce = false; config.updateOffered = app.getVersion(); saveConfig();
       featureRestart = false;
@@ -1230,4 +1298,6 @@ if (!app.requestSingleInstanceLock()) {
     }
   });
   app.on('window-all-closed', () => { if (!tray || quitting) app.quit(); });
+  // macOS: clicking the Dock icon brings the window back
+  app.on('activate', () => { if (app.isReady()) showMainWin(); });
 }

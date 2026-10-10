@@ -1,8 +1,8 @@
 <div align="center">
 
-## ⬇️ [Download Yukti for Windows](https://github.com/{REPO}/releases/latest/download/Yukti-Setup.exe)
+## ⬇️ [Download Yukti for Windows](https://github.com/{REPO}/releases/latest/download/Yukti-Setup.exe) · [Download Yukti for Mac](https://github.com/{REPO}/releases/latest/download/Yukti-macOS-arm64.dmg)
 
-**One file: `Yukti-Setup.exe`.** Nothing else on this page needs to be downloaded.
+**One file: `Yukti-Setup.exe` (Windows) or `Yukti-macOS-arm64.dmg` (Mac).** Nothing else on this page needs to be downloaded.
 
 English · हिंदी · ಕನ್ನಡ (the same steps in Hindi and Kannada are further down)
 
@@ -22,10 +22,23 @@ English · हिंदी · ಕನ್ನಡ (the same steps in Hindi and Kanna
 | **Graphics card** | not required. An NVIDIA card makes answers faster |
 | **First download** | 2.7 GB, or 3.4 GB with an NVIDIA card (10–40 minutes). About 0.9 GB if the computer already has an AI model |
 
+### On a Mac
+
+1. Open **Yukti-macOS-arm64.dmg** and drag **Yukti** into **Applications**.
+2. Open Yukti. The first time, macOS says it cannot check the app: open **System Settings → Privacy & Security** and click **Open Anyway**.
+3. Yukti downloads its AI model, photos and voice once (about 3.8 GB, or 1.4 GB if the Mac already has an AI model, for example from LM Studio). Then sign in. From now on Yukti works **without internet**.
+
+| | |
+|---|---|
+| **Mac** | Apple silicon (M1 or later), macOS 13.3 or later |
+| **Memory** | 8 GB (16 GB recommended) |
+| **Free disk space** | about 6 GB |
+
 Problems? In Yukti: **Help → Report a problem**, or email **juhilprogramming@gmail.com**.
 
 ### What is new in {VERSION}
 
+- **Yukti for Mac.** Runs on Apple silicon, on the Mac's own graphics chip. Photos and voice work too: the Mac app downloads them with the AI model on its first start, nothing to add later.
 - **A smaller first download when the computer already has an AI model.** If a model Yukti can run is already there (for example one downloaded with LM Studio), Yukti uses it and does not download its own (2.4 GB less). Yukti's own model can still be added at any time: *Other options* on the setup screen, or by adding photos. On a computer without any model, nothing changes: Yukti downloads its own model and works exactly as before.
 
 **Since 0.5.0**
@@ -43,6 +56,8 @@ The full list of changes is in the [changelog](https://github.com/{REPO}/blob/ma
 
 ### हिंदी
 
+**Mac:** **Yukti-macOS-arm64.dmg** खोलें, Yukti को Applications में खींचें। पहली बार: **System Settings → Privacy & Security → Open Anyway**। पहली शुरुआत में Yukti अपना AI, फ़ोटो और आवाज़ एक बार डाउनलोड करता है।
+
 1. **Yukti-Setup.exe** डाउनलोड करें और उस पर डबल-क्लिक करें (अगर Windows चेतावनी दिखाए: **More info → Run anyway**)।
 2. Yukti खुलेगा और खुद को तैयार करेगा। वह अपना AI एक बार डाउनलोड करेगा (2.7–3.4 GB)। विंडो खुली रखें।
 3. साइन इन करें। इसके बाद Yukti **बिना इंटरनेट** के चलता है।
@@ -52,6 +67,8 @@ The full list of changes is in the [changelog](https://github.com/{REPO}/blob/ma
 **0.5.0 से:** 📷 फ़ोटो भेजकर सवाल पूछें (पाइप का लेबल, टैग प्लेट, नेमप्लेट) · 🎙️ टाइप करने की जगह बोलें (हिंदी, English, ಕನ್ನಡ)। ये दोनों वैकल्पिक हैं: इंस्टॉल के बाद Yukti की होम स्क्रीन पर **जोड़ें** दबाएँ।
 
 ### ಕನ್ನಡ
+
+**Mac:** **Yukti-macOS-arm64.dmg** ತೆರೆದು Yukti ಅನ್ನು Applications ಗೆ ಎಳೆಯಿರಿ. ಮೊದಲ ಬಾರಿ: **System Settings → Privacy & Security → Open Anyway**. ಮೊದಲ ಆರಂಭದಲ್ಲಿ Yukti ತನ್ನ AI, ಫೋಟೋ ಮತ್ತು ಧ್ವನಿಯನ್ನು ಒಮ್ಮೆ ಡೌನ್‌ಲೋಡ್ ಮಾಡುತ್ತದೆ.
 
 1. **Yukti-Setup.exe** ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ ಅದರ ಮೇಲೆ ಡಬಲ್-ಕ್ಲಿಕ್ ಮಾಡಿ (Windows ಎಚ್ಚರಿಕೆ ತೋರಿಸಿದರೆ: **More info → Run anyway**).
 2. Yukti ತೆರೆದು ತಾನೇ ಸಿದ್ಧವಾಗುತ್ತದೆ. ತನ್ನ AI ಅನ್ನು ಒಮ್ಮೆ ಡೌನ್‌ಲೋಡ್ ಮಾಡುತ್ತದೆ (2.7–3.4 GB). ವಿಂಡೋ ತೆರೆದಿಡಿ.

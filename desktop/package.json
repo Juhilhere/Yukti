@@ -12,7 +12,8 @@
     "icon": "node scripts/make-icon.js",
     "dist": "node scripts/make-icon.js && electron-builder --win nsis",
     "pack": "node scripts/make-icon.js && electron-builder --win --dir",
-    "test": "node scripts/installer-selftest.js"
+    "test": "node scripts/installer-selftest.js",
+    "pack:mac": "node scripts/make-icon.js && electron-builder --mac dir --arm64"
   },
   "devDependencies": {
     "electron": "30.5.1",
@@ -55,6 +56,16 @@
       "uninstallerIcon": "build/icon.ico",
       "uninstallDisplayName": "Yukti",
       "artifactName": "Yukti-Setup.exe"
+    },
+    "mac": {
+      "target": [
+        "dir"
+      ],
+      "icon": "build/icon.png",
+      "category": "public.app-category.productivity",
+      "identity": null,
+      "hardenedRuntime": false,
+      "darkModeSupport": true
     }
   }
 }

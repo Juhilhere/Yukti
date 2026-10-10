@@ -27,7 +27,7 @@ from typing import Any
 import httpx
 
 from . import engine, journal
-from .config import FROZEN, ROOT, has_nvidia_gpu
+from .config import _APPDATA, FROZEN, MACOS, ROOT, has_nvidia_gpu
 from .db import q
 from .policy import Subject
 from .scope import asset_visible
@@ -42,7 +42,9 @@ MODEL = {
     "gpu": ("ggml-large-v3-turbo-q5_0.bin", "Whisper large-v3-turbo"),
     "cpu": ("ggml-small-q8_0.bin", "Whisper small"),
 }
-MODEL_DIRS = [ROOT / "speech" / "models", _DEV]
+# Mac: whisper.cpp with Metal ships inside the app; its voice model is downloaded into the user's data folder
+MAC_BIN = [ROOT / "speech" / "metal" / "whisper-server"]
+MODEL_DIRS = [ROOT / "speech" / "models", _APPDATA / "speech" / "models", _DEV]
 # AI4Bharat IndicWhisper (Vistaar benchmark models, Whisper architecture) converted to ggml: one model per language
 INDIC = {"hi": ("ggml-indicwhisper-hi.bin", "AI4Bharat IndicWhisper (Hindi)"),
          "kn": ("ggml-indicwhisper-kn.bin", "AI4Bharat IndicWhisper (Kannada)")}
@@ -80,6 +82,12 @@ def gpu_installed() -> bool:
 
 def choose() -> dict[str, Any]:
     """Which recogniser this computer can run: {'device', 'binary', 'model', 'model_name'} or {'reason'}."""
+    if MACOS and _first(MAC_BIN):  # Mac app, Apple GPU (Metal): the large model when it is there, else the small one
+        mac_model = _model("gpu") or _model("cpu")
+        if mac_model:
+            return {"device": "gpu", "binary": _first(MAC_BIN), "model": mac_model,
+                    "model_name": MODEL["gpu"][1] if mac_model.name == MODEL["gpu"][0] else MODEL["cpu"][1]}
+        return {"reason": "Voice input has not been added yet. An administrator can add it from the Yukti home screen on the server computer."}
     gpu_allowed = time.time() >= _S.gpu_disabled_until  # after a failed GPU start the processor is used for a while
     if gpu_allowed and _first(BIN["gpu"]) and _model("gpu") and has_nvidia_gpu() and (_S.device == "gpu" or _gpu_free_mb() >= 1200):
         return {"device": "gpu", "binary": _first(BIN["gpu"]), "model": _model("gpu"), "model_name": MODEL["gpu"][1]}

@@ -1,4 +1,5 @@
-import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { AlertTriangle, Info, Inbox, Loader2 } from 'lucide-react';
 import { cx } from '../lib/format';
 import { errMsg } from '../lib/api';
@@ -174,19 +175,44 @@ export function rich(text: string, tags: Record<string, (chunk: string) => React
 }
 
 /* ---------- Tooltip / InfoTip ---------- */
+/** Hover / focus hint. Drawn above everything (portal, fixed position) and kept inside the window, so a rounded box with
+ * overflow hidden (e.g. the question box) can never cut it off. */
 export function Tip({ text, children, side = 'right' }: { text: ReactNode; children: ReactNode; side?: 'right' | 'top' | 'bottom' | 'left' }) {
-  const pos = {
-    right: 'left-full top-1/2 -translate-y-1/2 ml-2',
-    left: 'right-full top-1/2 -translate-y-1/2 mr-2',
-    top: 'bottom-full left-1/2 -translate-x-1/2 mb-1.5',
-    bottom: 'top-full left-1/2 -translate-x-1/2 mt-1.5',
-  }[side];
+  const anchor = useRef<HTMLSpanElement>(null);
+  const tip = useRef<HTMLSpanElement>(null);
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
+  useLayoutEffect(() => {
+    if (!open || !anchor.current || !tip.current) { setPos(null); return; }
+    const a = anchor.current.getBoundingClientRect();
+    const t = tip.current.getBoundingClientRect();
+    const gap = 6, edge = 8;
+    let left = side === 'right' ? a.right + gap : side === 'left' ? a.left - t.width - gap : a.left + a.width / 2 - t.width / 2;
+    let top = side === 'top' ? a.top - t.height - gap : side === 'bottom' ? a.bottom + gap : a.top + a.height / 2 - t.height / 2;
+    if (side === 'top' && top < edge) top = a.bottom + gap;                                   // no room above: below
+    if (side === 'bottom' && top + t.height > innerHeight - edge) top = a.top - t.height - gap;
+    left = Math.min(Math.max(edge, left), innerWidth - t.width - edge);
+    top = Math.min(Math.max(edge, top), innerHeight - t.height - edge);
+    setPos({ left, top });
+  }, [open, side, text]);
+  useEffect(() => {
+    if (!open) return;
+    const close = () => setOpen(false);
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
+    return () => { window.removeEventListener('scroll', close, true); window.removeEventListener('resize', close); };
+  }, [open]);
   return (
-    <span className="group/tip relative inline-flex">
+    <span ref={anchor} className="relative inline-flex"
+      onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}
+      onFocus={() => setOpen(true)} onBlur={() => setOpen(false)}>
       {children}
-      <span className={cx('pointer-events-none absolute z-50 hidden w-max max-w-[280px] rounded-md border border-border bg-surface-3 px-2 py-1 text-[11.5px] font-normal normal-case tracking-normal text-text shadow-xl group-hover/tip:block', pos)}>
-        {text}
-      </span>
+      {open && text && createPortal(
+        <span ref={tip} role="tooltip"
+          style={{ left: pos?.left ?? 0, top: pos?.top ?? 0, visibility: pos ? 'visible' : 'hidden' }}
+          className="pointer-events-none fixed z-[200] w-max max-w-[280px] rounded-md border border-border bg-surface-3 px-2 py-1 text-[11.5px] font-normal normal-case tracking-normal text-text shadow-xl">
+          {text}
+        </span>, document.body)}
     </span>
   );
 }

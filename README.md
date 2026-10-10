@@ -9,6 +9,7 @@ Self-hosted · air-gapped · runs on the plant's own GPU server · nothing leave
 
 [![Version](https://img.shields.io/badge/version-0.5.1-f5a524)](docs/CHANGELOG.md)
 [![Platform](https://img.shields.io/badge/Windows-10%20%2F%2011-0078d4)](docs/DEPLOYMENT.md)
+[![macOS](https://img.shields.io/badge/macOS-13.3%2B%20·%20Apple%20silicon-111111)](#-get-started)
 [![Offline](https://img.shields.io/badge/deployment-air--gapped-2ea44f)](docs/SECURITY_MODEL.md)
 [![Languages](https://img.shields.io/badge/UI-English%20·%20हिंदी%20·%20ಕನ್ನಡ-ff6f61)](docs/USER_GUIDE.md)
 [![SIH 2026](https://img.shields.io/badge/SIH%202026-SIH26117-6f42c1)](#-team)
@@ -17,6 +18,7 @@ Self-hosted · air-gapped · runs on the plant's own GPU server · nothing leave
 <br>
 
 [**⬇️ Download for Windows**](https://github.com/Juhilhere/Yukti/releases/latest/download/Yukti-Setup.exe) &nbsp;·&nbsp;
+[**🍎 Download for Mac**](https://github.com/Juhilhere/Yukti/releases/latest/download/Yukti-macOS-arm64.dmg) &nbsp;·&nbsp;
 [**🌐 Try it — yukti.cypherion.tech**](https://yukti.cypherion.tech) &nbsp;·&nbsp;
 [**📖 Docs**](#-documentation)
 
@@ -34,15 +36,10 @@ Self-hosted · air-gapped · runs on the plant's own GPU server · nothing leave
 
 ---
 
-<details open>
-<summary><b>📑 Contents</b></summary>
-
-[The problem](#-the-problem) · [The answer](#-the-answer) · [End to end](#-yukti-end-to-end) · [Features](#-features) ·
+**📑 Contents** · [The problem](#-the-problem) · [The answer](#-the-answer) · [End to end](#-yukti-end-to-end) · [Features](#-features) ·
 [Architecture](#%EF%B8%8F-architecture) · [Why it holds up](#-why-it-holds-up) · [Performance](#-performance-measured) ·
 [Get started](#-get-started) · [Roles](#-roles) · [Security](#%EF%B8%8F-security) · [Documentation](#-documentation) ·
 [Roadmap](#%EF%B8%8F-roadmap) · [Team](#-team)
-
-</details>
 
 ## 🚨 The problem
 
@@ -89,11 +86,7 @@ flowchart LR
   style O fill:#2ea44f,color:#fff
 ```
 
-<table>
-<tr>
-<td width="50%" valign="top">
-
-**🔐 Who may know what**
+### 🔐 Who may know what
 
 ```mermaid
 sequenceDiagram
@@ -110,10 +103,7 @@ sequenceDiagram
   Note over P,H: decision recorded in the audit chain
 ```
 
-</td>
-<td width="50%" valign="top">
-
-**🧾 Every answer shows its evidence**
+### 🧾 Every answer shows its evidence
 
 | Field | Example |
 |---|---|
@@ -126,10 +116,6 @@ sequenceDiagram
 | Found by | `bm25` `tags` `graph` `vector` |
 
 *Not merely an answer — an answer the right person is allowed to trust.*
-
-</td>
-</tr>
-</table>
 
 ## ✨ Features
 
@@ -148,8 +134,7 @@ sequenceDiagram
 | 🧪 | **Isolated research layer** | Experimental models with their own guardrails — no documents, tools or approvals |
 | 🌐 | **Knowledge base** | Contacts and approved points of contact, company history, digitised old records, MRPL public data (140 sources) |
 
-<details>
-<summary><b>📸 Screenshots</b></summary>
+### 📸 Screenshots
 
 | | |
 |---|---|
@@ -159,25 +144,24 @@ sequenceDiagram
 | <img src="docs/images/admin-users.jpg" width="430"><br>**Admin: users, roles, MFA** | <img src="docs/images/admin-ai-settings.jpg" width="430"><br>**Admin: organisation-wide AI settings** |
 | <img src="docs/images/admin-usage.jpg" width="430"><br>**Admin: measured usage and health** | <img src="docs/images/desktop-setup.jpg" width="430"><br>**Desktop app setup** |
 
-</details>
 
 ### 🧾 Scan → finding → approval
 
 ```mermaid
-stateDiagram-v2
-  direction LR
-  [*] --> OCR: 📄 scanned report
-  OCR --> VLM: text · tables · tags · dates
-  VLM --> Verify: stamps · symbols · markings
-  Verify --> Review: mismatch or low confidence
-  Verify --> Finding: all fields verified
-  Review --> Finding: 👤 confirm / correct
-  Finding --> Note: asset · procedure · owner · due date · evidence region
-  Note --> Lane: 📝 approval note (.docx)
-  Lane --> Decided: ✅ approve / reject
-  Lane --> Escalated: ⏰ not acknowledged
-  Escalated --> Decided
-  Decided --> [*]
+flowchart TB
+  S(["📄 Scanned report"]) --> O["🔤 OCR<br/>text · tables · tags · dates"]
+  O --> V["👁️ Vision model<br/>stamps · symbols · markings"]
+  V --> C{"✔️ Verify against<br/>asset master"}
+  C -- "mismatch or<br/>low confidence" --> R["👤 Human review<br/>confirm · correct · dismiss"]
+  C -- "all fields verified" --> F["🧾 Finding<br/>asset · procedure · owner<br/>due date · evidence region"]
+  R --> F
+  F --> N["📝 Approval note<br/>(.docx)"]
+  N --> L["✅ Approver lane"]
+  L -- "decided" --> D(["Approved / rejected"])
+  L -- "not acknowledged in time" --> E["⏰ Escalated<br/>HOD → management"]
+  E --> D
+  style S fill:#0e5a7a,color:#fff
+  style D fill:#2ea44f,color:#fff
 ```
 
 > *A forgotten scan becomes an owned workflow with a deadline.*
@@ -234,8 +218,7 @@ flowchart TB
   L3 -.-> AU
 ```
 
-<details>
-<summary><b>🔁 Project lifecycle</b></summary>
+### 🔁 Project lifecycle
 
 ```mermaid
 flowchart LR
@@ -244,10 +227,8 @@ flowchart LR
   C --> D["4️⃣ Act, approve & audit<br/>notes · alerts · scenarios<br/>accountable human<br/>every step logged"]
 ```
 
-</details>
 
-<details>
-<summary><b>🧰 Technology stack</b></summary>
+### 🧰 Technology stack
 
 | Layer | Stack |
 |---|---|
@@ -256,7 +237,6 @@ flowchart LR
 | 🤖 Models & solvers | Gemma 3 4B · RapidOCR · Laya · HiGHS LP · *optional:* 27B-class reasoning, BGE-M3 |
 | 🔐 Data & security | SQLite FTS5 · ABAC policy · argon2id + MFA · SHA-256 audit |
 
-</details>
 
 Full design: **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** · research behind it: **[docs/REFERENCES.md](docs/REFERENCES.md)**
 
@@ -298,8 +278,9 @@ RTX 4050 laptop GPU, 6 GB:
 
 ## 🚀 Get started
 
-<details open>
-<summary><b>👷 Users — one download, one double-click</b></summary>
+### 👷 Users — one download, one double-click
+
+**🪟 Windows 10 / 11**
 
 ```mermaid
 flowchart LR
@@ -311,12 +292,20 @@ flowchart LR
 - Optional add-ons from the home screen: **📷 photos** (~800 MB) · **🎙️ voice** (0.3–1 GB).
 - No internet? Copy the offline package (`ops\release-site.ps1`) by USB.
 
+**🍎 Mac (Apple silicon, macOS 13.3+)**
+
+```mermaid
+flowchart LR
+  A["⬇️ Yukti-macOS-arm64.dmg"] --> B["📂 Drag to Applications<br/>first open: Privacy & Security<br/>→ Open Anyway"] --> C["📦 First start downloads<br/>AI model + 📷 photos + 🎙️ voice<br/>3.8 GB · 1.4 GB with a model"] --> D(["🔑 Sign in<br/>works offline"])
+```
+
+- Runs on the Mac's own graphics chip (Metal): llama.cpp for answers, whisper.cpp for voice, both inside the app.
+- Not notarized yet: macOS asks once, **System Settings → Privacy & Security → Open Anyway**.
+
 → [User Guide](docs/USER_GUIDE.md)
 
-</details>
 
-<details>
-<summary><b>🛠️ Administrators — run the server</b></summary>
+### 🛠️ Administrators — run the server
 
 The self-contained **Yukti Server** package ships `yukti-server.exe`, llama.cpp (CUDA 12.4 + Vulkan), Gemma 3 4B with its
 image module, whisper.cpp, a pre-trained Laya, the UI and the data — no Python, Ollama or vLLM needed (but usable if present).
@@ -325,16 +314,14 @@ image module, whisper.cpp, a pre-trained Laya, the UI and the data — no Python
 |---|---|
 | This PC only | `Yukti.exe` (or `server\Start Yukti Server.cmd`) |
 | Serve the plant LAN | `server\Start Yukti Server (Plant LAN).cmd` — allow TCP 8000 for the plant subnet only |
-| Publish the download | `ops\build-release.ps1` → `ops\release-site.ps1` |
+| Publish the download | `ops\build-release.ps1` → `ops\release-site.ps1` · Mac: `ops/build-mac.sh` → `Yukti-macOS-arm64.dmg` |
 
 Optional models ([MODELS.txt](ops/package/MODELS.txt)): 27B-class reasoning · BGE-M3 vectors · AI4Bharat IndicWhisper · research model.
 
 → [Deployment](docs/DEPLOYMENT.md) · [Admin Guide](docs/ADMIN_GUIDE.md)
 
-</details>
 
-<details>
-<summary><b>👩‍💻 Developers</b></summary>
+### 👩‍💻 Developers
 
 Requires [uv](https://docs.astral.sh/uv/) + Python 3.12 and Node 22.
 
@@ -356,7 +343,6 @@ cd desktop; npm ci; npm start             # desktop client (npm run dist → Yuk
 First start seeds demo employees, MRPL public data and the example documents (~30 s). Reset: delete `data\store\`.
 → [Contributing](docs/CONTRIBUTING.md) · [API](docs/API.md)
 
-</details>
 
 ## 👥 Roles
 
@@ -403,8 +389,7 @@ flowchart LR
   P3 --> P4["🏭 Phase 4 · Scale<br/>plant-wide · template for<br/>other refineries & PSUs"]
 ```
 
-<details>
-<summary><b>Not done yet</b></summary>
+### 🚧 Not done yet
 
 - 🔏 Code-signed installers (SmartScreen warns today)
 - 🔐 Certificate management — HTTPS works with `--tls-cert`/`--tls-key`; issuing and renewal is left to the plant PKI
@@ -413,16 +398,13 @@ flowchart LR
 - 🐧 A Linux server package
 - 📏 Evaluation on real plant documents and calibration of Laya on labelled refinery workflows
 
-</details>
 
-<details>
-<summary><b>Real vs example data</b></summary>
+### 🧪 Real vs example data
 
 | ✅ Real (measured or sourced) | 🧪 Example (by Team UniMinds, badged) | ⛔ Not included (from the plant) |
 |---|---|---|
 | All software behaviour, settings, tok/s, audit hashes, policy decisions · MRPL public data from 140 sources | 18 plant documents (datasheet, SOP and drawing revisions, troubleshooting guide, E-310 and PSV-118 scans, 1998 letter, finance audit, MSDS, manual, shift log, work orders, asset register, contacts) and the assets they describe | Yields, prices, demand history and contracts (the planner enters them) · the real asset register · real documents · the HR directory |
 
-</details>
 
 ## 👥 Team
 

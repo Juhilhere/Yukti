@@ -31,6 +31,7 @@ const PS_TIMEOUT_MS = 15000;
 
 /** true / false, or null when the check itself failed - a caller that remembers the answer must not remember a failure. */
 async function detectNvidiaGpu() {
+  if (process.platform === 'darwin') return false;   // Macs have no NVIDIA GPU (llama.cpp uses Metal there)
   try {
     const out = await run('powershell', ['-NoProfile', '-Command', '(Get-CimInstance Win32_VideoController).Name -join ";"'], { timeout: PS_TIMEOUT_MS });
     return /nvidia/i.test(out);
@@ -39,6 +40,9 @@ async function detectNvidiaGpu() {
 async function hasNvidiaGpu() { return (await detectNvidiaGpu()) === true; }
 
 async function freeBytes(dir) {
+  if (process.platform !== 'win32') {
+    try { const st = await fsp.statfs(path.resolve(dir)); return st.bavail * st.bsize; } catch { return null; }
+  }
   try {
     const drive = path.parse(path.resolve(dir)).root.replace(/\\$/, '');
     const out = await run('powershell', ['-NoProfile', '-Command', `(Get-PSDrive -Name '${drive[0]}').Free`], { timeout: PS_TIMEOUT_MS });
@@ -148,6 +152,10 @@ async function extractZip(zip, into) {
 }
 
 function checkDest(dest) {
+  if (process.platform !== 'win32') {
+    if (!path.isAbsolute(String(dest || ''))) throw new Error(`Install folder must be a full path (got "${dest}")`);
+    return;
+  }
   // Require a full absolute path (e.g. C:\Yukti\Server); reject drive-relative ("E:folder") or relative paths.
   if (!/^[A-Za-z]:[\\/]/.test(String(dest || '')) && !String(dest || '').startsWith('\\\\')) {
     throw new Error(`Install folder must be a full path such as C:\\Yukti\\Server (got "${dest}")`);
@@ -181,6 +189,7 @@ const LATER_SHARD = /-(?!00001-)\d{5}-of-\d{5}/;                     // a model 
 function defaultModelDirs(dest) {
   const dirs = [path.join(os.homedir(), '.lmstudio', 'models'), path.join(dest, 'models')];
   if (process.env.LOCALAPPDATA) dirs.push(path.join(process.env.LOCALAPPDATA, 'Yukti', 'models'));
+  if (process.platform === 'darwin') dirs.push(path.join(os.homedir(), 'Library', 'Application Support', 'Yukti', 'models'));
   return dirs;
 }
 
@@ -219,6 +228,20 @@ async function readState(dest) {
 }
 
 /**
+ * The Mac app (o.mac): its programs (server, llama.cpp, whisper.cpp) ship inside the signed app, so only the model files
+ * of a release are downloaded; the zips hold Windows programs. Apple's GPU (Metal) runs the large voice model that the
+ * manifest marks for NVIDIA cards, so the small one is left out and no part is held back for want of an NVIDIA card.
+ */
+const MAC_SKIP = new Set(['voice-ggml-small-q8_0']);
+function forThisApp(m, o) {
+  let artifacts = m.artifacts;
+  if (o.mac) artifacts = artifacts.filter((a) => a.kind === 'file' && !MAC_SKIP.has(a.name)).map(({ requires, ...a }) => a);
+  // only some components (e.g. the Mac app's first start: just the AI model)
+  if (Array.isArray(o.only)) artifacts = artifacts.filter((a) => o.only.includes(a.name));
+  return artifacts === m.artifacts ? m : { ...m, artifacts };
+}
+
+/**
  * Work out what installing from a manifest means on this PC, without downloading anything.
  * @param {object} o {manifestUrl | manifest, dest, forceGpu, fetch (optional, see fetchManifest)}
  * @returns {Promise<{version, dest, nvidia, installed, artifacts:[{name,label,size,requires,needed,installed,partialBytes}],
@@ -226,7 +249,7 @@ async function readState(dest) {
  */
 async function plan(o) {
   checkDest(o.dest);
-  const m = o.manifest || await fetchManifest(o.manifestUrl, o.publicKey, MANIFEST_TIMEOUT_MS, o.fetch || fetch);
+  const m = forThisApp(o.manifest || await fetchManifest(o.manifestUrl, o.publicKey, MANIFEST_TIMEOUT_MS, o.fetch || fetch), o);
   const dest = path.resolve(o.dest);
   const tmp = path.join(dest, '.download');
   const nvidia = o.forceGpu !== undefined ? o.forceGpu : await hasNvidiaGpu();
@@ -324,7 +347,7 @@ async function install(o) {
   const CANCELLED = 'Installation cancelled — run Install again to resume';
   const stopIfPaused = () => { if (o.signal && o.signal.aborted) throw new Error(CANCELLED); };
   const pausable = (p) => p.catch((e) => { stopIfPaused(); throw e; });
-  const m = await fetchManifest(o.manifestUrl, o.publicKey, MANIFEST_TIMEOUT_MS, fetchFn);
+  const m = forThisApp(await fetchManifest(o.manifestUrl, o.publicKey, MANIFEST_TIMEOUT_MS, fetchFn), o);
   const dest = path.resolve(o.dest);
   const tmp = path.join(dest, '.download');
   await fsp.mkdir(tmp, { recursive: true });
@@ -457,7 +480,7 @@ async function install(o) {
   state.gpu = nvidia ? 'nvidia' : 'other';
   await fsp.writeFile(stateFile, JSON.stringify(state, null, 2));
   await fsp.rm(tmp, { recursive: true, force: true });
-  if (!fs.existsSync(path.join(dest, 'yukti-server.exe'))) throw new Error('Installation incomplete: yukti-server.exe missing');
+  if (!o.only && !o.mac && !fs.existsSync(path.join(dest, 'yukti-server.exe'))) throw new Error('Installation incomplete: yukti-server.exe missing');
   report({ phase: 'done', pct: 100, message: `Yukti Server ${m.version} installed in ${dest}` });
   return { version: m.version, dest, gpu: state.gpu };
 }
