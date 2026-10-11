@@ -962,7 +962,7 @@ handle('yukti:connect', async (_e, req) => {
     config.mode = 'local'; config.installRoot = root;
     // "Later" on an offered update: the offer is remembered only now (not when it was merely shown), so closing the
     // window or a crash does not make it disappear for good
-    if (req.later) config.updateOffered = app.getVersion();
+    if (req.later) config.updateOffered = offeredStamp || app.getVersion();
     saveConfig();
     setImmediate(bootLocal);
     return { ok: true };
@@ -1187,7 +1187,7 @@ handle('yukti:install', async (_e, req = {}) => {
       const r = await installer.install({ ...(await installerOpts(url, dest)), ownModel: req.ownModel === true ? true : undefined,
         features: await firstInstallFeatures(dest), signal: ctl.signal, onProgress: send });
       // the update is in: do not offer it again (also remembered when the user chose "Later", see yukti:connect)
-      config.mode = 'local'; config.installRoot = r.dest; config.manifestUrl = url; config.startedOnce = false; config.updateOffered = app.getVersion(); saveConfig();
+      config.mode = 'local'; config.installRoot = r.dest; config.manifestUrl = url; config.startedOnce = false; config.updateOffered = offeredStamp || app.getVersion(); saveConfig();
       featureRestart = false;
       if (win && !win.isDestroyed()) win.setProgressBar(-1);
       setTimeout(bootLocal, 900);   // let the page show "Installed" for a moment
@@ -1224,6 +1224,15 @@ handle('yukti:splashAction', async (_e, action) => {
 });
 
 // ------------------------------------------------------------ lifecycle
+/** Parts of the installed server whose published file changed (same name, different SHA-256). */
+function changedParts(latest, inst) {
+  const have = (inst && inst.artifacts) || {};
+  return (latest.artifacts || []).filter((a) => have[a.name] && have[a.name] !== a.sha256).map((a) => a.name);
+}
+/** One published build: its version and publication time (a re-publish of the same version is a new build). */
+function buildStamp(m) { return `${m.version}@${m.published_at || ''}`; }
+let offeredStamp = null;   // the build offered at this start ("Later" and a finished install remember it)
+
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
@@ -1247,11 +1256,11 @@ if (!app.requestSingleInstanceLock()) {
       showSetup(T('main.zip'));
       return;
     }
-    // this app is newer than the installed server (the user ran a new Yukti-Setup.exe): offer the update — until the
-    // user says "Later" or the update is installed (config.updateOffered is set there, not here)
-    if (!bundle && config.mode === 'local' && serverKind(config.installRoot) && manifestUrl() && config.updateOffered !== app.getVersion()) {
+    // a newer build is published (a new version, or the same version re-published with changed parts): offer the
+    // update — until the user says "Later" to that build or it is installed (config.updateOffered is set there)
+    if (!bundle && config.mode === 'local' && serverKind(config.installRoot) && manifestUrl()) {
       const inst = await installer.installedVersion(config.installRoot);
-      if (inst && inst.version && inst.version !== app.getVersion()) {
+      if (inst && inst.version) {
         // the window comes first (start-up page): the check below needs the internet and must not leave the user
         // looking at nothing for seconds
         const seq = ++bootSeq;
@@ -1270,8 +1279,12 @@ if (!app.requestSingleInstanceLock()) {
           } catch (e) { log(`[setup] update check skipped: ${e.message}`); }
         }
         if (seq !== bootSeq || quitting) return;   // the user went to the setup page (or quit) meanwhile
-        if (latest && latest.version !== inst.version) {
-          log(`[setup] installed Yukti ${inst.version}, available ${latest.version}: offering the update`);
+        const changed = latest ? changedParts(latest, inst) : [];
+        const stamp = latest ? buildStamp(latest) : null;
+        if (latest && (latest.version !== inst.version || changed.length) && config.updateOffered !== stamp) {
+          offeredStamp = stamp;
+          log(`[setup] installed Yukti ${inst.version}, available ${latest.version}` +
+            (changed.length ? ` (changed: ${changed.join(', ')})` : '') + ': offering the update');
           showSetup();
           return;
         }

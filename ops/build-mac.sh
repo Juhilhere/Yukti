@@ -5,17 +5,18 @@
 # that is already on the Mac, e.g. LM Studio's). The photo and voice add-ons download only their model files the same
 # way (whisper.cpp for voice ships inside the app).
 # Requirements on the BUILD Mac only: uv, Node 22, curl, cmake, Xcode command line tools (clang, codesign, hdiutil).
-#   ops/build-mac.sh [--demo] [--out DIR]
+#   ops/build-mac.sh [--production] [--out DIR]     (demo build by default: sample accounts on the login page)
 set -euo pipefail
 
 VERSION="0.5.1"
 LLAMA_TAG="b11429"                       # llama.cpp release (Metal build for macOS arm64)
 WHISPER_TAG="b5130"                      # whisper.cpp release (same as the Windows build); compiled here with Metal
 OUT="${HOME}/yukti-build-mac"
-DEMO=0
+DEMO=1
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --demo) DEMO=1 ;;
+    --production) DEMO=0 ;;
     --out) OUT="$2"; shift ;;
     *) echo "unknown option $1"; exit 2 ;;
   esac

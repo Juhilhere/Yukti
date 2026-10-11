@@ -110,7 +110,7 @@ A browser pointed at `http://<server>:8000` works as well. Remove Yukti by delet
 ## 5. Website release (one zip)
 
 ```powershell
-.\ops\build-release.ps1 -Demo     # server package (omit -Demo for a production build without sample accounts)
+.\ops\build-release.ps1          # server package, demo build (add -Production for a build without sample accounts)
 .\ops\release-site.ps1            # -> E:\yukti-build\publish\ : index.html, Yukti-0.5.1-Windows.zip, .sha256
 python ops\serve_site.py E:\yukti-build\publish --port 9000     # optional local test
 ```
